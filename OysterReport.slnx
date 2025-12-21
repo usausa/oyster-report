@@ -2,7 +2,7 @@
   <Folder Name="/Example/">
   </Folder>
   <Folder Name="/Library/">
-    <Project Path="OysterReport/OysterReport.csproj" Id="d3170b31-5458-48fb-aa62-2de7306d9b2e" />
+    <Project Path="OysterReport/OysterReport.csproj" />
   </Folder>
   <Folder Name="/Solution Items/">
     <File Path=".editorconfig" />
