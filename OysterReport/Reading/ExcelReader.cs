@@ -178,18 +178,18 @@ public sealed class ExcelReader
                 Italic = style.Font.Italic,
                 Underline = style.Font.Underline != XLFontUnderlineValues.None,
                 Strikeout = style.Font.Strikethrough,
-                ColorHex = ColorHelper.NormalizeHex(style.Font.FontColor.Color.ToArgb().ToString("X8", CultureInfo.InvariantCulture)),
+                ColorHex = ColorHelper.ResolveHex(style.Font.FontColor, cell.Worksheet.Workbook, "#FF000000"),
             },
             Fill = new ReportFill
             {
-                BackgroundColorHex = ColorHelper.NormalizeHex(style.Fill.BackgroundColor.Color.ToArgb().ToString("X8", CultureInfo.InvariantCulture)),
+                BackgroundColorHex = ColorHelper.ResolveHex(style.Fill.BackgroundColor, cell.Worksheet.Workbook, "#00000000"),
             },
             Borders = new ReportBorders
             {
-                Left = ReadBorder(style.Border.LeftBorder, style.Border.LeftBorderColor.Color.ToArgb().ToString("X8", CultureInfo.InvariantCulture)),
-                Top = ReadBorder(style.Border.TopBorder, style.Border.TopBorderColor.Color.ToArgb().ToString("X8", CultureInfo.InvariantCulture)),
-                Right = ReadBorder(style.Border.RightBorder, style.Border.RightBorderColor.Color.ToArgb().ToString("X8", CultureInfo.InvariantCulture)),
-                Bottom = ReadBorder(style.Border.BottomBorder, style.Border.BottomBorderColor.Color.ToArgb().ToString("X8", CultureInfo.InvariantCulture)),
+                Left = ReadBorder(style.Border.LeftBorder, ColorHelper.ResolveHex(style.Border.LeftBorderColor, cell.Worksheet.Workbook, "#FF000000")),
+                Top = ReadBorder(style.Border.TopBorder, ColorHelper.ResolveHex(style.Border.TopBorderColor, cell.Worksheet.Workbook, "#FF000000")),
+                Right = ReadBorder(style.Border.RightBorder, ColorHelper.ResolveHex(style.Border.RightBorderColor, cell.Worksheet.Workbook, "#FF000000")),
+                Bottom = ReadBorder(style.Border.BottomBorder, ColorHelper.ResolveHex(style.Border.BottomBorderColor, cell.Worksheet.Workbook, "#FF000000")),
             },
             Alignment = new ReportAlignment
             {
@@ -323,7 +323,7 @@ public sealed class ExcelReader
             picture.Name,
             placement,
             picture.TopLeftCell.Address.ToStringRelative(false),
-            picture.BottomRightCell?.Address.ToStringRelative(false),
+            TryGetBottomRightCellAddress(picture),
             new ReportOffset
             {
                 X = picture.Left * 72d / 96d,
@@ -334,6 +334,21 @@ public sealed class ExcelReader
             imageBytes);
     }
 
+    private static string? TryGetBottomRightCellAddress(IXLPicture picture)
+    {
+        try
+        {
+            return picture.BottomRightCell?.Address.ToStringRelative(false);
+        }
+        catch (NullReferenceException)
+        {
+            return null;
+        }
+        catch (InvalidOperationException)
+        {
+            return null;
+        }
+    }
     private static void ApplyMergedRanges(ReportSheet reportSheet)
     {
         foreach (var mergedRange in reportSheet.MergedRanges)

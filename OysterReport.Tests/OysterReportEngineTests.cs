@@ -1,5 +1,5 @@
-// <copyright file="OysterReportEngineTests.cs" company="machi_pon">
-// Copyright (c) machi_pon. All rights reserved.
+// <copyright file="OysterReportEngineTests.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
 namespace OysterReport.Tests;
