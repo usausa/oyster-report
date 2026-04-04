@@ -1,5 +1,6 @@
 namespace OysterReport.Internal.Rendering;
 
+using System.Globalization;
 using OysterReport.Common;
 using OysterReport.Common.Geometry;
 using OysterReport.Helpers;
@@ -26,22 +27,33 @@ internal static class PdfRenderPlanner
         var printableBounds = new ReportRect
         {
             X = sheet.PageSetup.Margins.Left,
-            Y = sheet.PageSetup.Margins.Top + sheet.PageSetup.HeaderMarginPoint,
+            Y = sheet.PageSetup.Margins.Top,
             Width = pageBounds.Width - sheet.PageSetup.Margins.Left - sheet.PageSetup.Margins.Right,
-            Height = pageBounds.Height - sheet.PageSetup.Margins.Top - sheet.PageSetup.Margins.Bottom - sheet.PageSetup.HeaderMarginPoint - sheet.PageSetup.FooterMarginPoint,
+            Height = pageBounds.Height - sheet.PageSetup.Margins.Top - sheet.PageSetup.Margins.Bottom,
         };
 
+        var renderRange = sheet.PrintArea?.Range ?? sheet.UsedRange;
+
         var visibleRows = sheet.Rows
-            .Where(row => !row.IsHidden && row.Index >= sheet.UsedRange.StartRow && row.Index <= sheet.UsedRange.EndRow)
+            .Where(row => !row.IsHidden && row.Index >= renderRange.StartRow && row.Index <= renderRange.EndRow)
             .OrderBy(row => row.Index)
             .ToList();
         var visibleColumns = sheet.Columns
-            .Where(column => !column.IsHidden && column.Index >= sheet.UsedRange.StartColumn && column.Index <= sheet.UsedRange.EndColumn)
+            .Where(column => !column.IsHidden && column.Index >= renderRange.StartColumn && column.Index <= renderRange.EndColumn)
             .OrderBy(column => column.Index)
             .ToList();
 
+        var contentHeight = visibleRows.Sum(row => row.HeightPoint);
+        var contentWidth = visibleColumns.Sum(column => column.WidthPoint);
+        var contentOffsetX = sheet.PageSetup.CenterHorizontally
+            ? Math.Max(0d, (printableBounds.Width - contentWidth) / 2d)
+            : 0d;
+        var contentOffsetY = sheet.PageSetup.CenterVertically
+            ? Math.Max(0d, (printableBounds.Height - contentHeight) / 2d)
+            : 0d;
+
         var rowOffsets = new Dictionary<int, double>();
-        var currentTop = printableBounds.Y;
+        var currentTop = printableBounds.Y + contentOffsetY;
         foreach (var row in visibleRows)
         {
             rowOffsets[row.Index] = currentTop;
@@ -49,7 +61,7 @@ internal static class PdfRenderPlanner
         }
 
         var columnOffsets = new Dictionary<int, double>();
-        var currentLeft = printableBounds.X;
+        var currentLeft = printableBounds.X + contentOffsetX;
         foreach (var column in visibleColumns)
         {
             columnOffsets[column.Index] = currentLeft;
@@ -170,16 +182,16 @@ internal static class PdfRenderPlanner
             HeaderBounds = new ReportRect
             {
                 X = printableBounds.X,
-                Y = sheet.PageSetup.Margins.Top,
+                Y = sheet.PageSetup.HeaderMarginPoint,
                 Width = printableBounds.Width,
-                Height = sheet.PageSetup.HeaderMarginPoint,
+                Height = Math.Max(0d, sheet.PageSetup.Margins.Top - sheet.PageSetup.HeaderMarginPoint),
             },
             FooterBounds = new ReportRect
             {
                 X = printableBounds.X,
-                Y = pageBounds.Height - sheet.PageSetup.Margins.Bottom - sheet.PageSetup.FooterMarginPoint,
+                Y = pageBounds.Height - sheet.PageSetup.Margins.Bottom,
                 Width = printableBounds.Width,
-                Height = sheet.PageSetup.FooterMarginPoint,
+                Height = Math.Max(0d, sheet.PageSetup.Margins.Bottom - sheet.PageSetup.FooterMarginPoint),
             },
         };
     }
@@ -192,7 +204,7 @@ internal static class PdfRenderPlanner
             var cell = sheet.Cells.First(sourceCell => sourceCell.Address == cellInfo.CellAddress);
             AddBorder(
                 borderInfos,
-                $"{cellInfo.CellAddress}:L",
+                BuildLineKey("L", cellInfo.OuterBounds.X, cellInfo.OuterBounds.Y, cellInfo.OuterBounds.X, cellInfo.OuterBounds.Bottom),
                 new ReportLine
                 {
                     X1 = cellInfo.OuterBounds.X,
@@ -204,7 +216,7 @@ internal static class PdfRenderPlanner
                 cell.Address);
             AddBorder(
                 borderInfos,
-                $"{cellInfo.CellAddress}:T",
+                BuildLineKey("T", cellInfo.OuterBounds.X, cellInfo.OuterBounds.Y, cellInfo.OuterBounds.Right, cellInfo.OuterBounds.Y),
                 new ReportLine
                 {
                     X1 = cellInfo.OuterBounds.X,
@@ -216,7 +228,7 @@ internal static class PdfRenderPlanner
                 cell.Address);
             AddBorder(
                 borderInfos,
-                $"{cellInfo.CellAddress}:R",
+                BuildLineKey("R", cellInfo.OuterBounds.Right, cellInfo.OuterBounds.Y, cellInfo.OuterBounds.Right, cellInfo.OuterBounds.Bottom),
                 new ReportLine
                 {
                     X1 = cellInfo.OuterBounds.Right,
@@ -228,7 +240,7 @@ internal static class PdfRenderPlanner
                 cell.Address);
             AddBorder(
                 borderInfos,
-                $"{cellInfo.CellAddress}:B",
+                BuildLineKey("B", cellInfo.OuterBounds.X, cellInfo.OuterBounds.Bottom, cellInfo.OuterBounds.Right, cellInfo.OuterBounds.Bottom),
                 new ReportLine
                 {
                     X1 = cellInfo.OuterBounds.X,
@@ -255,13 +267,18 @@ internal static class PdfRenderPlanner
             return;
         }
 
-        borders[key] = new PdfBorderRenderInfo
+        var candidate = new PdfBorderRenderInfo
         {
             Line = line,
             Style = border.Style,
             ColorHex = border.ColorHex,
             OwnerCellAddress = ownerCellAddress,
         };
+
+        if (!borders.TryGetValue(key, out var existingBorder) || GetBorderPriority(candidate.Style) > GetBorderPriority(existingBorder.Style))
+        {
+            borders[key] = candidate;
+        }
     }
 
     private static List<PdfImageRenderInfo> BuildImageInfos(
@@ -293,4 +310,23 @@ internal static class PdfRenderPlanner
 
         return results;
     }
+
+    private static string BuildLineKey(string prefix, double x1, double y1, double x2, double y2) =>
+        string.Create(
+            CultureInfo.InvariantCulture,
+            $"{prefix}:{Math.Round(x1, 4)}:{Math.Round(y1, 4)}:{Math.Round(x2, 4)}:{Math.Round(y2, 4)}");
+
+    private static int GetBorderPriority(ReportBorderStyle style) =>
+        style switch
+        {
+            ReportBorderStyle.DoubleLine => 7,
+            ReportBorderStyle.Thick => 6,
+            ReportBorderStyle.Medium => 5,
+            ReportBorderStyle.Thin => 4,
+            ReportBorderStyle.Dashed => 3,
+            ReportBorderStyle.DashDot => 2,
+            ReportBorderStyle.Dotted => 1,
+            ReportBorderStyle.Hair => 0,
+            _ => -1,
+        };
 }

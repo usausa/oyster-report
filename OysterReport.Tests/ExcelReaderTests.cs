@@ -88,4 +88,57 @@ public sealed class ExcelReaderTests
         Assert.Equal("Logo", image.Name);
         Assert.Null(image.ToCellAddress);
     }
+
+    [Fact]
+    public void ReadShouldConvertPageMarginsToPoints()
+    {
+        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        {
+            var sheet = workbook.AddWorksheet("Margins");
+            sheet.Cell("A1").Value = "Margin";
+            sheet.PageSetup.Margins.Left = 1.25;
+            sheet.PageSetup.Margins.Top = 0.5;
+            sheet.PageSetup.Margins.Right = 0.75;
+            sheet.PageSetup.Margins.Bottom = 1.0;
+            sheet.PageSetup.Margins.Header = 0.3;
+            sheet.PageSetup.Margins.Footer = 0.2;
+        });
+
+        var workbook = new ExcelReader().Read(stream);
+        var sheet = Assert.Single(workbook.Sheets);
+
+        Assert.Equal(90d, sheet.PageSetup.Margins.Left, 3);
+        Assert.Equal(36d, sheet.PageSetup.Margins.Top, 3);
+        Assert.Equal(54d, sheet.PageSetup.Margins.Right, 3);
+        Assert.Equal(72d, sheet.PageSetup.Margins.Bottom, 3);
+        Assert.Equal(21.6d, sheet.PageSetup.HeaderMarginPoint, 3);
+        Assert.Equal(14.4d, sheet.PageSetup.FooterMarginPoint, 3);
+    }
+
+    [Fact]
+    public void ReadShouldApplyTableStripeFillFromExcelTableTheme()
+    {
+        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        {
+            var sheet = workbook.AddWorksheet("Table");
+            sheet.Cell("A1").Value = "No.";
+            sheet.Cell("B1").Value = "Name";
+            sheet.Cell("A2").Value = 1;
+            sheet.Cell("B2").Value = "First";
+            sheet.Cell("A3").Value = 2;
+            sheet.Cell("B3").Value = "Second";
+
+            var table = sheet.Range("A1:B3").CreateTable();
+            table.Theme = XLTableTheme.TableStyleLight4;
+            table.ShowRowStripes = true;
+        });
+
+        var workbook = new ExcelReader().Read(stream);
+        var sheet = Assert.Single(workbook.Sheets);
+        var firstDataRowCell = sheet.Cells.Single(cell => cell.Address == "A2");
+        var secondDataRowCell = sheet.Cells.Single(cell => cell.Address == "A3");
+
+        Assert.NotEqual("#00000000", firstDataRowCell.Style.Fill.BackgroundColorHex);
+        Assert.NotEqual(firstDataRowCell.Style.Fill.BackgroundColorHex, secondDataRowCell.Style.Fill.BackgroundColorHex);
+    }
 }

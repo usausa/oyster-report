@@ -403,7 +403,7 @@ public sealed class ReportCell
 
     public ReportPlaceholderText? Placeholder { get; } // プレースホルダ情報
 
-    public ReportCellStyle Style { get; } = new(); // セルスタイル
+    public ReportCellStyle Style { get; private set; } = new(); // セルスタイル
 
     public ReportRect Bounds { get; private set; } // セル外枠の物理矩形
 
@@ -414,6 +414,8 @@ public sealed class ReportCell
     internal void SetBounds(ReportRect bounds) => Bounds = bounds;
 
     internal void SetMerge(ReportMergeInfo? merge) => Merge = merge;
+
+    internal void SetStyle(ReportCellStyle style) => Style = style;
 
     internal void SetRowColumn(int row, int column)
     {

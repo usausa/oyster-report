@@ -19,6 +19,20 @@ public sealed class PdfGenerator
 
     private static readonly string[] FallbackFontNames =
     [
+        "MS PGothic",
+        "ＭＳ Ｐゴシック",
+        "MS Gothic",
+        "ＭＳ ゴシック",
+        "MS UI Gothic",
+        "Yu Gothic",
+        "Yu Gothic UI",
+        "Meiryo",
+        "Meiryo UI",
+        "Yu Mincho",
+        "MS PMincho",
+        "ＭＳ Ｐ明朝",
+        "HGPMinchoE",
+        "HGP明朝E",
         "Arial",
         "Helvetica",
         "Segoe UI",
@@ -28,6 +42,17 @@ public sealed class PdfGenerator
         "Times New Roman",
         "Courier New",
     ];
+
+    private static readonly Dictionary<string, string[]> KnownFontAliases =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["ＭＳ Ｐゴシック"] = ["MS PGothic", "MS UI Gothic", "Yu Gothic", "Meiryo"],
+            ["MS Pゴシック"] = ["MS PGothic", "MS UI Gothic", "Yu Gothic", "Meiryo"],
+            ["MS PGothic"] = ["ＭＳ Ｐゴシック", "MS UI Gothic", "Yu Gothic", "Meiryo"],
+            ["ＭＳ ゴシック"] = ["MS Gothic", "MS PGothic", "MS UI Gothic"],
+            ["Meiryo UI"] = ["Meiryo", "Yu Gothic UI", "Yu Gothic"],
+            ["HGP明朝E"] = ["HGPMinchoE", "Yu Mincho", "MS PMincho", "ＭＳ Ｐ明朝"],
+        };
 
     public void Generate(
         ReportWorkbook workbook,
@@ -140,7 +165,7 @@ public sealed class PdfGenerator
         foreach (var renderCell in cells)
         {
             var sourceCell = sourceSheet.Cells.First(cell => cell.Address == renderCell.CellAddress);
-            if (!string.Equals(sourceCell.Style.Fill.BackgroundColorHex, "#00000000", StringComparison.Ordinal))
+            if (!IsTransparentColor(sourceCell.Style.Fill.BackgroundColorHex))
             {
                 var backgroundBrush = new XSolidBrush(ToColor(sourceCell.Style.Fill.BackgroundColorHex));
                 graphics.DrawRectangle(
@@ -181,6 +206,13 @@ public sealed class PdfGenerator
         foreach (var border in borders)
         {
             var pen = new XPen(ToColor(border.ColorHex), ResolveBorderWidth(border.Style));
+            ApplyBorderStyle(pen, border.Style);
+            if (border.Style == ReportBorderStyle.DoubleLine)
+            {
+                DrawDoubleBorder(graphics, pen, border.Line);
+                continue;
+            }
+
             graphics.DrawLine(pen, border.Line.X1, border.Line.Y1, border.Line.X2, border.Line.Y2);
         }
     }
@@ -347,6 +379,18 @@ public sealed class PdfGenerator
             yield return font.Name;
         }
 
+        if (!string.IsNullOrWhiteSpace(font.Name) &&
+            KnownFontAliases.TryGetValue(font.Name, out var aliases))
+        {
+            foreach (var alias in aliases)
+            {
+                if (seen.Add(alias))
+                {
+                    yield return alias;
+                }
+            }
+        }
+
         if (string.Equals(font.Name, "Calibri", StringComparison.OrdinalIgnoreCase))
         {
             foreach (var preferredFallback in new[] { "Arial", "Segoe UI", "Helvetica" })
@@ -384,7 +428,7 @@ public sealed class PdfGenerator
     {
         try
         {
-            font = new XFont(fontName, size, style);
+            font = new XFont(fontName, size, style, new XPdfFontOptions(PdfFontEncoding.Unicode, PdfFontEmbedding.EmbedCompleteFontFile));
             return true;
         }
         catch (InvalidOperationException)
@@ -413,14 +457,48 @@ public sealed class PdfGenerator
         return XColors.Black;
     }
 
+    private static bool IsTransparentColor(string colorHex) =>
+        ColorHelper.NormalizeHex(colorHex).StartsWith("#00", StringComparison.Ordinal);
+
     private static double ResolveBorderWidth(ReportBorderStyle style) =>
         style switch
         {
             ReportBorderStyle.Thick => 2d,
             ReportBorderStyle.Medium => 1d,
             ReportBorderStyle.DoubleLine => 1.5d,
+            ReportBorderStyle.Hair => 0.25d,
             _ => 0.5d,
         };
+
+    private static void ApplyBorderStyle(XPen pen, ReportBorderStyle style)
+    {
+        switch (style)
+        {
+            case ReportBorderStyle.Dashed:
+                pen.DashStyle = XDashStyle.Dash;
+                break;
+            case ReportBorderStyle.Dotted:
+                pen.DashStyle = XDashStyle.Dot;
+                break;
+            case ReportBorderStyle.DashDot:
+                pen.DashStyle = XDashStyle.DashDot;
+                break;
+        }
+    }
+
+    private static void DrawDoubleBorder(XGraphics graphics, XPen pen, ReportLine line)
+    {
+        var gap = Math.Max(0.75d, pen.Width);
+        if (Math.Abs(line.Y1 - line.Y2) < 0.01d)
+        {
+            graphics.DrawLine(pen, line.X1, line.Y1 - (gap / 2d), line.X2, line.Y2 - (gap / 2d));
+            graphics.DrawLine(pen, line.X1, line.Y1 + (gap / 2d), line.X2, line.Y2 + (gap / 2d));
+            return;
+        }
+
+        graphics.DrawLine(pen, line.X1 - (gap / 2d), line.Y1, line.X2 - (gap / 2d), line.Y2);
+        graphics.DrawLine(pen, line.X1 + (gap / 2d), line.Y1, line.X2 + (gap / 2d), line.Y2);
+    }
 
     private sealed record HeaderFooterSections(string Left, string Center, string Right)
     {

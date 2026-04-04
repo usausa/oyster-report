@@ -1,6 +1,8 @@
 namespace OysterReport.Reading;
 
 using System.Globalization;
+using System.IO.Compression;
+using System.Xml.Linq;
 using ClosedXML.Excel;
 using ClosedXML.Excel.Drawings;
 using OysterReport.Common;
@@ -37,7 +39,13 @@ public sealed class ExcelReader
             stream.Position = 0;
         }
 
-        using var workbook = new XLWorkbook(stream);
+        using var workbookStream = new MemoryStream();
+        stream.CopyTo(workbookStream);
+        var workbookBytes = workbookStream.ToArray();
+        workbookStream.Position = 0;
+
+        var workbookTableStyles = WorkbookTableStyleMap.Load(workbookBytes);
+        using var workbook = new XLWorkbook(workbookStream);
         var measurementProfile = new ReportMeasurementProfile
         {
             DefaultFontName = workbook.Style.Font.FontName,
@@ -50,20 +58,25 @@ public sealed class ExcelReader
             ? new HashSet<string>(options.TargetSheets, sheetNameComparer)
             : null;
 
-        foreach (var worksheet in workbook.Worksheets)
+        foreach (var (worksheet, worksheetIndex) in workbook.Worksheets.Select((worksheet, index) => (worksheet, index)))
         {
             if (targetSheets is not null && !targetSheets.Contains(worksheet.Name))
             {
                 continue;
             }
 
-            reportWorkbook.AddSheet(ReadSheet(worksheet, measurementProfile, options?.IncludeImages ?? true));
+            var sheetTableStyles = workbookTableStyles.GetTableStyles(worksheetIndex);
+            reportWorkbook.AddSheet(ReadSheet(worksheet, measurementProfile, options?.IncludeImages ?? true, sheetTableStyles));
         }
 
         return reportWorkbook;
     }
 
-    private static ReportSheet ReadSheet(IXLWorksheet worksheet, ReportMeasurementProfile measurementProfile, bool includeImages)
+    private static ReportSheet ReadSheet(
+        IXLWorksheet worksheet,
+        ReportMeasurementProfile measurementProfile,
+        bool includeImages,
+        IReadOnlyList<TableStyleInfo> tableStyles)
     {
         var reportSheet = new ReportSheet(worksheet.Name);
         var usedRange = worksheet.RangeUsed();
@@ -149,6 +162,7 @@ public sealed class ExcelReader
 
         reportSheet.RecalculateLayout();
         ApplyMergedRanges(reportSheet);
+        ApplyTableStyles(reportSheet, worksheet.Workbook, tableStyles);
         return reportSheet;
     }
 
@@ -258,13 +272,13 @@ public sealed class ExcelReader
                 : ReportPageOrientation.Portrait,
             Margins = new()
             {
-                Left = worksheet.PageSetup.Margins.Left,
-                Top = worksheet.PageSetup.Margins.Top,
-                Right = worksheet.PageSetup.Margins.Right,
-                Bottom = worksheet.PageSetup.Margins.Bottom,
+                Left = ConvertInchToPoint(worksheet.PageSetup.Margins.Left),
+                Top = ConvertInchToPoint(worksheet.PageSetup.Margins.Top),
+                Right = ConvertInchToPoint(worksheet.PageSetup.Margins.Right),
+                Bottom = ConvertInchToPoint(worksheet.PageSetup.Margins.Bottom),
             },
-            HeaderMarginPoint = worksheet.PageSetup.Margins.Header,
-            FooterMarginPoint = worksheet.PageSetup.Margins.Footer,
+            HeaderMarginPoint = ConvertInchToPoint(worksheet.PageSetup.Margins.Header),
+            FooterMarginPoint = ConvertInchToPoint(worksheet.PageSetup.Margins.Footer),
             ScalePercent = worksheet.PageSetup.Scale,
             FitToPagesWide = worksheet.PageSetup.PagesWide == 0 ? null : worksheet.PageSetup.PagesWide,
             FitToPagesTall = worksheet.PageSetup.PagesTall == 0 ? null : worksheet.PageSetup.PagesTall,
@@ -349,6 +363,62 @@ public sealed class ExcelReader
             return null;
         }
     }
+
+    private static void ApplyTableStyles(
+        ReportSheet reportSheet,
+        IXLWorkbook workbook,
+        IReadOnlyList<TableStyleInfo> tableStyles)
+    {
+        ArgumentNullException.ThrowIfNull(reportSheet);
+        ArgumentNullException.ThrowIfNull(workbook);
+        ArgumentNullException.ThrowIfNull(tableStyles);
+
+        foreach (var tableStyle in tableStyles)
+        {
+            if (!tableStyle.ShowRowStripes ||
+                !string.Equals(tableStyle.ThemeName, "TableStyleLight4", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            const string stripeFillHex = "#FFDEEBF7";
+
+            var firstDataRow = tableStyle.Range.StartRow + (tableStyle.HasHeaderRow ? 1 : 0);
+            var lastDataRow = tableStyle.Range.EndRow - (tableStyle.HasTotalsRow ? 1 : 0);
+            for (var rowIndex = firstDataRow; rowIndex <= lastDataRow; rowIndex++)
+            {
+                if (((rowIndex - firstDataRow) % 2) != 0)
+                {
+                    continue;
+                }
+
+                foreach (var cell in reportSheet.Cells.Where(cell =>
+                             cell.Row == rowIndex &&
+                             cell.Column >= tableStyle.Range.StartColumn &&
+                             cell.Column <= tableStyle.Range.EndColumn))
+                {
+                    if (!IsTransparentFill(cell.Style.Fill.BackgroundColorHex))
+                    {
+                        continue;
+                    }
+
+                    cell.SetStyle(cell.Style with
+                    {
+                        Fill = cell.Style.Fill with
+                        {
+                            BackgroundColorHex = stripeFillHex,
+                        },
+                    });
+                }
+            }
+        }
+    }
+
+    private static double ConvertInchToPoint(double inch) => inch * 72d;
+
+    private static bool IsTransparentFill(string colorHex) =>
+        ColorHelper.NormalizeHex(colorHex).StartsWith("#00", StringComparison.Ordinal);
+
     private static void ApplyMergedRanges(ReportSheet reportSheet)
     {
         foreach (var mergedRange in reportSheet.MergedRanges)
@@ -362,6 +432,196 @@ public sealed class ExcelReader
                     Range = mergedRange.Range,
                 });
             }
+        }
+    }
+
+    private sealed record TableStyleInfo(
+        ReportRange Range,
+        string ThemeName,
+        bool ShowRowStripes,
+        bool HasHeaderRow,
+        bool HasTotalsRow);
+
+    private sealed class WorkbookTableStyleMap
+    {
+        private readonly IReadOnlyList<IReadOnlyList<TableStyleInfo>> tableStylesBySheetIndex;
+
+        private WorkbookTableStyleMap(IReadOnlyList<IReadOnlyList<TableStyleInfo>> tableStylesBySheetIndex)
+        {
+            this.tableStylesBySheetIndex = tableStylesBySheetIndex;
+        }
+
+        public static WorkbookTableStyleMap Load(byte[] workbookBytes)
+        {
+            ArgumentNullException.ThrowIfNull(workbookBytes);
+
+            using var stream = new MemoryStream(workbookBytes, writable: false);
+            using var archive = new ZipArchive(stream, ZipArchiveMode.Read, leaveOpen: false);
+            var mainNamespace = XNamespace.Get("http://schemas.openxmlformats.org/spreadsheetml/2006/main");
+            var relationshipNamespace = XNamespace.Get("http://schemas.openxmlformats.org/officeDocument/2006/relationships");
+            var tableStylesBySheetIndex = archive.Entries
+                .Where(entry => entry.FullName.StartsWith("xl/worksheets/sheet", StringComparison.OrdinalIgnoreCase) &&
+                                entry.FullName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
+                .OrderBy(entry => GetSheetOrder(entry.FullName))
+                .Select(entry => LoadSheetTableStyles(archive, entry.FullName, mainNamespace, relationshipNamespace))
+                .ToList();
+
+            return new WorkbookTableStyleMap(tableStylesBySheetIndex);
+        }
+
+        public IReadOnlyList<TableStyleInfo> GetTableStyles(int sheetIndex)
+        {
+            return sheetIndex >= 0 && sheetIndex < tableStylesBySheetIndex.Count
+                ? tableStylesBySheetIndex[sheetIndex]
+                : Array.Empty<TableStyleInfo>();
+        }
+
+        private static IReadOnlyList<TableStyleInfo> LoadSheetTableStyles(
+            ZipArchive archive,
+            string sheetPath,
+            XNamespace mainNamespace,
+            XNamespace relationshipNamespace)
+        {
+            var sheetDocument = LoadXml(archive, sheetPath);
+            if (sheetDocument.Root is null)
+            {
+                return Array.Empty<TableStyleInfo>();
+            }
+
+            var tablePartElements = sheetDocument.Root
+                .Elements(mainNamespace + "tableParts")
+                .Elements(mainNamespace + "tablePart")
+                .ToList();
+            if (tablePartElements.Count == 0)
+            {
+                return Array.Empty<TableStyleInfo>();
+            }
+
+            var sheetRelationshipsPath = BuildRelationshipPath(sheetPath);
+            var sheetRelationships = LoadRelationships(archive, sheetRelationshipsPath);
+            var results = new List<TableStyleInfo>();
+            foreach (var tablePartElement in tablePartElements)
+            {
+                var relationshipId = tablePartElement.Attribute(relationshipNamespace + "id")?.Value;
+                if (string.IsNullOrWhiteSpace(relationshipId) ||
+                    !sheetRelationships.TryGetValue(relationshipId, out var tablePath))
+                {
+                    continue;
+                }
+
+                var tableDocument = LoadXml(archive, tablePath);
+                var tableRoot = tableDocument.Root;
+                if (tableRoot is null)
+                {
+                    continue;
+                }
+
+                var styleInfoElement = tableRoot.Element(mainNamespace + "tableStyleInfo");
+                var rangeReference = tableRoot.Attribute("ref")?.Value;
+                if (styleInfoElement is null || string.IsNullOrWhiteSpace(rangeReference))
+                {
+                    continue;
+                }
+
+                results.Add(new TableStyleInfo(
+                    ParseRange(rangeReference),
+                    styleInfoElement.Attribute("name")?.Value ?? string.Empty,
+                    ReadBoolAttribute(styleInfoElement.Attribute("showRowStripes")),
+                    !string.Equals(tableRoot.Attribute("headerRowCount")?.Value, "0", StringComparison.Ordinal),
+                    ReadBoolAttribute(tableRoot.Attribute("totalsRowShown"))));
+            }
+
+            return results;
+        }
+
+        private static Dictionary<string, string> LoadRelationships(ZipArchive archive, string path)
+        {
+            var document = LoadXml(archive, path);
+            var root = document.Root;
+            if (root is null)
+            {
+                return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            }
+
+            var sourcePath = GetRelationshipSourcePath(path);
+            return root.Elements()
+                .Where(element => element.Attribute("Id") is not null && element.Attribute("Target") is not null)
+                .ToDictionary(
+                    element => element.Attribute("Id")!.Value,
+                    element => ResolveZipPath(sourcePath, element.Attribute("Target")!.Value),
+                    StringComparer.OrdinalIgnoreCase);
+        }
+
+        private static XDocument LoadXml(ZipArchive archive, string path)
+        {
+            var normalizedPath = path.Replace('\\', '/');
+            var entry = archive.GetEntry(normalizedPath);
+            if (entry is null)
+            {
+                return new XDocument();
+            }
+
+            using var entryStream = entry.Open();
+            return XDocument.Load(entryStream);
+        }
+
+        private static string BuildRelationshipPath(string path)
+        {
+            var normalizedPath = path.Replace('\\', '/');
+            var lastSlashIndex = normalizedPath.LastIndexOf('/');
+            return lastSlashIndex < 0
+                ? $"_rels/{normalizedPath}.rels"
+                : $"{normalizedPath[..lastSlashIndex]}/_rels/{normalizedPath[(lastSlashIndex + 1)..]}.rels";
+        }
+
+        private static string GetRelationshipSourcePath(string relationshipPath)
+        {
+            var normalizedPath = relationshipPath.Replace('\\', '/');
+            var marker = "/_rels/";
+            var markerIndex = normalizedPath.IndexOf(marker, StringComparison.Ordinal);
+            if (markerIndex < 0 || !normalizedPath.EndsWith(".rels", StringComparison.Ordinal))
+            {
+                return normalizedPath;
+            }
+
+            var prefix = normalizedPath[..markerIndex];
+            var fileName = normalizedPath[(markerIndex + marker.Length)..^".rels".Length];
+            return string.IsNullOrEmpty(prefix) ? fileName : $"{prefix}/{fileName}";
+        }
+
+        private static string ResolveZipPath(string sourcePath, string target)
+        {
+            if (target.StartsWith('/'))
+            {
+                return target.TrimStart('/');
+            }
+
+            var sourceDirectory = Path.GetDirectoryName(sourcePath.Replace('/', Path.DirectorySeparatorChar)) ?? string.Empty;
+            var combinedPath = Path.GetFullPath(Path.Combine(Path.DirectorySeparatorChar.ToString(), sourceDirectory, target));
+            return combinedPath.TrimStart(Path.DirectorySeparatorChar).Replace(Path.DirectorySeparatorChar, '/');
+        }
+
+        private static int GetSheetOrder(string entryPath)
+        {
+            var fileName = Path.GetFileNameWithoutExtension(entryPath.Replace('/', Path.DirectorySeparatorChar));
+            return fileName is not null && fileName.StartsWith("sheet", StringComparison.OrdinalIgnoreCase) &&
+                   int.TryParse(fileName["sheet".Length..], out var order)
+                ? order
+                : int.MaxValue;
+        }
+
+        private static bool ReadBoolAttribute(XAttribute? attribute) =>
+            string.Equals(attribute?.Value, "1", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(attribute?.Value, "true", StringComparison.OrdinalIgnoreCase);
+
+        private static ReportRange ParseRange(string rangeReference)
+        {
+            var segments = rangeReference.Split(':', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+            var start = segments[0];
+            var end = segments.Length > 1 ? segments[1] : segments[0];
+            var (startRow, startColumn) = AddressHelper.ParseAddress(start);
+            var (endRow, endColumn) = AddressHelper.ParseAddress(end);
+            return new ReportRange(startRow, startColumn, endRow, endColumn);
         }
     }
 }
