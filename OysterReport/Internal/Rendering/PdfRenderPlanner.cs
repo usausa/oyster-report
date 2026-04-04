@@ -271,6 +271,7 @@ internal static class PdfRenderPlanner
         {
             Line = line,
             Style = border.Style,
+            Width = border.Width,
             ColorHex = border.ColorHex,
             OwnerCellAddress = ownerCellAddress,
         };

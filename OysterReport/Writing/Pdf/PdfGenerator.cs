@@ -9,6 +9,7 @@ using OysterReport.Helpers;
 using OysterReport.Internal.Rendering;
 using OysterReport.Model;
 using PdfSharp.Drawing;
+using PdfSharp.Drawing.Layout;
 using PdfSharp.Pdf;
 
 public sealed class PdfGenerator
@@ -114,7 +115,7 @@ public sealed class PdfGenerator
                 using var graphics = XGraphics.FromPdfPage(page);
                 DrawPageBackground(graphics, pagePlan.PageBounds);
                 DrawCells(graphics, sourceSheet, pagePlan.Cells, options);
-                DrawBorders(graphics, sheetPlan.Borders);
+                DrawBorders(graphics, sourceSheet, pagePlan.Cells);
                 DrawImages(graphics, sheetPlan.Images);
                 DrawHeaderFooter(graphics, pagePlan.HeaderFooter, pagePlan.PageNumber, sheetPlan.Pages.Count);
             }
@@ -143,11 +144,12 @@ public sealed class PdfGenerator
 
         var fontResolverProperty = globalFontSettingsType.GetProperty("FontResolver", BindingFlags.Public | BindingFlags.Static);
         var fallbackFontResolverProperty = globalFontSettingsType.GetProperty("FallbackFontResolver", BindingFlags.Public | BindingFlags.Static);
-        var useWindowsFontsProperty = globalFontSettingsType.GetProperty("UseWindowsFontsUnderWindows", BindingFlags.Public | BindingFlags.Static);
 
         if (fontResolverProperty?.GetValue(null) is null && fallbackFontResolverProperty?.GetValue(null) is null)
         {
-            useWindowsFontsProperty?.SetValue(null, true);
+            fontResolverProperty?.SetValue(
+                null,
+                new WindowsInstalledFontResolver("Yu Gothic UI", "Meiryo UI", "Yu Gothic", "Meiryo", "MS UI Gothic", "Segoe UI"));
         }
     }
 
@@ -188,32 +190,102 @@ public sealed class PdfGenerator
 
             var font = ResolveFont(sourceCell.Style.Font, options);
             var textBrush = new XSolidBrush(ToColor(sourceCell.Style.Font.ColorHex));
+            var textRect = new XRect(
+                renderCell.ContentBounds.X,
+                renderCell.ContentBounds.Y,
+                Math.Max(0, renderCell.ContentBounds.Width),
+                Math.Max(0, renderCell.ContentBounds.Height));
+
+            if (sourceCell.Style.WrapText || sourceCell.DisplayText.Contains('\n', StringComparison.Ordinal))
+            {
+                var formatter = new XTextFormatter(graphics)
+                {
+                    Alignment = ResolveParagraphAlignment(sourceCell),
+                };
+
+                formatter.DrawString(
+                    sourceCell.DisplayText,
+                    font,
+                    textBrush,
+                    textRect,
+                    ResolveStringFormat(sourceCell));
+                continue;
+            }
+
             graphics.DrawString(
                 sourceCell.DisplayText,
                 font,
                 textBrush,
-                new XRect(
-                    renderCell.TextBounds.X,
-                    renderCell.TextBounds.Y,
-                    Math.Max(0, renderCell.ContentBounds.Width),
-                    Math.Max(0, renderCell.ContentBounds.Height)),
-                XStringFormats.TopLeft);
+                textRect,
+                ResolveStringFormat(sourceCell));
         }
     }
 
-    private static void DrawBorders(XGraphics graphics, IReadOnlyList<PdfBorderRenderInfo> borders)
+    private static void DrawBorders(XGraphics graphics, ReportSheet sourceSheet, IReadOnlyList<PdfCellRenderInfo> cells)
     {
-        foreach (var border in borders)
+        var sourceCellsByAddress = sourceSheet.Cells.ToDictionary(cell => cell.Address, StringComparer.Ordinal);
+        var drawnLines = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var renderCell in cells)
         {
-            var pen = new XPen(ToColor(border.ColorHex), ResolveBorderWidth(border.Style));
-            ApplyBorderStyle(pen, border.Style);
-            if (border.Style == ReportBorderStyle.DoubleLine)
+            if (!sourceCellsByAddress.TryGetValue(renderCell.CellAddress, out var sourceCell))
             {
-                DrawDoubleBorder(graphics, pen, border.Line);
                 continue;
             }
 
-            graphics.DrawLine(pen, border.Line.X1, border.Line.Y1, border.Line.X2, border.Line.Y2);
+            if (sourceCell.Merge is not null && !renderCell.IsMergedOwner)
+            {
+                continue;
+            }
+
+            var borders = sourceCell.Merge is null
+                ? sourceCell.Style.Borders
+                : ResolveMergedBorders(sourceSheet, sourceCell);
+            var cellBounds = renderCell.OuterBounds;
+            DrawBorderSide(
+                graphics,
+                borders.Top,
+                new ReportLine
+                {
+                    X1 = cellBounds.X,
+                    Y1 = cellBounds.Y,
+                    X2 = cellBounds.Right,
+                    Y2 = cellBounds.Y,
+                },
+                drawnLines);
+            DrawBorderSide(
+                graphics,
+                borders.Right,
+                new ReportLine
+                {
+                    X1 = cellBounds.Right,
+                    Y1 = cellBounds.Y,
+                    X2 = cellBounds.Right,
+                    Y2 = cellBounds.Bottom,
+                },
+                drawnLines);
+            DrawBorderSide(
+                graphics,
+                borders.Bottom,
+                new ReportLine
+                {
+                    X1 = cellBounds.Right,
+                    Y1 = cellBounds.Bottom,
+                    X2 = cellBounds.X,
+                    Y2 = cellBounds.Bottom,
+                },
+                drawnLines);
+            DrawBorderSide(
+                graphics,
+                borders.Left,
+                new ReportLine
+                {
+                    X1 = cellBounds.X,
+                    Y1 = cellBounds.Bottom,
+                    X2 = cellBounds.X,
+                    Y2 = cellBounds.Y,
+                },
+                drawnLines);
         }
     }
 
@@ -437,6 +509,9 @@ public sealed class PdfGenerator
         catch (ArgumentException)
         {
         }
+        catch (NullReferenceException)
+        {
+        }
 
         font = null!;
         return false;
@@ -463,11 +538,11 @@ public sealed class PdfGenerator
     private static double ResolveBorderWidth(ReportBorderStyle style) =>
         style switch
         {
-            ReportBorderStyle.Thick => 2d,
-            ReportBorderStyle.Medium => 1d,
-            ReportBorderStyle.DoubleLine => 1.5d,
+            ReportBorderStyle.Thick => 2.25d,
+            ReportBorderStyle.Medium => 1.5d,
+            ReportBorderStyle.DoubleLine => 0.75d,
             ReportBorderStyle.Hair => 0.25d,
-            _ => 0.5d,
+            _ => 0.75d,
         };
 
     private static void ApplyBorderStyle(XPen pen, ReportBorderStyle style)
@@ -486,22 +561,246 @@ public sealed class PdfGenerator
         }
     }
 
-    private static void DrawDoubleBorder(XGraphics graphics, XPen pen, ReportLine line)
+    private static void DrawDoubleBorder(XGraphics graphics, XColor color, double width, ReportLine line)
     {
-        var gap = Math.Max(0.75d, pen.Width);
+        var gap = Math.Max(1.5d, width * 1.5d);
         if (Math.Abs(line.Y1 - line.Y2) < 0.01d)
         {
-            graphics.DrawLine(pen, line.X1, line.Y1 - (gap / 2d), line.X2, line.Y2 - (gap / 2d));
-            graphics.DrawLine(pen, line.X1, line.Y1 + (gap / 2d), line.X2, line.Y2 + (gap / 2d));
+            DrawSolidBorder(
+                graphics,
+                color,
+                width,
+                line with
+                {
+                    Y1 = line.Y1 - (gap / 2d),
+                    Y2 = line.Y2 - (gap / 2d),
+                });
+            DrawSolidBorder(
+                graphics,
+                color,
+                width,
+                line with
+                {
+                    Y1 = line.Y1 + (gap / 2d),
+                    Y2 = line.Y2 + (gap / 2d),
+                });
             return;
         }
 
-        graphics.DrawLine(pen, line.X1 - (gap / 2d), line.Y1, line.X2 - (gap / 2d), line.Y2);
-        graphics.DrawLine(pen, line.X1 + (gap / 2d), line.Y1, line.X2 + (gap / 2d), line.Y2);
+        DrawSolidBorder(
+            graphics,
+            color,
+            width,
+            line with
+            {
+                X1 = line.X1 - (gap / 2d),
+                X2 = line.X2 - (gap / 2d),
+            });
+        DrawSolidBorder(
+            graphics,
+            color,
+            width,
+            line with
+            {
+                X1 = line.X1 + (gap / 2d),
+                X2 = line.X2 + (gap / 2d),
+            });
     }
+
+    private static XStringFormat ResolveStringFormat(ReportCell cell)
+    {
+        var horizontalAlignment = ResolveHorizontalAlignment(cell);
+        var verticalAlignment = cell.Style.Alignment.Vertical;
+        return new XStringFormat
+        {
+            Alignment = horizontalAlignment switch
+            {
+                ReportHorizontalAlignment.Center => XStringAlignment.Center,
+                ReportHorizontalAlignment.Right => XStringAlignment.Far,
+                _ => XStringAlignment.Near,
+            },
+            LineAlignment = verticalAlignment switch
+            {
+                ReportVerticalAlignment.Center => XLineAlignment.Center,
+                ReportVerticalAlignment.Bottom => XLineAlignment.Far,
+                _ => XLineAlignment.Near,
+            },
+        };
+    }
+
+    private static XParagraphAlignment ResolveParagraphAlignment(ReportCell cell) =>
+        ResolveHorizontalAlignment(cell) switch
+        {
+            ReportHorizontalAlignment.Center => XParagraphAlignment.Center,
+            ReportHorizontalAlignment.Right => XParagraphAlignment.Right,
+            ReportHorizontalAlignment.Justify => XParagraphAlignment.Justify,
+            _ => XParagraphAlignment.Left,
+        };
+
+    private static ReportHorizontalAlignment ResolveHorizontalAlignment(ReportCell cell)
+    {
+        if (cell.Style.Alignment.Horizontal != ReportHorizontalAlignment.General)
+        {
+            return cell.Style.Alignment.Horizontal;
+        }
+
+        return cell.Value.Kind switch
+        {
+            ReportCellValueKind.Number => ReportHorizontalAlignment.Right,
+            ReportCellValueKind.DateTime => ReportHorizontalAlignment.Right,
+            _ => ReportHorizontalAlignment.Left,
+        };
+    }
+
+    private static void DrawBorderSide(
+        XGraphics graphics,
+        ReportBorder border,
+        ReportLine line,
+        HashSet<string> drawnLines)
+    {
+        if (border.Style == ReportBorderStyle.None)
+        {
+            return;
+        }
+
+        var lineKey = BuildLineKey(line);
+        if (!drawnLines.Add(lineKey))
+        {
+            return;
+        }
+
+        var borderColor = ToColor(border.ColorHex);
+        var borderWidth = border.Width > 0d ? border.Width : ResolveBorderWidth(border.Style);
+        var pen = new XPen(borderColor, borderWidth);
+        ApplyBorderStyle(pen, border.Style);
+        if (border.Style == ReportBorderStyle.DoubleLine)
+        {
+            DrawDoubleBorder(graphics, borderColor, borderWidth, line);
+            return;
+        }
+
+        if (IsSolidBorder(border.Style))
+        {
+            DrawSolidBorder(graphics, borderColor, borderWidth, line);
+            return;
+        }
+
+        graphics.DrawLine(pen, line.X1, line.Y1, line.X2, line.Y2);
+    }
+
+    private static void DrawSolidBorder(XGraphics graphics, XColor color, double width, ReportLine line)
+    {
+        var brush = new XSolidBrush(color);
+        if (Math.Abs(line.Y1 - line.Y2) < 0.01d)
+        {
+            var left = Math.Min(line.X1, line.X2);
+            var top = line.Y1 - (width / 2d);
+            graphics.DrawRectangle(brush, left, top, Math.Abs(line.X2 - line.X1), width);
+            return;
+        }
+
+        var leftEdge = line.X1 - (width / 2d);
+        var topEdge = Math.Min(line.Y1, line.Y2);
+        graphics.DrawRectangle(brush, leftEdge, topEdge, width, Math.Abs(line.Y2 - line.Y1));
+    }
+
+    private static bool IsSolidBorder(ReportBorderStyle style) =>
+        style is ReportBorderStyle.Hair or ReportBorderStyle.Thin or ReportBorderStyle.Medium or ReportBorderStyle.Thick;
+
+    private static ReportBorders ResolveMergedBorders(ReportSheet sourceSheet, ReportCell ownerCell)
+    {
+        ArgumentNullException.ThrowIfNull(sourceSheet);
+        ArgumentNullException.ThrowIfNull(ownerCell);
+
+        var mergeInfo = ownerCell.Merge ?? throw new InvalidOperationException("Merged border resolution requires merge info.");
+        var mergedCells = sourceSheet.Cells
+            .Where(cell => mergeInfo.Range.Contains(cell.Row, cell.Column))
+            .ToList();
+
+        var mergedBorders = new ReportBorders
+        {
+            Top = ResolveMergedBorder(
+                mergedCells,
+                mergeInfo.Range.StartRow,
+                mergeInfo.Range.StartColumn,
+                mergeInfo.Range.EndColumn,
+                static cell => cell.Row,
+                static cell => cell.Column,
+                static cell => cell.Style.Borders.Top),
+            Right = ResolveMergedBorder(
+                mergedCells,
+                mergeInfo.Range.EndColumn,
+                mergeInfo.Range.StartRow,
+                mergeInfo.Range.EndRow,
+                static cell => cell.Column,
+                static cell => cell.Row,
+                static cell => cell.Style.Borders.Right),
+            Bottom = ResolveMergedBorder(
+                mergedCells,
+                mergeInfo.Range.EndRow,
+                mergeInfo.Range.StartColumn,
+                mergeInfo.Range.EndColumn,
+                static cell => cell.Row,
+                static cell => cell.Column,
+                static cell => cell.Style.Borders.Bottom),
+            Left = ResolveMergedBorder(
+                mergedCells,
+                mergeInfo.Range.StartColumn,
+                mergeInfo.Range.StartRow,
+                mergeInfo.Range.EndRow,
+                static cell => cell.Column,
+                static cell => cell.Row,
+                static cell => cell.Style.Borders.Left),
+        };
+
+        return mergedBorders;
+    }
+
+    private static ReportBorder ResolveMergedBorder(
+        IReadOnlyList<ReportCell> mergedCells,
+        int fixedIndex,
+        int rangeStart,
+        int rangeEnd,
+        Func<ReportCell, int> fixedSelector,
+        Func<ReportCell, int> rangeSelector,
+        Func<ReportCell, ReportBorder> borderSelector)
+    {
+        ReportBorder? bestBorder = null;
+        foreach (var cell in mergedCells.Where(cell => fixedSelector(cell) == fixedIndex && rangeSelector(cell) >= rangeStart && rangeSelector(cell) <= rangeEnd))
+        {
+            var border = borderSelector(cell);
+            if (bestBorder is null || GetBorderPriority(border.Style) > GetBorderPriority(bestBorder.Style))
+            {
+                bestBorder = border;
+            }
+        }
+
+        return bestBorder ?? new ReportBorder();
+    }
+
+    private static int GetBorderPriority(ReportBorderStyle style) =>
+        style switch
+        {
+            ReportBorderStyle.DoubleLine => 6,
+            ReportBorderStyle.Thick => 5,
+            ReportBorderStyle.Medium => 4,
+            ReportBorderStyle.Thin => 3,
+            ReportBorderStyle.DashDot => 2,
+            ReportBorderStyle.Dashed => 2,
+            ReportBorderStyle.Dotted => 2,
+            ReportBorderStyle.Hair => 1,
+            _ => 0,
+        };
 
     private sealed record HeaderFooterSections(string Left, string Center, string Right)
     {
         public static HeaderFooterSections Empty { get; } = new(string.Empty, string.Empty, string.Empty);
+    }
+
+    private static string BuildLineKey(ReportLine line)
+    {
+        return string.Create(
+            CultureInfo.InvariantCulture,
+            $"{Math.Round(Math.Min(line.X1, line.X2), 4)}:{Math.Round(Math.Min(line.Y1, line.Y2), 4)}:{Math.Round(Math.Max(line.X1, line.X2), 4)}:{Math.Round(Math.Max(line.Y1, line.Y2), 4)}");
     }
 }

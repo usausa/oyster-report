@@ -50,6 +50,7 @@ public sealed class ExcelReader
         {
             DefaultFontName = workbook.Style.Font.FontName,
             DefaultFontSize = workbook.Style.Font.FontSize,
+            MaxDigitWidth = FontMeasurementHelper.ResolveMaxDigitWidth(workbook.Style.Font.FontName, workbook.Style.Font.FontSize),
         };
         var reportWorkbook = new ReportWorkbook(
             metadata ?? new ReportMetadata { TemplateName = workbook.Properties.Title ?? "Workbook" },
@@ -79,22 +80,16 @@ public sealed class ExcelReader
         IReadOnlyList<TableStyleInfo> tableStyles)
     {
         var reportSheet = new ReportSheet(worksheet.Name);
-        var usedRange = worksheet.RangeUsed();
-        if (usedRange is null)
+        var printArea = ReadPrintArea(worksheet);
+        if (!TryResolveSheetRange(worksheet, printArea, out var range))
         {
             return reportSheet;
         }
 
-        var range = new ReportRange(
-            usedRange.RangeAddress.FirstAddress.RowNumber,
-            usedRange.RangeAddress.FirstAddress.ColumnNumber,
-            usedRange.RangeAddress.LastAddress.RowNumber,
-            usedRange.RangeAddress.LastAddress.ColumnNumber);
-
         reportSheet.SetUsedRange(range);
         reportSheet.SetPageSetup(ReadPageSetup(worksheet));
         reportSheet.SetHeaderFooter(ReadHeaderFooter(worksheet));
-        reportSheet.SetPrintArea(ReadPrintArea(worksheet));
+        reportSheet.SetPrintArea(printArea);
         reportSheet.SetShowGridLines(worksheet.PageSetup.ShowGridlines);
 
         for (var rowIndex = range.StartRow; rowIndex <= range.EndRow; rowIndex++)
@@ -196,7 +191,7 @@ public sealed class ExcelReader
             },
             Fill = new ReportFill
             {
-                BackgroundColorHex = ColorHelper.ResolveHex(style.Fill.BackgroundColor, cell.Worksheet.Workbook, "#00000000"),
+                BackgroundColorHex = ResolveFillColorHex(style.Fill, cell.Worksheet.Workbook),
             },
             Borders = new ReportBorders
             {
@@ -209,6 +204,8 @@ public sealed class ExcelReader
             {
                 Horizontal = style.Alignment.Horizontal switch
                 {
+                    XLAlignmentHorizontalValues.General => ReportHorizontalAlignment.General,
+                    XLAlignmentHorizontalValues.CenterContinuous => ReportHorizontalAlignment.Center,
                     XLAlignmentHorizontalValues.Center => ReportHorizontalAlignment.Center,
                     XLAlignmentHorizontalValues.Right => ReportHorizontalAlignment.Right,
                     XLAlignmentHorizontalValues.Justify => ReportHorizontalAlignment.Justify,
@@ -244,16 +241,23 @@ public sealed class ExcelReader
             _ => ReportBorderStyle.Thin,
         };
 
+        var resolvedColorHex = ColorHelper.NormalizeHex(colorHex);
+        if (style != ReportBorderStyle.None && resolvedColorHex.StartsWith("#00", StringComparison.Ordinal))
+        {
+            resolvedColorHex = "#FF000000";
+        }
+
         return new ReportBorder
         {
             Style = style,
-            ColorHex = ColorHelper.NormalizeHex(colorHex),
+            ColorHex = resolvedColorHex,
             Width = style switch
             {
-                ReportBorderStyle.Thick => 2d,
-                ReportBorderStyle.Medium => 1d,
-                ReportBorderStyle.DoubleLine => 1.5d,
-                _ => 0.5d,
+                ReportBorderStyle.Thick => 2.25d,
+                ReportBorderStyle.Medium => 1.5d,
+                ReportBorderStyle.DoubleLine => 0.75d,
+                ReportBorderStyle.Hair => 0.25d,
+                _ => 0.75d,
             },
         };
     }
@@ -321,6 +325,69 @@ public sealed class ExcelReader
         };
     }
 
+    private static bool TryResolveSheetRange(IXLWorksheet worksheet, ReportPrintArea? printArea, out ReportRange range)
+    {
+        ArgumentNullException.ThrowIfNull(worksheet);
+
+        var contentRange = worksheet.RangeUsed();
+        var formattedRange = worksheet.RangeUsed(XLCellsUsedOptions.All);
+        if (contentRange is null && formattedRange is null && worksheet.MergedRanges.Count == 0 && printArea is null)
+        {
+            range = default!;
+            return false;
+        }
+
+        var startRow = int.MaxValue;
+        var startColumn = int.MaxValue;
+        var endRow = int.MinValue;
+        var endColumn = int.MinValue;
+
+        IncludeRange(contentRange);
+        IncludeRange(formattedRange);
+        if (printArea is not null)
+        {
+            IncludeReportRange(printArea.Range);
+        }
+
+        foreach (var mergedRange in worksheet.MergedRanges)
+        {
+            startRow = Math.Min(startRow, mergedRange.RangeAddress.FirstAddress.RowNumber);
+            startColumn = Math.Min(startColumn, mergedRange.RangeAddress.FirstAddress.ColumnNumber);
+            endRow = Math.Max(endRow, mergedRange.RangeAddress.LastAddress.RowNumber);
+            endColumn = Math.Max(endColumn, mergedRange.RangeAddress.LastAddress.ColumnNumber);
+        }
+
+        if (startRow == int.MaxValue || startColumn == int.MaxValue || endRow == int.MinValue || endColumn == int.MinValue)
+        {
+            range = default!;
+            return false;
+        }
+
+        range = new ReportRange(startRow, startColumn, endRow, endColumn);
+        return true;
+
+        void IncludeRange(IXLRange? range)
+        {
+            if (range is null)
+            {
+                return;
+            }
+
+            startRow = Math.Min(startRow, range.RangeAddress.FirstAddress.RowNumber);
+            startColumn = Math.Min(startColumn, range.RangeAddress.FirstAddress.ColumnNumber);
+            endRow = Math.Max(endRow, range.RangeAddress.LastAddress.RowNumber);
+            endColumn = Math.Max(endColumn, range.RangeAddress.LastAddress.ColumnNumber);
+        }
+
+        void IncludeReportRange(ReportRange range)
+        {
+            startRow = Math.Min(startRow, range.StartRow);
+            startColumn = Math.Min(startColumn, range.StartColumn);
+            endRow = Math.Max(endRow, range.EndRow);
+            endColumn = Math.Max(endColumn, range.EndColumn);
+        }
+    }
+
     private static ReportImage ReadImage(IXLPicture picture)
     {
         using var memoryStream = new MemoryStream();
@@ -350,18 +417,38 @@ public sealed class ExcelReader
 
     private static string? TryGetBottomRightCellAddress(IXLPicture picture)
     {
+        if (picture.Placement != XLPicturePlacement.MoveAndSize)
+        {
+            return null;
+        }
+
         try
         {
             return picture.BottomRightCell?.Address.ToStringRelative(false);
         }
-        catch (NullReferenceException)
+        catch (Exception ex) when (ex is NullReferenceException or InvalidOperationException)
         {
             return null;
         }
-        catch (InvalidOperationException)
+    }
+
+    private static string ResolveFillColorHex(IXLFill fill, IXLWorkbook workbook)
+    {
+        ArgumentNullException.ThrowIfNull(fill);
+        ArgumentNullException.ThrowIfNull(workbook);
+
+        if (fill.PatternType == XLFillPatternValues.None)
         {
-            return null;
+            return "#00000000";
         }
+
+        var background = ColorHelper.ResolveHex(fill.BackgroundColor, workbook, "#00000000");
+        if (!background.StartsWith("#00", StringComparison.Ordinal))
+        {
+            return background;
+        }
+
+        return ColorHelper.ResolveHex(fill.PatternColor, workbook, "#00000000");
     }
 
     private static void ApplyTableStyles(

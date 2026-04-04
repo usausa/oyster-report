@@ -53,6 +53,8 @@ internal sealed record PdfBorderRenderInfo
 
     public ReportBorderStyle Style { get; init; } // 線分に適用する罫線スタイル
 
+    public double Width { get; init; } // 線分に適用する罫線幅
+
     public string ColorHex { get; init; } = "#FF000000"; // 線分に適用する罫線色
 
     public string OwnerCellAddress { get; init; } = string.Empty; // この線分の由来となる代表セル番地

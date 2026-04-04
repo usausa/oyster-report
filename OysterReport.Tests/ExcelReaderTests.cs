@@ -7,6 +7,7 @@ namespace OysterReport.Tests;
 using System.Linq;
 using ClosedXML.Excel;
 using ClosedXML.Excel.Drawings;
+using OysterReport.Common;
 using OysterReport.Reading;
 using Xunit;
 
@@ -38,6 +39,22 @@ public sealed class ExcelReaderTests
         Assert.True(sheet.PageSetup.CenterHorizontally);
         Assert.Contains(sheet.Rows, row => row.Index == 2 && row.IsHidden);
         Assert.Contains(sheet.Cells, cell => cell.Address == "A2" && cell.Placeholder?.MarkerName == "Name");
+    }
+
+    [Fact]
+    public void ReadShouldPreserveGeneralAlignmentForNumericCells()
+    {
+        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        {
+            var sheet = workbook.AddWorksheet("Alignment");
+            sheet.Cell("A1").Value = 123;
+        });
+
+        var workbook = new ExcelReader().Read(stream);
+        var sheet = Assert.Single(workbook.Sheets);
+        var cell = sheet.Cells.Single(item => item.Address == "A1");
+
+        Assert.Equal(ReportHorizontalAlignment.General, cell.Style.Alignment.Horizontal);
     }
 
     [Fact]
