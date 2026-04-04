@@ -1,8 +1,9 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFrameworks>net10.0;net9.0;net8.0</TargetFrameworks>
     <CodeAnalysisRuleSet>..\Analyzers.ruleset</CodeAnalysisRuleSet>
+    <UseSharedCompilation>false</UseSharedCompilation>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -16,6 +17,11 @@
     <PackageReference Include="ClosedXML" Version="0.105.0" />
     <PackageReference Include="PDFsharp" Version="6.2.4" />
     <PackageReference Include="PDFsharp-MigraDoc" Version="6.2.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="_backup\\**\\*.cs*" />
+    <Compile Remove="Source\\**\\*.cs" />
   </ItemGroup>
 
 </Project>

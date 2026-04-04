@@ -4,6 +4,9 @@
   <Folder Name="/Library/">
     <Project Path="OysterReport/OysterReport.csproj" />
   </Folder>
+  <Folder Name="/Tests/">
+    <Project Path="OysterReport.Tests/OysterReport.Tests.csproj" />
+  </Folder>
   <Folder Name="/Solution Items/">
     <File Path=".editorconfig" />
     <File Path=".gitattributes" />

@@ -1,0 +1,44 @@
+// <copyright file="OysterReportEngineTests.cs" company="machi_pon">
+// Copyright (c) machi_pon. All rights reserved.
+// </copyright>
+
+namespace OysterReport.Tests;
+
+using OysterReport.Reading;
+using Xunit;
+
+public sealed class OysterReportEngineTests
+{
+    [Fact]
+    public void EngineShouldSupportEndToEndFlow()
+    {
+        using var input = WorkbookTestFactory.CreateWorkbook(workbook =>
+        {
+            var sheet = workbook.AddWorksheet("Report");
+            sheet.Cell("A1").Value = "{{Name}}";
+        });
+
+        var tempFile = Path.GetTempFileName();
+        try
+        {
+            using (var file = File.Create(tempFile))
+            {
+                input.CopyTo(file);
+            }
+
+            var engine = new OysterReportEngine();
+            var workbook = engine.Read(tempFile, new ExcelReadOptions());
+            var sheet = Assert.Single(workbook.Sheets);
+            sheet.ReplacePlaceholder("Name", "Bob");
+
+            using var output = new MemoryStream();
+            engine.GeneratePdf(workbook, output);
+
+            Assert.True(output.Length > 0);
+        }
+        finally
+        {
+            File.Delete(tempFile);
+        }
+    }
+}
