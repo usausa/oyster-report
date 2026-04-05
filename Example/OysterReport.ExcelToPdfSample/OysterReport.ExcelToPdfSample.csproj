@@ -9,4 +9,10 @@
     <ProjectReference Include="..\..\OysterReport\OysterReport.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="seikyusyo.xlsx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
