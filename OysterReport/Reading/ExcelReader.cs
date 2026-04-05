@@ -683,9 +683,29 @@ public sealed class ExcelReader
                 return target.TrimStart('/');
             }
 
-            var sourceDirectory = Path.GetDirectoryName(sourcePath.Replace('/', Path.DirectorySeparatorChar)) ?? string.Empty;
-            var combinedPath = Path.GetFullPath(Path.Combine(Path.DirectorySeparatorChar.ToString(), sourceDirectory, target));
-            return combinedPath.TrimStart(Path.DirectorySeparatorChar).Replace(Path.DirectorySeparatorChar, '/');
+            var normalizedTarget = target.Replace('\\', '/');
+            var normalizedSource = sourcePath.Replace('\\', '/');
+            var lastSlash = normalizedSource.LastIndexOf('/');
+            var baseDir = lastSlash >= 0 ? normalizedSource[..lastSlash] : string.Empty;
+            var combined = string.IsNullOrEmpty(baseDir) ? normalizedTarget : $"{baseDir}/{normalizedTarget}";
+            var parts = combined.Split('/');
+            var resultParts = new List<string>();
+            foreach (var part in parts)
+            {
+                if (part == "..")
+                {
+                    if (resultParts.Count > 0)
+                    {
+                        resultParts.RemoveAt(resultParts.Count - 1);
+                    }
+                }
+                else if (part.Length > 0 && part != ".")
+                {
+                    resultParts.Add(part);
+                }
+            }
+
+            return string.Join("/", resultParts);
         }
 
         private static int GetSheetOrder(string entryPath)
