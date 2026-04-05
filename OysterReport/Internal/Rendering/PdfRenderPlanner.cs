@@ -306,6 +306,7 @@ internal static class PdfRenderPlanner
                     Width = image.WidthPoint,
                     Height = image.HeightPoint,
                 },
+                ImageBytes = image.ImageBytes,
             });
         }
 

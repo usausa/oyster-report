@@ -293,8 +293,20 @@ public sealed class PdfGenerator
     {
         foreach (var image in images)
         {
-            graphics.DrawRectangle(XPens.LightGray, image.Bounds.X, image.Bounds.Y, image.Bounds.Width, image.Bounds.Height);
-            graphics.DrawString(image.Name, CreateFallbackFont(8d), XBrushes.Gray, image.Bounds.X + 2d, image.Bounds.Y + 10d);
+            if (image.ImageBytes.IsEmpty)
+            {
+                continue;
+            }
+
+            try
+            {
+                using var stream = new MemoryStream(image.ImageBytes.ToArray());
+                var xImage = XImage.FromStream(stream);
+                graphics.DrawImage(xImage, image.Bounds.X, image.Bounds.Y, image.Bounds.Width, image.Bounds.Height);
+            }
+            catch (Exception ex) when (ex is InvalidOperationException or ArgumentException or NotSupportedException)
+            {
+            }
         }
     }
 

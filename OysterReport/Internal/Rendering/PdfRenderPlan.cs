@@ -65,6 +65,8 @@ internal sealed record PdfImageRenderInfo
     public string Name { get; init; } = string.Empty; // 画像識別名
 
     public ReportRect Bounds { get; init; } // 描画に使う最終矩形
+
+    public ReadOnlyMemory<byte> ImageBytes { get; init; } // 画像バイトデータ
 }
 
 internal sealed record PdfHeaderFooterRenderInfo
