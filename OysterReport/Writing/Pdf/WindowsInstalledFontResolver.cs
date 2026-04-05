@@ -12,15 +12,11 @@ internal sealed class WindowsInstalledFontResolver : IFontResolver
     private static readonly string WindowsFontsDirectory =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
 
-    private readonly string[] fallbackFamilies;
     private readonly Dictionary<string, string> fontNameToPath;
     private readonly ConcurrentDictionary<string, byte[]> cache = new(StringComparer.OrdinalIgnoreCase);
 
-    public WindowsInstalledFontResolver(params string[] fallbackFamilies)
+    public WindowsInstalledFontResolver()
     {
-        this.fallbackFamilies = fallbackFamilies.Length > 0
-            ? fallbackFamilies
-            : ["Yu Gothic UI", "Meiryo UI", "Yu Gothic", "Meiryo", "MS UI Gothic", "Segoe UI"];
         fontNameToPath = LoadFontRegistryMap();
     }
 
@@ -34,24 +30,95 @@ internal sealed class WindowsInstalledFontResolver : IFontResolver
         ParseFaceName(faceName, out var family, out var wantBold, out var wantItalic);
         if (!TryFindFontPath(family, wantBold, wantItalic, out var path))
         {
-            foreach (var fallbackFamily in fallbackFamilies)
-            {
-                if (TryFindFontPath(fallbackFamily, wantBold, wantItalic, out path))
-                {
-                    break;
-                }
-            }
-        }
-
-        if (path is null)
-        {
             throw new FileNotFoundException(
                 $"Installed font not found for '{faceName}' (family='{family}', bold={wantBold}, italic={wantItalic}).");
         }
 
-        fontBytes = File.ReadAllBytes(path);
-        cache[faceName] = fontBytes;
-        return fontBytes;
+        var rawBytes = File.ReadAllBytes(path);
+
+        // TTC ファイルの場合は face 0 を TTF として抽出する。
+        // TryFindFontPath は StartsWith で一致するため、
+        // 常にレジストリキー先頭のフォント (face 0) が対象になる。
+        if (string.Equals(Path.GetExtension(path), ".ttc", StringComparison.OrdinalIgnoreCase))
+        {
+            rawBytes = ExtractTtfFaceFromTtc(rawBytes, faceIndex: 0);
+        }
+
+        cache[faceName] = rawBytes;
+        return rawBytes;
+    }
+
+    private static byte[] ExtractTtfFaceFromTtc(byte[] ttc, int faceIndex)
+    {
+        uint ReadUInt32(int offset) =>
+            ((uint)ttc[offset] << 24) | ((uint)ttc[offset + 1] << 16) | ((uint)ttc[offset + 2] << 8) | ttc[offset + 3];
+        ushort ReadUInt16(int offset) =>
+            (ushort)(((uint)ttc[offset] << 8) | ttc[offset + 1]);
+
+        var numFonts = (int)ReadUInt32(8);
+        if (faceIndex >= numFonts)
+        {
+            throw new ArgumentOutOfRangeException(nameof(faceIndex), $"TTC has {numFonts} faces, requested index {faceIndex}.");
+        }
+
+        var faceOffset = (int)ReadUInt32(12 + (4 * faceIndex));
+        var numTables = ReadUInt16(faceOffset + 4);
+
+        // テーブルレコードを読み込む (tag, checkSum, offset, length)
+        var tables = new (string Tag, uint CheckSum, int SrcOffset, int Length)[numTables];
+        for (var i = 0; i < numTables; i++)
+        {
+            var rec = faceOffset + 12 + (i * 16);
+            tables[i] = (
+                Tag: System.Text.Encoding.ASCII.GetString(ttc, rec, 4),
+                CheckSum: ReadUInt32(rec + 4),
+                SrcOffset: (int)ReadUInt32(rec + 8),
+                Length: (int)ReadUInt32(rec + 12));
+        }
+
+        // 新しい TTF ファイルのレイアウトを計算する
+        // OffsetTable (12 bytes) + TableRecords (numTables * 16 bytes) + table data
+        var headerSize = 12 + (numTables * 16);
+        var tableOffsets = new int[numTables];
+        var totalSize = headerSize;
+        for (var i = 0; i < numTables; i++)
+        {
+            tableOffsets[i] = totalSize;
+            totalSize += tables[i].Length;
+            // 4 バイト境界にアライン
+            if (totalSize % 4 != 0)
+            {
+                totalSize += 4 - (totalSize % 4);
+            }
+        }
+
+        // TTF バイト列を組み立てる
+        var ttf = new byte[totalSize];
+        void WriteUInt32(int offset, uint value)
+        {
+            ttf[offset] = (byte)(value >> 24);
+            ttf[offset + 1] = (byte)(value >> 16);
+            ttf[offset + 2] = (byte)(value >> 8);
+            ttf[offset + 3] = (byte)value;
+        }
+
+        // sfnt OffsetTable をコピー (sfVersion + numTables + searchRange + entrySelector + rangeShift)
+        Array.Copy(ttc, faceOffset, ttf, 0, 12);
+
+        // TableRecord を新しいオフセットで書き込む
+        for (var i = 0; i < numTables; i++)
+        {
+            var rec = 12 + (i * 16);
+            System.Text.Encoding.ASCII.GetBytes(tables[i].Tag, 0, 4, ttf, rec);
+            WriteUInt32(rec + 4, tables[i].CheckSum);
+            WriteUInt32(rec + 8, (uint)tableOffsets[i]);
+            WriteUInt32(rec + 12, (uint)tables[i].Length);
+
+            // テーブルデータをコピー
+            Array.Copy(ttc, tables[i].SrcOffset, ttf, tableOffsets[i], tables[i].Length);
+        }
+
+        return ttf;
     }
 
     public FontResolverInfo ResolveTypeface(string familyName, bool isBold, bool isItalic)
@@ -106,7 +173,8 @@ internal sealed class WindowsInstalledFontResolver : IFontResolver
                 : Path.Combine(WindowsFontsDirectory, registryValue);
             var extension = Path.GetExtension(path);
             if (!string.Equals(extension, ".ttf", StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(extension, ".otf", StringComparison.OrdinalIgnoreCase))
+                !string.Equals(extension, ".otf", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(extension, ".ttc", StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }

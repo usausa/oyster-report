@@ -18,42 +18,14 @@ public sealed class PdfGenerator
 
     private static int fontPlatformConfigured;
 
-    private static readonly string[] FallbackFontNames =
+    private static readonly string[] HeaderFooterFallbackFontNames =
     [
-        "MS PGothic",
-        "ＭＳ Ｐゴシック",
-        "MS Gothic",
-        "ＭＳ ゴシック",
-        "MS UI Gothic",
-        "Yu Gothic",
-        "Yu Gothic UI",
-        "Meiryo",
-        "Meiryo UI",
-        "Yu Mincho",
-        "MS PMincho",
-        "ＭＳ Ｐ明朝",
-        "HGPMinchoE",
-        "HGP明朝E",
         "Arial",
-        "Helvetica",
         "Segoe UI",
+        "Helvetica",
         "Liberation Sans",
         "DejaVu Sans",
-        "Noto Sans",
-        "Times New Roman",
-        "Courier New",
     ];
-
-    private static readonly Dictionary<string, string[]> KnownFontAliases =
-        new(StringComparer.OrdinalIgnoreCase)
-        {
-            ["ＭＳ Ｐゴシック"] = ["MS PGothic", "MS UI Gothic", "Yu Gothic", "Meiryo"],
-            ["MS Pゴシック"] = ["MS PGothic", "MS UI Gothic", "Yu Gothic", "Meiryo"],
-            ["MS PGothic"] = ["ＭＳ Ｐゴシック", "MS UI Gothic", "Yu Gothic", "Meiryo"],
-            ["ＭＳ ゴシック"] = ["MS Gothic", "MS PGothic", "MS UI Gothic"],
-            ["Meiryo UI"] = ["Meiryo", "Yu Gothic UI", "Yu Gothic"],
-            ["HGP明朝E"] = ["HGPMinchoE", "Yu Mincho", "MS PMincho", "ＭＳ Ｐ明朝"],
-        };
 
     public void Generate(
         ReportWorkbook workbook,
@@ -147,9 +119,7 @@ public sealed class PdfGenerator
 
         if (fontResolverProperty?.GetValue(null) is null && fallbackFontResolverProperty?.GetValue(null) is null)
         {
-            fontResolverProperty?.SetValue(
-                null,
-                new WindowsInstalledFontResolver("Yu Gothic UI", "Meiryo UI", "Yu Gothic", "Meiryo", "MS UI Gothic", "Segoe UI"));
+            fontResolverProperty?.SetValue(null, new WindowsInstalledFontResolver());
         }
     }
 
@@ -462,42 +432,11 @@ public sealed class PdfGenerator
         {
             yield return font.Name;
         }
-
-        if (!string.IsNullOrWhiteSpace(font.Name) &&
-            KnownFontAliases.TryGetValue(font.Name, out var aliases))
-        {
-            foreach (var alias in aliases)
-            {
-                if (seen.Add(alias))
-                {
-                    yield return alias;
-                }
-            }
-        }
-
-        if (string.Equals(font.Name, "Calibri", StringComparison.OrdinalIgnoreCase))
-        {
-            foreach (var preferredFallback in new[] { "Arial", "Segoe UI", "Helvetica" })
-            {
-                if (seen.Add(preferredFallback))
-                {
-                    yield return preferredFallback;
-                }
-            }
-        }
-
-        foreach (var fallbackFontName in FallbackFontNames)
-        {
-            if (seen.Add(fallbackFontName))
-            {
-                yield return fallbackFontName;
-            }
-        }
     }
 
     private static XFont CreateFallbackFont(double size)
     {
-        foreach (var fontName in FallbackFontNames)
+        foreach (var fontName in HeaderFooterFallbackFontNames)
         {
             if (TryCreateFont(fontName, size, XFontStyleEx.Regular, out var font))
             {
@@ -512,7 +451,7 @@ public sealed class PdfGenerator
     {
         try
         {
-            font = new XFont(fontName, size, style, new XPdfFontOptions(PdfFontEncoding.Unicode, PdfFontEmbedding.EmbedCompleteFontFile));
+            font = new XFont(fontName, size, style, new XPdfFontOptions(PdfFontEncoding.Unicode, PdfFontEmbedding.TryComputeSubset));
             return true;
         }
         catch (InvalidOperationException)
