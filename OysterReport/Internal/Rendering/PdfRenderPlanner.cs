@@ -43,13 +43,13 @@ internal static class PdfRenderPlanner
             .OrderBy(column => column.Index)
             .ToList();
 
-        var contentHeight = visibleRows.Sum(row => row.HeightPoint);
         var contentWidth = visibleColumns.Sum(column => column.WidthPoint);
         var contentOffsetX = sheet.PageSetup.CenterHorizontally
             ? Math.Max(0d, (printableBounds.Width - contentWidth) / 2d)
             : 0d;
+        var centeringHeight = ComputeFittingHeight(visibleRows, printableBounds.Height);
         var contentOffsetY = sheet.PageSetup.CenterVertically
-            ? Math.Max(0d, (printableBounds.Height - contentHeight) / 2d)
+            ? Math.Max(0d, (printableBounds.Height - centeringHeight) / 2d)
             : 0d;
 
         var rowOffsets = new Dictionary<int, double>();
@@ -398,6 +398,22 @@ internal static class PdfRenderPlanner
         string.Create(
             CultureInfo.InvariantCulture,
             $"{prefix}:{Math.Round(x1, 4)}:{Math.Round(y1, 4)}:{Math.Round(x2, 4)}:{Math.Round(y2, 4)}");
+
+    private static double ComputeFittingHeight(IReadOnlyList<ReportRow> rows, double maxHeight)
+    {
+        var height = 0d;
+        foreach (var row in rows)
+        {
+            if (height + row.HeightPoint > maxHeight)
+            {
+                break;
+            }
+
+            height += row.HeightPoint;
+        }
+
+        return height;
+    }
 
     private static int GetBorderPriority(ReportBorderStyle style) =>
         style switch

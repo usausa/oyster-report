@@ -45,6 +45,7 @@ public sealed class ExcelReader
         workbookStream.Position = 0;
 
         var workbookTableStyles = WorkbookTableStyleMap.Load(workbookBytes);
+        var rawColumnWidths = WorkbookRawColumnWidths.Load(workbookBytes);
         using var workbook = new XLWorkbook(workbookStream);
         var measurementProfile = new ReportMeasurementProfile
         {
@@ -67,7 +68,7 @@ public sealed class ExcelReader
             }
 
             var sheetTableStyles = workbookTableStyles.GetTableStyles(worksheetIndex);
-            reportWorkbook.AddSheet(ReadSheet(worksheet, measurementProfile, options?.IncludeImages ?? true, sheetTableStyles));
+            reportWorkbook.AddSheet(ReadSheet(worksheet, measurementProfile, options?.IncludeImages ?? true, sheetTableStyles, worksheetIndex, rawColumnWidths));
         }
 
         return reportWorkbook;
@@ -77,7 +78,9 @@ public sealed class ExcelReader
         IXLWorksheet worksheet,
         ReportMeasurementProfile measurementProfile,
         bool includeImages,
-        IReadOnlyList<TableStyleInfo> tableStyles)
+        IReadOnlyList<TableStyleInfo> tableStyles,
+        int sheetIndex,
+        WorkbookRawColumnWidths rawColumnWidths)
     {
         var reportSheet = new ReportSheet(worksheet.Name);
         var printArea = ReadPrintArea(worksheet);
@@ -101,7 +104,10 @@ public sealed class ExcelReader
         for (var columnIndex = range.StartColumn; columnIndex <= range.EndColumn; columnIndex++)
         {
             var column = worksheet.Column(columnIndex);
-            var widthPoint = ColumnWidthConverter.ToPoint(column.Width, measurementProfile.MaxDigitWidth, measurementProfile.ColumnWidthAdjustment);
+            var rawWidth = rawColumnWidths.TryGetRawWidth(sheetIndex, columnIndex);
+            var widthPoint = rawWidth.HasValue
+                ? Math.Ceiling(rawWidth.Value * measurementProfile.MaxDigitWidth) * (72d / 96d) * measurementProfile.ColumnWidthAdjustment
+                : ColumnWidthConverter.ToPoint(column.Width, measurementProfile.MaxDigitWidth, measurementProfile.ColumnWidthAdjustment);
             reportSheet.AddColumnDefinition(new ReportColumn(columnIndex, widthPoint, column.IsHidden, column.OutlineLevel, column.Width));
         }
 
@@ -528,6 +534,114 @@ public sealed class ExcelReader
         bool ShowRowStripes,
         bool HasHeaderRow,
         bool HasTotalsRow);
+
+    private sealed class WorkbookRawColumnWidths
+    {
+        private readonly IReadOnlyList<IReadOnlyList<(int Min, int Max, double Width)>> sheetColumnRanges;
+
+        private WorkbookRawColumnWidths(IReadOnlyList<IReadOnlyList<(int Min, int Max, double Width)>> sheetColumnRanges)
+        {
+            this.sheetColumnRanges = sheetColumnRanges;
+        }
+
+        public static WorkbookRawColumnWidths Load(byte[] workbookBytes)
+        {
+            ArgumentNullException.ThrowIfNull(workbookBytes);
+
+            using var stream = new MemoryStream(workbookBytes, writable: false);
+            using var archive = new ZipArchive(stream, ZipArchiveMode.Read, leaveOpen: false);
+            var mainNamespace = XNamespace.Get("http://schemas.openxmlformats.org/spreadsheetml/2006/main");
+
+            var sheetRanges = archive.Entries
+                .Where(entry => entry.FullName.StartsWith("xl/worksheets/sheet", StringComparison.OrdinalIgnoreCase) &&
+                                entry.FullName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
+                .OrderBy(entry => GetSheetOrder(entry.FullName))
+                .Select(entry => LoadSheetColumnRanges(archive, entry.FullName, mainNamespace))
+                .ToList();
+
+            return new WorkbookRawColumnWidths(sheetRanges);
+        }
+
+        public double? TryGetRawWidth(int sheetIndex, int columnIndex)
+        {
+            if (sheetIndex < 0 || sheetIndex >= sheetColumnRanges.Count)
+            {
+                return null;
+            }
+
+            foreach (var (min, max, width) in sheetColumnRanges[sheetIndex])
+            {
+                if (columnIndex >= min && columnIndex <= max)
+                {
+                    return width;
+                }
+            }
+
+            return null;
+        }
+
+        private static IReadOnlyList<(int Min, int Max, double Width)> LoadSheetColumnRanges(
+            ZipArchive archive, string sheetPath, XNamespace mainNamespace)
+        {
+            var doc = LoadXml(archive, sheetPath);
+            if (doc.Root is null)
+            {
+                return Array.Empty<(int, int, double)>();
+            }
+
+            var results = new List<(int Min, int Max, double Width)>();
+            var colsElement = doc.Root.Element(mainNamespace + "cols");
+            if (colsElement is null)
+            {
+                return results;
+            }
+
+            foreach (var col in colsElement.Elements(mainNamespace + "col"))
+            {
+                if (!double.TryParse(
+                        col.Attribute("width")?.Value,
+                        NumberStyles.Number,
+                        CultureInfo.InvariantCulture,
+                        out var width) || width <= 0)
+                {
+                    continue;
+                }
+
+                if (!int.TryParse(col.Attribute("min")?.Value, out var min) ||
+                    !int.TryParse(col.Attribute("max")?.Value, out var max) ||
+                    min <= 0 || max < min)
+                {
+                    continue;
+                }
+
+                results.Add((min, max, width));
+            }
+
+            return results;
+        }
+
+        private static int GetSheetOrder(string entryPath)
+        {
+            var fileName = Path.GetFileNameWithoutExtension(entryPath.Replace('/', Path.DirectorySeparatorChar));
+            return fileName is not null && fileName.StartsWith("sheet", StringComparison.OrdinalIgnoreCase) &&
+                   int.TryParse(fileName["sheet".Length..], out var order)
+                ? order
+                : int.MaxValue;
+        }
+
+        private static XDocument LoadXml(ZipArchive archive, string path)
+        {
+            var normalizedPath = path.Replace('\\', '/');
+            var entry = archive.GetEntry(normalizedPath);
+            if (entry is null)
+            {
+                return new XDocument();
+            }
+
+            using var entryStream = entry.Open();
+            return XDocument.Load(entryStream);
+        }
+    }
 
     private sealed class WorkbookTableStyleMap
     {
