@@ -134,18 +134,48 @@ public sealed class PdfGenerator
         IReadOnlyList<PdfCellRenderInfo> cells,
         PdfGenerateOptions options)
     {
+        var sourceCellsByAddress = sourceSheet.Cells.ToDictionary(cell => cell.Address, StringComparer.Ordinal);
+
+        var backgroundGroups = new Dictionary<string, List<ReportRect>>(StringComparer.Ordinal);
         foreach (var renderCell in cells)
         {
-            var sourceCell = sourceSheet.Cells.First(cell => cell.Address == renderCell.CellAddress);
-            if (!IsTransparentColor(sourceCell.Style.Fill.BackgroundColorHex))
+            if (!sourceCellsByAddress.TryGetValue(renderCell.CellAddress, out var cell))
             {
-                var backgroundBrush = new XSolidBrush(ToColor(sourceCell.Style.Fill.BackgroundColorHex));
-                graphics.DrawRectangle(
-                    backgroundBrush,
-                    renderCell.OuterBounds.X,
-                    renderCell.OuterBounds.Y,
-                    renderCell.OuterBounds.Width,
-                    renderCell.OuterBounds.Height);
+                continue;
+            }
+
+            var colorHex = cell.Style.Fill.BackgroundColorHex;
+            if (IsTransparentColor(colorHex))
+            {
+                continue;
+            }
+
+            if (!backgroundGroups.TryGetValue(colorHex, out var rects))
+            {
+                rects = [];
+                backgroundGroups[colorHex] = rects;
+            }
+
+            rects.Add(renderCell.OuterBounds);
+        }
+
+        foreach (var (colorHex, rects) in backgroundGroups)
+        {
+            var brush = new XSolidBrush(ToColor(colorHex));
+            var path = new XGraphicsPath();
+            foreach (var rect in rects)
+            {
+                path.AddRectangle(new XRect(rect.X, rect.Y, rect.Width, rect.Height));
+            }
+
+            graphics.DrawPath(brush, path);
+        }
+
+        foreach (var renderCell in cells)
+        {
+            if (!sourceCellsByAddress.TryGetValue(renderCell.CellAddress, out var sourceCell))
+            {
+                continue;
             }
 
             if (!renderCell.IsMergedOwner && sourceCell.Merge is not null)
@@ -194,7 +224,7 @@ public sealed class PdfGenerator
     private static void DrawBorders(XGraphics graphics, ReportSheet sourceSheet, IReadOnlyList<PdfCellRenderInfo> cells)
     {
         var sourceCellsByAddress = sourceSheet.Cells.ToDictionary(cell => cell.Address, StringComparer.Ordinal);
-        var drawnLines = new HashSet<string>(StringComparer.Ordinal);
+        var collectedLines = new Dictionary<string, (ReportLine Line, ReportBorder Border)>(StringComparer.Ordinal);
 
         foreach (var renderCell in cells)
         {
@@ -212,8 +242,7 @@ public sealed class PdfGenerator
                 ? sourceCell.Style.Borders
                 : ResolveMergedBorders(sourceSheet, sourceCell);
             var cellBounds = renderCell.OuterBounds;
-            DrawBorderSide(
-                graphics,
+            CollectBorderSide(
                 borders.Top,
                 new ReportLine
                 {
@@ -222,9 +251,8 @@ public sealed class PdfGenerator
                     X2 = cellBounds.Right,
                     Y2 = cellBounds.Y,
                 },
-                drawnLines);
-            DrawBorderSide(
-                graphics,
+                collectedLines);
+            CollectBorderSide(
                 borders.Right,
                 new ReportLine
                 {
@@ -233,9 +261,8 @@ public sealed class PdfGenerator
                     X2 = cellBounds.Right,
                     Y2 = cellBounds.Bottom,
                 },
-                drawnLines);
-            DrawBorderSide(
-                graphics,
+                collectedLines);
+            CollectBorderSide(
                 borders.Bottom,
                 new ReportLine
                 {
@@ -244,9 +271,8 @@ public sealed class PdfGenerator
                     X2 = cellBounds.X,
                     Y2 = cellBounds.Bottom,
                 },
-                drawnLines);
-            DrawBorderSide(
-                graphics,
+                collectedLines);
+            CollectBorderSide(
                 borders.Left,
                 new ReportLine
                 {
@@ -255,8 +281,54 @@ public sealed class PdfGenerator
                     X2 = cellBounds.X,
                     Y2 = cellBounds.Y,
                 },
-                drawnLines);
+                collectedLines);
         }
+
+        foreach (var (line, border) in collectedLines.Values.OrderBy(entry => GetBorderPriority(entry.Border.Style)))
+        {
+            DrawBorderLine(graphics, border, line);
+        }
+    }
+
+    private static void CollectBorderSide(
+        ReportBorder border,
+        ReportLine line,
+        Dictionary<string, (ReportLine Line, ReportBorder Border)> collectedLines)
+    {
+        if (border.Style == ReportBorderStyle.None)
+        {
+            return;
+        }
+
+        var lineKey = BuildLineKey(line);
+        if (collectedLines.TryGetValue(lineKey, out var existing) &&
+            GetBorderPriority(existing.Border.Style) >= GetBorderPriority(border.Style))
+        {
+            return;
+        }
+
+        collectedLines[lineKey] = (line, border);
+    }
+
+    private static void DrawBorderLine(XGraphics graphics, ReportBorder border, ReportLine line)
+    {
+        var borderColor = ToColor(border.ColorHex);
+        var borderWidth = border.Width > 0d ? border.Width : ResolveBorderWidth(border.Style);
+        var pen = new XPen(borderColor, borderWidth);
+        ApplyBorderStyle(pen, border.Style);
+        if (border.Style == ReportBorderStyle.DoubleLine)
+        {
+            DrawDoubleBorder(graphics, borderColor, borderWidth, line);
+            return;
+        }
+
+        if (IsSolidBorder(border.Style))
+        {
+            DrawSolidBorder(graphics, borderColor, borderWidth, line);
+            return;
+        }
+
+        graphics.DrawLine(pen, line.X1, line.Y1, line.X2, line.Y2);
     }
 
     private static void DrawImages(XGraphics graphics, IReadOnlyList<PdfImageRenderInfo> images)
@@ -601,42 +673,6 @@ public sealed class PdfGenerator
             ReportCellValueKind.DateTime => ReportHorizontalAlignment.Right,
             _ => ReportHorizontalAlignment.Left,
         };
-    }
-
-    private static void DrawBorderSide(
-        XGraphics graphics,
-        ReportBorder border,
-        ReportLine line,
-        HashSet<string> drawnLines)
-    {
-        if (border.Style == ReportBorderStyle.None)
-        {
-            return;
-        }
-
-        var lineKey = BuildLineKey(line);
-        if (!drawnLines.Add(lineKey))
-        {
-            return;
-        }
-
-        var borderColor = ToColor(border.ColorHex);
-        var borderWidth = border.Width > 0d ? border.Width : ResolveBorderWidth(border.Style);
-        var pen = new XPen(borderColor, borderWidth);
-        ApplyBorderStyle(pen, border.Style);
-        if (border.Style == ReportBorderStyle.DoubleLine)
-        {
-            DrawDoubleBorder(graphics, borderColor, borderWidth, line);
-            return;
-        }
-
-        if (IsSolidBorder(border.Style))
-        {
-            DrawSolidBorder(graphics, borderColor, borderWidth, line);
-            return;
-        }
-
-        graphics.DrawLine(pen, line.X1, line.Y1, line.X2, line.Y2);
     }
 
     private static void DrawSolidBorder(XGraphics graphics, XColor color, double width, ReportLine line)

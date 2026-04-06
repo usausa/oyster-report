@@ -11,24 +11,6 @@ var outputPath = ResolveOutputPath(args, inputPath);
 var engine = new OysterReportEngine();
 var workbook = engine.Read(inputPath);
 
-// --- 罫線診断 ---
-var sheet = workbook.Sheets[0];
-foreach (var addr in new[] { "B1", "C1", "D1", "E1", "F1" })
-{
-    var cell = sheet.Cells.FirstOrDefault(c => c.Address == addr);
-    if (cell is null)
-    {
-        Console.WriteLine($"{addr}: (cell not found)");
-        continue;
-    }
-
-    var b = cell.Style.Borders;
-    var f = cell.Style.Fill;
-    Console.WriteLine($"{addr}: fill={f.BackgroundColorHex}  L={b.Left.Style} T={b.Top.Style} R={b.Right.Style} B={b.Bottom.Style}");
-}
-
-// --- 罫線診断終了 ---
-
 var options = new PdfGenerateOptions
 {
     FontResolver = new JapaneseFontResolver(),
