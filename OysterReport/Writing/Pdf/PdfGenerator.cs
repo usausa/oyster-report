@@ -196,28 +196,44 @@ public sealed class PdfGenerator
                 Math.Max(0, renderCell.ContentBounds.Width),
                 Math.Max(0, renderCell.ContentBounds.Height));
 
-            if (sourceCell.Style.WrapText || sourceCell.DisplayText.Contains('\n', StringComparison.Ordinal))
-            {
-                var formatter = new XTextFormatter(graphics)
-                {
-                    Alignment = ResolveParagraphAlignment(sourceCell),
-                };
+            var clipRect = new XRect(
+                renderCell.TextBounds.X,
+                renderCell.TextBounds.Y,
+                Math.Max(0, renderCell.TextBounds.Width),
+                Math.Max(0, renderCell.TextBounds.Height));
 
-                formatter.DrawString(
+            var clipState = graphics.Save();
+            try
+            {
+                graphics.IntersectClip(clipRect);
+
+                if (sourceCell.Style.WrapText || sourceCell.DisplayText.Contains('\n', StringComparison.Ordinal))
+                {
+                    var formatter = new XTextFormatter(graphics)
+                    {
+                        Alignment = ResolveParagraphAlignment(sourceCell),
+                    };
+
+                    formatter.DrawString(
+                        sourceCell.DisplayText,
+                        font,
+                        textBrush,
+                        textRect,
+                        ResolveStringFormat(sourceCell));
+                    continue;
+                }
+
+                graphics.DrawString(
                     sourceCell.DisplayText,
                     font,
                     textBrush,
                     textRect,
                     ResolveStringFormat(sourceCell));
-                continue;
             }
-
-            graphics.DrawString(
-                sourceCell.DisplayText,
-                font,
-                textBrush,
-                textRect,
-                ResolveStringFormat(sourceCell));
+            finally
+            {
+                graphics.Restore(clipState);
+            }
         }
     }
 

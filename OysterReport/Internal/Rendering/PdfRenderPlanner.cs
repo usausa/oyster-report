@@ -14,14 +14,14 @@ internal static class PdfRenderPlanner
         ArgumentNullException.ThrowIfNull(workbook);
         ArgumentNullException.ThrowIfNull(options);
 
-        var sheets = workbook.Sheets.Select((sheet, index) => BuildSheetPlan(sheet, workbook.MeasurementProfile, index + 1)).ToList();
+        var sheets = workbook.Sheets.Select((sheet, index) => BuildSheetPlan(sheet, index + 1)).ToList();
         return new PdfRenderPlan
         {
             Sheets = sheets,
         };
     }
 
-    private static PdfRenderSheetPlan BuildSheetPlan(ReportSheet sheet, ReportMeasurementProfile measurementProfile, int sheetNumber)
+    private static PdfRenderSheetPlan BuildSheetPlan(ReportSheet sheet, int sheetNumber)
     {
         var pageBounds = ResolvePageBounds(sheet.PageSetup);
         var printableBounds = new ReportRect
@@ -69,6 +69,9 @@ internal static class PdfRenderPlanner
         }
 
         var mergedRanges = sheet.MergedRanges.ToDictionary(range => range.OwnerCellAddress, range => range);
+        var cellsByRowCol = sheet.Cells.ToDictionary(c => (c.Row, c.Column));
+        var columnByIndex = visibleColumns.ToDictionary(c => c.Index);
+        var mergedRangeByCell = BuildMergedRangeByCell(sheet.MergedRanges);
         var pageCells = new List<PdfCellRenderInfo>();
         foreach (var cell in sheet.Cells.Where(cell => rowOffsets.ContainsKey(cell.Row) && columnOffsets.ContainsKey(cell.Column)))
         {
@@ -92,7 +95,16 @@ internal static class PdfRenderPlanner
                 CellAddress = cell.Address,
                 OuterBounds = outerBounds,
                 ContentBounds = contentBounds,
-                TextBounds = EstimateTextBounds(contentBounds, cell.DisplayText, measurementProfile, cell.Style.Font.Size),
+                TextBounds = ComputeTextOverflowBounds(
+                    cell,
+                    contentBounds,
+                    outerBounds,
+                    isMergedOwner,
+                    isMergedOwner ? mergedRanges.GetValueOrDefault(cell.Address) : null,
+                    cellsByRowCol,
+                    columnByIndex,
+                    columnOffsets,
+                    mergedRangeByCell),
                 IsMergedOwner = isMergedOwner,
                 IsClipped = false,
             });
@@ -148,17 +160,86 @@ internal static class PdfRenderPlanner
         };
     }
 
-    private static ReportRect EstimateTextBounds(ReportRect contentBounds, string text, ReportMeasurementProfile measurementProfile, double fontSize)
+    private static Dictionary<(int Row, int Column), ReportMergedRange> BuildMergedRangeByCell(
+        IReadOnlyList<ReportMergedRange> mergedRanges)
     {
-        var effectiveFontSize = fontSize <= 0 ? measurementProfile.DefaultFontSize : fontSize;
-        var width = Math.Min(contentBounds.Width, Math.Max(0, text.Length * effectiveFontSize * 0.55d));
-        var height = Math.Min(contentBounds.Height, Math.Max(effectiveFontSize + 2d, 0));
-        return new ReportRect
+        var map = new Dictionary<(int, int), ReportMergedRange>();
+        foreach (var mr in mergedRanges)
         {
-            X = contentBounds.X,
-            Y = contentBounds.Y,
-            Width = width,
-            Height = height,
+            for (var r = mr.Range.StartRow; r <= mr.Range.EndRow; r++)
+            {
+                for (var c = mr.Range.StartColumn; c <= mr.Range.EndColumn; c++)
+                {
+                    map[(r, c)] = mr;
+                }
+            }
+        }
+
+        return map;
+    }
+
+    private static ReportRect ComputeTextOverflowBounds(
+        ReportCell cell,
+        ReportRect contentBounds,
+        ReportRect outerBounds,
+        bool isMergedOwner,
+        ReportMergedRange? mergedRange,
+        Dictionary<(int Row, int Column), ReportCell> cellsByRowCol,
+        Dictionary<int, ReportColumn> columnByIndex,
+        Dictionary<int, double> columnOffsets,
+        Dictionary<(int Row, int Column), ReportMergedRange> mergedRangeByCell)
+    {
+        if (cell.Style.WrapText || cell.DisplayText.Contains('\n', StringComparison.Ordinal))
+        {
+            return contentBounds;
+        }
+
+        if (cell.Style.Alignment.Horizontal != ReportHorizontalAlignment.General &&
+            cell.Style.Alignment.Horizontal != ReportHorizontalAlignment.Left)
+        {
+            return contentBounds;
+        }
+
+        var rightmostCol = cell.Column;
+        if (isMergedOwner && mergedRange != null)
+        {
+            rightmostCol = mergedRange.Range.EndColumn;
+        }
+
+        var overflowRight = outerBounds.Right;
+        var nextCol = rightmostCol + 1;
+
+        while (columnOffsets.TryGetValue(nextCol, out var nextColLeft) &&
+               columnByIndex.TryGetValue(nextCol, out var nextColInfo))
+        {
+            if (cellsByRowCol.TryGetValue((cell.Row, nextCol), out var adjacentCell))
+            {
+                if (!string.IsNullOrEmpty(adjacentCell.DisplayText))
+                {
+                    break;
+                }
+
+                if (adjacentCell.Style.Borders.Left.Style != ReportBorderStyle.None)
+                {
+                    break;
+                }
+            }
+
+            overflowRight = nextColLeft + nextColInfo.WidthPoint;
+
+            if (mergedRangeByCell.TryGetValue((cell.Row, nextCol), out var adjMerged))
+            {
+                nextCol = adjMerged.Range.EndColumn + 1;
+            }
+            else
+            {
+                nextCol++;
+            }
+        }
+
+        return contentBounds with
+        {
+            Width = Math.Max(contentBounds.Width, overflowRight - contentBounds.X),
         };
     }
 

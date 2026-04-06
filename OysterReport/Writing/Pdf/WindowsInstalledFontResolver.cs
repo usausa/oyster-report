@@ -12,12 +12,12 @@ internal sealed class WindowsInstalledFontResolver : IFontResolver
     private static readonly string WindowsFontsDirectory =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
 
-    private readonly Dictionary<string, string> fontNameToPath;
+    private readonly Dictionary<string, (string Path, int FaceIndex)> fontNameToPathAndFace;
     private readonly ConcurrentDictionary<string, byte[]> cache = new(StringComparer.OrdinalIgnoreCase);
 
     public WindowsInstalledFontResolver()
     {
-        fontNameToPath = LoadFontRegistryMap();
+        fontNameToPathAndFace = LoadFontRegistry();
     }
 
     public byte[] GetFont(string faceName)
@@ -28,7 +28,7 @@ internal sealed class WindowsInstalledFontResolver : IFontResolver
         }
 
         ParseFaceName(faceName, out var family, out var wantBold, out var wantItalic);
-        if (!TryFindFontPath(family, wantBold, wantItalic, out var path))
+        if (!TryFindFont(family, wantBold, wantItalic, out var path, out var faceIndex))
         {
             throw new FileNotFoundException(
                 $"Installed font not found for '{faceName}' (family='{family}', bold={wantBold}, italic={wantItalic}).");
@@ -36,12 +36,10 @@ internal sealed class WindowsInstalledFontResolver : IFontResolver
 
         var rawBytes = File.ReadAllBytes(path);
 
-        // TTC ファイルの場合は face 0 を TTF として抽出する。
-        // TryFindFontPath は StartsWith で一致するため、
-        // 常にレジストリキー先頭のフォント (face 0) が対象になる。
+        // TTC ファイルの場合は該当フェイスを TTF として抽出する。
         if (string.Equals(Path.GetExtension(path), ".ttc", StringComparison.OrdinalIgnoreCase))
         {
-            rawBytes = ExtractTtfFaceFromTtc(rawBytes, faceIndex: 0);
+            rawBytes = ExtractTtfFaceFromTtc(rawBytes, faceIndex);
         }
 
         cache[faceName] = rawBytes;
@@ -152,9 +150,11 @@ internal sealed class WindowsInstalledFontResolver : IFontResolver
             .Trim();
     }
 
-    private static Dictionary<string, string> LoadFontRegistryMap()
+    private static readonly string[] CompoundNameSeparator = [" & "];
+
+    private static Dictionary<string, (string Path, int FaceIndex)> LoadFontRegistry()
     {
-        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var map = new Dictionary<string, (string, int)>(StringComparer.OrdinalIgnoreCase);
         using var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts");
         if (key is null)
         {
@@ -179,33 +179,53 @@ internal sealed class WindowsInstalledFontResolver : IFontResolver
                 continue;
             }
 
-            if (!map.ContainsKey(valueName))
+            // レジストリキーは "FontA & FontB & FontC (TrueType)" のような複合名になることがある。
+            // 末尾の "(TrueType)" 等の括弧内テキストを除去して "&" で分割し、
+            // 各フォント名とその TTC フェイスインデックス (分割順序) を登録する。
+            var namesPart = valueName;
+            var parenIdx = namesPart.LastIndexOf('(');
+            if (parenIdx > 0)
             {
-                map[valueName] = path;
+                namesPart = namesPart[..parenIdx].TrimEnd(';', ' ');
+            }
+
+            var parts = namesPart.Split(CompoundNameSeparator, StringSplitOptions.RemoveEmptyEntries);
+            for (var i = 0; i < parts.Length; i++)
+            {
+                var name = parts[i].Trim();
+                if (!string.IsNullOrEmpty(name) && !map.ContainsKey(name))
+                {
+                    map[name] = (path, i);
+                }
             }
         }
 
         return map;
     }
 
-    private bool TryFindFontPath(string family, bool bold, bool italic, [NotNullWhen(true)] out string? path)
+    private bool TryFindFont(
+        string family,
+        bool bold,
+        bool italic,
+        [NotNullWhen(true)] out string? path,
+        out int faceIndex)
     {
         path = null;
+        faceIndex = 0;
         foreach (var candidate in GetCandidateNames(family, bold, italic))
         {
-            var match = fontNameToPath.Keys.FirstOrDefault(key => key.StartsWith(candidate, StringComparison.OrdinalIgnoreCase));
-            if (match is null)
+            if (!fontNameToPathAndFace.TryGetValue(candidate, out var info))
             {
                 continue;
             }
 
-            var candidatePath = fontNameToPath[match];
-            if (!File.Exists(candidatePath))
+            if (!File.Exists(info.Path))
             {
                 continue;
             }
 
-            path = candidatePath;
+            path = info.Path;
+            faceIndex = info.FaceIndex;
             return true;
         }
 

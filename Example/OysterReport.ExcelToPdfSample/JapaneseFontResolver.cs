@@ -4,37 +4,33 @@
 
 using OysterReport.Writing.Pdf;
 
-// Windows にインストールされた TTC フォントは PDFsharp 6.x では
-// collectionNumber が未実装 (face 0 のみ対応) のため、
-// TTC の face 0 に対応するフォント名 (レジストリキーの先頭名) へマッピングする。
+// Windows の TTC フォントのうち、レジストリキーが全角名や略称になっているものを
+// Windows フォントレジストリで検索可能な ASCII 名へマッピングする。
 //
-// 各 TTC の face 0:
-//   msgothic.ttc  → MS Gothic     (レジストリキー先頭: "MS Gothic & ...")
-//   msmincho.ttc  → MS Mincho     (レジストリキー先頭: "MS Mincho & ...")
-//   meiryo.ttc    → Meiryo        (レジストリキー先頭: "Meiryo & ...")
-//   HGRME.TTC     → HG明朝E      (レジストリキー先頭: "HG明朝E & ...")
+// TTC フェイス対応 (WindowsInstalledFontResolver が自動判別):
+//   msgothic.ttc  → face 0: MS Gothic / face 1: MS UI Gothic / face 2: MS PGothic
+//   msmincho.ttc  → face 0: MS Mincho / face 1: MS PMincho
+//   meiryo.ttc    → face 0: Meiryo
+//   HGRME.TTC     → face 0: HG明朝E
 internal sealed class JapaneseFontResolver : IReportFontResolver
 {
     private static readonly Dictionary<string, string> FontMap =
         new(StringComparer.OrdinalIgnoreCase)
         {
-            // MS Gothic 系 (msgothic.ttc: face 0 = MS Gothic)
-            ["ＭＳ Ｐゴシック"] = "MS Gothic",
-            ["MS PGothic"] = "MS Gothic",
-            ["MS Pゴシック"] = "MS Gothic",
+            // MS Gothic 系 (msgothic.ttc)
+            ["ＭＳ Ｐゴシック"] = "MS PGothic",
+            ["MS Pゴシック"] = "MS PGothic",
             ["ＭＳ ゴシック"] = "MS Gothic",
-            ["MS UI Gothic"] = "MS Gothic",
 
-            // MS Mincho 系 (msmincho.ttc: face 0 = MS Mincho)
-            ["ＭＳ Ｐ明朝"] = "MS Mincho",
-            ["MS PMincho"] = "MS Mincho",
-            ["MS P明朝"] = "MS Mincho",
+            // MS Mincho 系 (msmincho.ttc)
+            ["ＭＳ Ｐ明朝"] = "MS PMincho",
+            ["MS P明朝"] = "MS PMincho",
             ["ＭＳ 明朝"] = "MS Mincho",
 
-            // Meiryo 系 (meiryo.ttc: face 0 = Meiryo)
+            // Meiryo 系 (meiryo.ttc)
             ["Meiryo UI"] = "Meiryo",
 
-            // HG Mincho E 系 (HGRME.TTC: face 0 = HGMinchoE; レジストリキー: "HG明朝E & ...")
+            // HG Mincho E 系 (HGRME.TTC)
             ["HGP明朝E"] = "HG明朝E",
             ["HGPMinchoE"] = "HG明朝E",
             ["HGS明朝E"] = "HG明朝E",
