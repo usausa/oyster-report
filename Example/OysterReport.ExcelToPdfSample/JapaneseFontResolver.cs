@@ -41,10 +41,6 @@ internal sealed class JapaneseFontResolver : IReportFontResolver
             ["HGSMinchoE"] = "HG明朝E",
         };
 
-    public JapaneseFontResolver()
-    {
-    }
-
     public ReportFontResolveResult Resolve(ReportFontRequest request)
     {
         if (FontMap.TryGetValue(request.FontName, out var resolved))
