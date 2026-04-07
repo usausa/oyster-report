@@ -1,4 +1,4 @@
-namespace OysterReport.Reading;
+namespace OysterReport;
 
 public sealed class ExcelReadOptions
 {

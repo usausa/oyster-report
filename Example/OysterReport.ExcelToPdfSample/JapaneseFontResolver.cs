@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-using OysterReport.Writing.Pdf;
+using OysterReport;
 
 // Windows にインストールされた TTC フォントは PDFsharp 6.x では
 // collectionNumber が未実装 (face 0 のみ対応) のため、

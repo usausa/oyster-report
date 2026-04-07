@@ -7,8 +7,6 @@ namespace OysterReport.Tests;
 using System.Linq;
 using ClosedXML.Excel;
 using ClosedXML.Excel.Drawings;
-using OysterReport.Common;
-using OysterReport.Reading;
 using Xunit;
 
 public sealed class ExcelReaderTests

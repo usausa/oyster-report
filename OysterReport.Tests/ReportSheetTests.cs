@@ -4,8 +4,6 @@
 
 namespace OysterReport.Tests;
 
-using OysterReport.Model;
-using OysterReport.Reading;
 using Xunit;
 
 public sealed class ReportSheetTests

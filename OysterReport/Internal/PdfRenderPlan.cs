@@ -1,7 +1,6 @@
-namespace OysterReport.Internal.Rendering;
+namespace OysterReport.Internal;
 
-using OysterReport.Common;
-using OysterReport.Common.Geometry;
+using OysterReport;
 
 internal sealed record PdfRenderPlan
 {

@@ -1,11 +1,7 @@
-namespace OysterReport.Internal.Rendering;
+namespace OysterReport.Internal;
 
 using System.Globalization;
-using OysterReport.Common;
-using OysterReport.Common.Geometry;
-using OysterReport.Helpers;
-using OysterReport.Model;
-using OysterReport.Writing.Pdf;
+using OysterReport;
 
 internal static class PdfRenderPlanner
 {
@@ -139,8 +135,8 @@ internal static class PdfRenderPlanner
 
     private static ReportRect BuildMergedBounds(
         ReportMergedRange mergedRange,
-        IReadOnlyList<ReportRow> visibleRows,
-        IReadOnlyList<ReportColumn> visibleColumns,
+        IEnumerable<ReportRow> visibleRows,
+        IEnumerable<ReportColumn> visibleColumns,
         Dictionary<int, double> rowOffsets,
         Dictionary<int, double> columnOffsets)
     {
@@ -161,7 +157,7 @@ internal static class PdfRenderPlanner
     }
 
     private static Dictionary<(int Row, int Column), ReportMergedRange> BuildMergedRangeByCell(
-        IReadOnlyList<ReportMergedRange> mergedRanges)
+        IEnumerable<ReportMergedRange> mergedRanges)
     {
         var map = new Dictionary<(int, int), ReportMergedRange>();
         foreach (var mr in mergedRanges)
@@ -277,7 +273,7 @@ internal static class PdfRenderPlanner
         };
     }
 
-    private static List<PdfBorderRenderInfo> BuildBorderInfos(ReportSheet sheet, IReadOnlyList<PdfCellRenderInfo> cellInfos)
+    private static List<PdfBorderRenderInfo> BuildBorderInfos(ReportSheet sheet, IEnumerable<PdfCellRenderInfo> cellInfos)
     {
         var borderInfos = new Dictionary<string, PdfBorderRenderInfo>(StringComparer.Ordinal);
         foreach (var cellInfo in cellInfos)
@@ -399,7 +395,7 @@ internal static class PdfRenderPlanner
             CultureInfo.InvariantCulture,
             $"{prefix}:{Math.Round(x1, 4)}:{Math.Round(y1, 4)}:{Math.Round(x2, 4)}:{Math.Round(y2, 4)}");
 
-    private static double ComputeFittingHeight(IReadOnlyList<ReportRow> rows, double maxHeight)
+    private static double ComputeFittingHeight(IEnumerable<ReportRow> rows, double maxHeight)
     {
         var height = 0d;
         foreach (var row in rows)

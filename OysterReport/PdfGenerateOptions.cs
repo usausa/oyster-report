@@ -1,4 +1,4 @@
-namespace OysterReport.Writing.Pdf;
+namespace OysterReport;
 
 public sealed class PdfGenerateOptions
 {

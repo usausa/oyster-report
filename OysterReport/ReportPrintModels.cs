@@ -1,7 +1,6 @@
-namespace OysterReport.Model;
+namespace OysterReport;
 
-using OysterReport.Common;
-using OysterReport.Common.Geometry;
+using OysterReport.Internal;
 
 public sealed record ReportPageSetup
 {
@@ -82,7 +81,7 @@ public sealed class ReportImage
         HeightPoint = heightPoint;
         ImageBytes = imageBytes;
 
-        var (row, _) = OysterReport.Common.AddressHelper.ParseAddress(fromCellAddress);
+        var (row, _) = AddressHelper.ParseAddress(fromCellAddress);
         FromRow = row;
     }
 
@@ -106,13 +105,13 @@ public sealed class ReportImage
 
     internal ReportImage CloneShifted(int rowOffset)
     {
-        var (_, fromColumn) = OysterReport.Common.AddressHelper.ParseAddress(FromCellAddress);
-        var shiftedFrom = OysterReport.Common.AddressHelper.ToAddress(FromRow + rowOffset, fromColumn);
+        var (_, fromColumn) = AddressHelper.ParseAddress(FromCellAddress);
+        var shiftedFrom = AddressHelper.ToAddress(FromRow + rowOffset, fromColumn);
         string? shiftedTo = null;
         if (!string.IsNullOrWhiteSpace(ToCellAddress))
         {
-            var (toRow, toColumn) = OysterReport.Common.AddressHelper.ParseAddress(ToCellAddress);
-            shiftedTo = OysterReport.Common.AddressHelper.ToAddress(toRow + rowOffset, toColumn);
+            var (toRow, toColumn) = AddressHelper.ParseAddress(ToCellAddress);
+            shiftedTo = AddressHelper.ToAddress(toRow + rowOffset, toColumn);
         }
 
         return new ReportImage(Name, AnchorType, shiftedFrom, shiftedTo, Offset, WidthPoint, HeightPoint, ImageBytes);
@@ -120,14 +119,14 @@ public sealed class ReportImage
 
     internal void ShiftRows(int rowOffset)
     {
-        var (_, fromColumn) = OysterReport.Common.AddressHelper.ParseAddress(FromCellAddress);
-        FromCellAddress = OysterReport.Common.AddressHelper.ToAddress(FromRow + rowOffset, fromColumn);
+        var (_, fromColumn) = AddressHelper.ParseAddress(FromCellAddress);
+        FromCellAddress = AddressHelper.ToAddress(FromRow + rowOffset, fromColumn);
         FromRow += rowOffset;
 
         if (!string.IsNullOrWhiteSpace(ToCellAddress))
         {
-            var (toRow, toColumn) = OysterReport.Common.AddressHelper.ParseAddress(ToCellAddress);
-            ToCellAddress = OysterReport.Common.AddressHelper.ToAddress(toRow + rowOffset, toColumn);
+            var (toRow, toColumn) = AddressHelper.ParseAddress(ToCellAddress);
+            ToCellAddress = AddressHelper.ToAddress(toRow + rowOffset, toColumn);
         }
     }
 }

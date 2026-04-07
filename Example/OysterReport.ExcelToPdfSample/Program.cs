@@ -3,7 +3,6 @@
 // </copyright>
 
 using OysterReport;
-using OysterReport.Writing.Pdf;
 
 var inputPath = ResolveInputPath(args);
 var outputPath = ResolveOutputPath(args, inputPath);

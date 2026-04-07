@@ -1,13 +1,11 @@
-namespace OysterReport.Reading;
+namespace OysterReport;
 
 using System.Globalization;
 using System.IO.Compression;
 using System.Xml.Linq;
 using ClosedXML.Excel;
 using ClosedXML.Excel.Drawings;
-using OysterReport.Common;
-using OysterReport.Helpers;
-using OysterReport.Model;
+using OysterReport.Internal;
 
 public sealed class ExcelReader
 {
@@ -497,10 +495,7 @@ public sealed class ExcelReader
 
                     cell.SetStyle(cell.Style with
                     {
-                        Fill = cell.Style.Fill with
-                        {
-                            BackgroundColorHex = stripeFillHex
-                        }
+                        Fill = new ReportFill { BackgroundColorHex = stripeFillHex }
                     });
                 }
             }
@@ -623,7 +618,7 @@ public sealed class ExcelReader
         private static int GetSheetOrder(string entryPath)
         {
             var fileName = Path.GetFileNameWithoutExtension(entryPath.Replace('/', Path.DirectorySeparatorChar));
-            return fileName is not null && fileName.StartsWith("sheet", StringComparison.OrdinalIgnoreCase) &&
+            return fileName.StartsWith("sheet", StringComparison.OrdinalIgnoreCase) &&
                    int.TryParse(fileName["sheet".Length..], out var order)
                 ? order
                 : int.MaxValue;
@@ -825,7 +820,7 @@ public sealed class ExcelReader
         private static int GetSheetOrder(string entryPath)
         {
             var fileName = Path.GetFileNameWithoutExtension(entryPath.Replace('/', Path.DirectorySeparatorChar));
-            return fileName is not null && fileName.StartsWith("sheet", StringComparison.OrdinalIgnoreCase) &&
+            return fileName.StartsWith("sheet", StringComparison.OrdinalIgnoreCase) &&
                    int.TryParse(fileName["sheet".Length..], out var order)
                 ? order
                 : int.MaxValue;

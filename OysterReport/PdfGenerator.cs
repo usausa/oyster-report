@@ -1,13 +1,9 @@
-namespace OysterReport.Writing.Pdf;
+namespace OysterReport;
 
 using System.Globalization;
 using System.Reflection;
 using System.Text;
-using OysterReport.Common;
-using OysterReport.Common.Geometry;
-using OysterReport.Helpers;
-using OysterReport.Internal.Rendering;
-using OysterReport.Model;
+using OysterReport.Internal;
 using PdfSharp.Drawing;
 using PdfSharp.Drawing.Layout;
 using PdfSharp.Pdf;
@@ -62,13 +58,8 @@ public sealed class PdfGenerator
         ArgumentNullException.ThrowIfNull(output);
         ArgumentNullException.ThrowIfNull(options);
 
-        using var document = new PdfDocument
-        {
-            Options =
-            {
-                CompressContentStreams = options.CompressContentStreams
-            }
-        };
+        using var document = new PdfDocument();
+        document.Options.CompressContentStreams = options.CompressContentStreams;
 
         if (options.EmbedDocumentMetadata)
         {
@@ -237,7 +228,7 @@ public sealed class PdfGenerator
         }
     }
 
-    private static void DrawBorders(XGraphics graphics, ReportSheet sourceSheet, IReadOnlyList<PdfCellRenderInfo> cells)
+    private static void DrawBorders(XGraphics graphics, ReportSheet sourceSheet, IEnumerable<PdfCellRenderInfo> cells)
     {
         var sourceCellsByAddress = sourceSheet.Cells.ToDictionary(cell => cell.Address, StringComparer.Ordinal);
         var collectedLines = new Dictionary<string, (ReportLine Line, ReportBorder Border)>(StringComparer.Ordinal);
@@ -347,7 +338,7 @@ public sealed class PdfGenerator
         graphics.DrawLine(pen, line.X1, line.Y1, line.X2, line.Y2);
     }
 
-    private static void DrawImages(XGraphics graphics, IReadOnlyList<PdfImageRenderInfo> images)
+    private static void DrawImages(XGraphics graphics, IEnumerable<PdfImageRenderInfo> images)
     {
         foreach (var image in images)
         {
@@ -460,8 +451,6 @@ public sealed class PdfGenerator
                     break;
                 case '&':
                     current.Append('&');
-                    break;
-                default:
                     break;
             }
         }
@@ -586,18 +575,13 @@ public sealed class PdfGenerator
 
     private static void ApplyBorderStyle(XPen pen, ReportBorderStyle style)
     {
-        switch (style)
+        pen.DashStyle = style switch
         {
-            case ReportBorderStyle.Dashed:
-                pen.DashStyle = XDashStyle.Dash;
-                break;
-            case ReportBorderStyle.Dotted:
-                pen.DashStyle = XDashStyle.Dot;
-                break;
-            case ReportBorderStyle.DashDot:
-                pen.DashStyle = XDashStyle.DashDot;
-                break;
-        }
+            ReportBorderStyle.Dashed => XDashStyle.Dash,
+            ReportBorderStyle.Dotted => XDashStyle.Dot,
+            ReportBorderStyle.DashDot => XDashStyle.DashDot,
+            _ => pen.DashStyle
+        };
     }
 
     private static void DrawDoubleBorder(XGraphics graphics, XColor color, double width, ReportLine line)
@@ -760,7 +744,7 @@ public sealed class PdfGenerator
     }
 
     private static ReportBorder ResolveMergedBorder(
-        IReadOnlyList<ReportCell> mergedCells,
+        IEnumerable<ReportCell> mergedCells,
         int fixedIndex,
         int rangeStart,
         int rangeEnd,

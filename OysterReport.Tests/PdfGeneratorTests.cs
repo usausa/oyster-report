@@ -4,9 +4,6 @@
 
 namespace OysterReport.Tests;
 
-using OysterReport.Diagnostics;
-using OysterReport.Reading;
-using OysterReport.Writing.Pdf;
 using Xunit;
 
 public sealed class PdfGeneratorTests

@@ -1,8 +1,6 @@
-namespace OysterReport.Model;
+namespace OysterReport;
 
-using OysterReport.Common;
-using OysterReport.Common.Geometry;
-using OysterReport.Diagnostics;
+using OysterReport.Internal;
 
 public sealed record ReportMetadata
 {
@@ -381,7 +379,7 @@ public sealed class ReportCell
     {
         Row = row;
         Column = column;
-        Address = OysterReport.Common.AddressHelper.ToAddress(row, column);
+        Address = AddressHelper.ToAddress(row, column);
         Value = value;
         SourceText = sourceText;
         DisplayText = displayText;
@@ -421,7 +419,7 @@ public sealed class ReportCell
     {
         Row = row;
         Column = column;
-        Address = OysterReport.Common.AddressHelper.ToAddress(row, column);
+        Address = AddressHelper.ToAddress(row, column);
     }
 
     internal ReportCell CloneWithPosition(int row, int column)
@@ -472,7 +470,7 @@ public sealed class ReportMergedRange
     public ReportMergedRange(ReportRange range)
     {
         Range = range;
-        OwnerCellAddress = OysterReport.Common.AddressHelper.ToAddress(range.StartRow, range.StartColumn);
+        OwnerCellAddress = AddressHelper.ToAddress(range.StartRow, range.StartColumn);
     }
 
     public ReportRange Range { get; private set; } // 結合セル範囲

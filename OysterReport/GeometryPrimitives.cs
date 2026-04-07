@@ -1,4 +1,4 @@
-namespace OysterReport.Common.Geometry;
+namespace OysterReport;
 
 public readonly record struct ReportRect
 {

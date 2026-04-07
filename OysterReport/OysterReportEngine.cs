@@ -1,11 +1,5 @@
 namespace OysterReport;
 
-using OysterReport.Common;
-using OysterReport.Diagnostics;
-using OysterReport.Model;
-using OysterReport.Reading;
-using OysterReport.Writing.Pdf;
-
 public sealed class OysterReportEngine
 {
     private readonly ExcelReader excelReader = new();

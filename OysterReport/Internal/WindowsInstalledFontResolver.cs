@@ -1,4 +1,4 @@
-namespace OysterReport.Writing.Pdf;
+namespace OysterReport.Internal;
 
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;

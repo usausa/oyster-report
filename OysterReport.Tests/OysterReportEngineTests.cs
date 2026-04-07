@@ -4,7 +4,6 @@
 
 namespace OysterReport.Tests;
 
-using OysterReport.Reading;
 using Xunit;
 
 public sealed class OysterReportEngineTests

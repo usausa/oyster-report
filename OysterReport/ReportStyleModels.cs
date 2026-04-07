@@ -1,6 +1,4 @@
-namespace OysterReport.Model;
-
-using OysterReport.Common;
+namespace OysterReport;
 
 public sealed record ReportCellStyle
 {
