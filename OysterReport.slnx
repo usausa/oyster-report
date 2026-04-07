@@ -1,6 +1,6 @@
 <Solution>
   <Folder Name="/Example/">
-    <Project Path="Example/OysterReport.ExcelToPdfSample/OysterReport.ExcelToPdfSample.csproj" />
+    <Project Path="Example/Example.csproj" />
   </Folder>
   <Folder Name="/Library/">
     <Project Path="OysterReport/OysterReport.csproj" />

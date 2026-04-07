@@ -2,8 +2,9 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
+using Example;
+
 using OysterReport;
-using OysterReport.ExcelToPdfSample;
 
 var inputPath = ResolveInputPath(args);
 var outputPath = ResolveOutputPath(args, inputPath);
@@ -41,7 +42,7 @@ static string ResolveInputPath(string[] args)
         currentDirectory = currentDirectory.Parent;
     }
 
-    throw new FileNotFoundException("seikyusyo.xlsx が見つかりません。引数で入力ファイルを指定してください。");
+    throw new FileNotFoundException("seikyusyo.xlsx not found");
 }
 
 static string ResolveOutputPath(string[] args, string inputPath)

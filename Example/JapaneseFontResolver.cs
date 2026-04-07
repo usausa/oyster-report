@@ -1,4 +1,4 @@
-namespace OysterReport.ExcelToPdfSample;
+namespace Example;
 
 using OysterReport;
 
