@@ -287,7 +287,7 @@ public sealed class ReportSheet
                 X = column.LeftPoint,
                 Y = row.TopPoint,
                 Width = column.WidthPoint,
-                Height = row.HeightPoint,
+                Height = row.HeightPoint
             });
         }
     }
@@ -430,7 +430,7 @@ public sealed class ReportCell
         return new ReportCell(row, column, Value, SourceText, DisplayText, Style, placeholder)
         {
             Bounds = Bounds,
-            Merge = Merge,
+            Merge = Merge
         };
     }
 }
@@ -452,7 +452,7 @@ public sealed class ReportPlaceholderText
     internal ReportPlaceholderText Clone() =>
         new(MarkerText, MarkerName)
         {
-            ResolvedText = ResolvedText,
+            ResolvedText = ResolvedText
         };
 
     internal void SetResolvedText(string? text) => ResolvedText = text;

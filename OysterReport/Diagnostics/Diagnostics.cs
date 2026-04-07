@@ -52,7 +52,7 @@ public sealed class ReportDebugDumper
         var text = format switch
         {
             ReportDumpFormat.Markdown => BuildMarkdown(payload, title),
-            _ => JsonSerializer.Serialize(payload, serializerOptions),
+            _ => JsonSerializer.Serialize(payload, serializerOptions)
         };
 
         using var writer = new StreamWriter(output, Encoding.UTF8, 1024, leaveOpen: true);
@@ -77,7 +77,7 @@ internal static class DumpPayloadFactory
 {
     public static readonly JsonSerializerOptions SerializerOptions = new()
     {
-        WriteIndented = true,
+        WriteIndented = true
     };
 
     public static object CreateWorkbookPayload(ReportWorkbook workbook) =>
@@ -97,7 +97,7 @@ internal static class DumpPayloadFactory
                     row.HeightPoint,
                     row.TopPoint,
                     row.IsHidden,
-                    row.OutlineLevel,
+                    row.OutlineLevel
                 }),
                 Columns = sheet.Columns.Select(column => new
                 {
@@ -106,7 +106,7 @@ internal static class DumpPayloadFactory
                     column.LeftPoint,
                     column.IsHidden,
                     column.OutlineLevel,
-                    column.OriginalExcelWidth,
+                    column.OriginalExcelWidth
                 }),
                 Cells = sheet.Cells.Select(cell => new
                 {
@@ -114,7 +114,7 @@ internal static class DumpPayloadFactory
                     cell.Column,
                     cell.Address,
                     cell.DisplayText,
-                    Placeholder = cell.Placeholder?.MarkerName,
+                    Placeholder = cell.Placeholder?.MarkerName
                 }),
                 sheet.MergedRanges,
                 sheet.Images,
@@ -122,8 +122,8 @@ internal static class DumpPayloadFactory
                 sheet.HeaderFooter,
                 sheet.PrintArea,
                 sheet.HorizontalPageBreaks,
-                sheet.VerticalPageBreaks,
-            }),
+                sheet.VerticalPageBreaks
+            })
         };
 
     public static object CreatePdfPreparationPayload(ReportWorkbook workbook, object renderPlan) =>
@@ -136,7 +136,7 @@ internal static class DumpPayloadFactory
                 OperatingSystem = System.Runtime.InteropServices.RuntimeInformation.OSDescription,
                 Architecture = System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture.ToString(),
                 Culture = CultureInfo.CurrentCulture.Name,
-                Framework = System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription,
-            },
+                Framework = System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription
+            }
         };
 }

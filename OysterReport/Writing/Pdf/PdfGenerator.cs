@@ -24,7 +24,7 @@ public sealed class PdfGenerator
         "Segoe UI",
         "Helvetica",
         "Liberation Sans",
-        "DejaVu Sans",
+        "DejaVu Sans"
     ];
 
     public void Generate(
@@ -66,8 +66,8 @@ public sealed class PdfGenerator
         {
             Options =
             {
-                CompressContentStreams = options.CompressContentStreams,
-            },
+                CompressContentStreams = options.CompressContentStreams
+            }
         };
 
         if (options.EmbedDocumentMetadata)
@@ -211,7 +211,7 @@ public sealed class PdfGenerator
                 {
                     var formatter = new XTextFormatter(graphics)
                     {
-                        Alignment = ResolveParagraphAlignment(sourceCell),
+                        Alignment = ResolveParagraphAlignment(sourceCell)
                     };
 
                     formatter.DrawString(
@@ -265,7 +265,7 @@ public sealed class PdfGenerator
                     X1 = cellBounds.X,
                     Y1 = cellBounds.Y,
                     X2 = cellBounds.Right,
-                    Y2 = cellBounds.Y,
+                    Y2 = cellBounds.Y
                 },
                 collectedLines);
             CollectBorderSide(
@@ -275,7 +275,7 @@ public sealed class PdfGenerator
                     X1 = cellBounds.Right,
                     Y1 = cellBounds.Y,
                     X2 = cellBounds.Right,
-                    Y2 = cellBounds.Bottom,
+                    Y2 = cellBounds.Bottom
                 },
                 collectedLines);
             CollectBorderSide(
@@ -285,7 +285,7 @@ public sealed class PdfGenerator
                     X1 = cellBounds.Right,
                     Y1 = cellBounds.Bottom,
                     X2 = cellBounds.X,
-                    Y2 = cellBounds.Bottom,
+                    Y2 = cellBounds.Bottom
                 },
                 collectedLines);
             CollectBorderSide(
@@ -295,7 +295,7 @@ public sealed class PdfGenerator
                     X1 = cellBounds.X,
                     Y1 = cellBounds.Bottom,
                     X2 = cellBounds.X,
-                    Y2 = cellBounds.Y,
+                    Y2 = cellBounds.Y
                 },
                 collectedLines);
         }
@@ -507,7 +507,7 @@ public sealed class PdfGenerator
             {
                 FontName = font.Name,
                 Bold = font.Bold,
-                Italic = font.Italic,
+                Italic = font.Italic
             });
 
             if (resolution.IsResolved && !string.IsNullOrWhiteSpace(resolution.ResolvedFontName) && seen.Add(resolution.ResolvedFontName))
@@ -581,7 +581,7 @@ public sealed class PdfGenerator
             ReportBorderStyle.Medium => 1.5d,
             ReportBorderStyle.DoubleLine => 0.75d,
             ReportBorderStyle.Hair => 0.25d,
-            _ => 0.75d,
+            _ => 0.75d
         };
 
     private static void ApplyBorderStyle(XPen pen, ReportBorderStyle style)
@@ -612,7 +612,7 @@ public sealed class PdfGenerator
                 line with
                 {
                     Y1 = line.Y1 - (gap / 2d),
-                    Y2 = line.Y2 - (gap / 2d),
+                    Y2 = line.Y2 - (gap / 2d)
                 });
             DrawSolidBorder(
                 graphics,
@@ -621,7 +621,7 @@ public sealed class PdfGenerator
                 line with
                 {
                     Y1 = line.Y1 + (gap / 2d),
-                    Y2 = line.Y2 + (gap / 2d),
+                    Y2 = line.Y2 + (gap / 2d)
                 });
             return;
         }
@@ -633,7 +633,7 @@ public sealed class PdfGenerator
             line with
             {
                 X1 = line.X1 - (gap / 2d),
-                X2 = line.X2 - (gap / 2d),
+                X2 = line.X2 - (gap / 2d)
             });
         DrawSolidBorder(
             graphics,
@@ -642,7 +642,7 @@ public sealed class PdfGenerator
             line with
             {
                 X1 = line.X1 + (gap / 2d),
-                X2 = line.X2 + (gap / 2d),
+                X2 = line.X2 + (gap / 2d)
             });
     }
 
@@ -656,14 +656,14 @@ public sealed class PdfGenerator
             {
                 ReportHorizontalAlignment.Center => XStringAlignment.Center,
                 ReportHorizontalAlignment.Right => XStringAlignment.Far,
-                _ => XStringAlignment.Near,
+                _ => XStringAlignment.Near
             },
             LineAlignment = verticalAlignment switch
             {
                 ReportVerticalAlignment.Center => XLineAlignment.Center,
                 ReportVerticalAlignment.Bottom => XLineAlignment.Far,
-                _ => XLineAlignment.Near,
-            },
+                _ => XLineAlignment.Near
+            }
         };
     }
 
@@ -673,7 +673,7 @@ public sealed class PdfGenerator
             ReportHorizontalAlignment.Center => XParagraphAlignment.Center,
             ReportHorizontalAlignment.Right => XParagraphAlignment.Right,
             ReportHorizontalAlignment.Justify => XParagraphAlignment.Justify,
-            _ => XParagraphAlignment.Left,
+            _ => XParagraphAlignment.Left
         };
 
     private static ReportHorizontalAlignment ResolveHorizontalAlignment(ReportCell cell)
@@ -687,7 +687,7 @@ public sealed class PdfGenerator
         {
             ReportCellValueKind.Number => ReportHorizontalAlignment.Right,
             ReportCellValueKind.DateTime => ReportHorizontalAlignment.Right,
-            _ => ReportHorizontalAlignment.Left,
+            _ => ReportHorizontalAlignment.Left
         };
     }
 
@@ -753,7 +753,7 @@ public sealed class PdfGenerator
                 mergeInfo.Range.EndRow,
                 static cell => cell.Column,
                 static cell => cell.Row,
-                static cell => cell.Style.Borders.Left),
+                static cell => cell.Style.Borders.Left)
         };
 
         return mergedBorders;
@@ -792,7 +792,7 @@ public sealed class PdfGenerator
             ReportBorderStyle.Dashed => 2,
             ReportBorderStyle.Dotted => 2,
             ReportBorderStyle.Hair => 1,
-            _ => 0,
+            _ => 0
         };
 
     private sealed record HeaderFooterSections(string Left, string Center, string Right)

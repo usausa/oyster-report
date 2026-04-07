@@ -72,7 +72,7 @@ internal static class FontMeasurementHelper
             var value when value.Contains("mspgothic", StringComparison.Ordinal) => 6.66667d,
             var value when value.Contains("msgothic", StringComparison.Ordinal) => 6.66667d,
             var value when value.Contains("arial", StringComparison.Ordinal) => 7.41536d,
-            _ => fallback,
+            _ => fallback
         };
 
         return Math.Max(fallback, baseWidth * (fontSize / 10d));
@@ -126,7 +126,7 @@ internal static class ColorHelper
             {
                 XLColorType.Theme => ResolveThemeHex(color, workbook, fallback),
                 XLColorType.Indexed => ResolveIndexedHex(color, fallback),
-                _ => ToHex(color.Color),
+                _ => ToHex(color.Color)
             };
         }
         catch (InvalidOperationException)
@@ -274,7 +274,7 @@ internal static class PageSizeResolver
         {
             ReportPaperSize.Letter => (612d, 792d),
             ReportPaperSize.Legal => (612d, 1008d),
-            _ => (595.28d, 841.89d),
+            _ => (595.28d, 841.89d)
         };
     }
 }

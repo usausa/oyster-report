@@ -52,8 +52,8 @@ public sealed class ReportSheetTests
             PlaceholderValuesByIteration =
             [
                 new Dictionary<string, string?> { ["Item"] = "A" },
-                new Dictionary<string, string?> { ["Item"] = "B" },
-            ],
+                new Dictionary<string, string?> { ["Item"] = "B" }
+            ]
         });
 
         Assert.Contains(sheet.Cells, cell => cell.Address == "A3" && cell.DisplayText == "A");

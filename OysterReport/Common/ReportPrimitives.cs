@@ -5,14 +5,14 @@ using System.Globalization;
 public enum ReportDumpFormat
 {
     Json,
-    Markdown,
+    Markdown
 }
 
 public enum ReportDiagnosticSeverity
 {
     Info,
     Warning,
-    Error,
+    Error
 }
 
 public enum ReportPaperSize
@@ -20,20 +20,20 @@ public enum ReportPaperSize
     Custom,
     A4,
     Letter,
-    Legal,
+    Legal
 }
 
 public enum ReportPageOrientation
 {
     Portrait,
-    Landscape,
+    Landscape
 }
 
 public enum ReportAnchorType
 {
     MoveAndSizeWithCells,
     MoveWithCells,
-    Absolute,
+    Absolute
 }
 
 public enum ReportHorizontalAlignment
@@ -42,7 +42,7 @@ public enum ReportHorizontalAlignment
     Left,
     Center,
     Right,
-    Justify,
+    Justify
 }
 
 public enum ReportVerticalAlignment
@@ -50,7 +50,7 @@ public enum ReportVerticalAlignment
     Top,
     Center,
     Bottom,
-    Justify,
+    Justify
 }
 
 public enum ReportBorderStyle
@@ -63,7 +63,7 @@ public enum ReportBorderStyle
     Dashed,
     Dotted,
     Hair,
-    DashDot,
+    DashDot
 }
 
 public enum ReportCellValueKind
@@ -73,7 +73,7 @@ public enum ReportCellValueKind
     Number,
     DateTime,
     Boolean,
-    Error,
+    Error
 }
 
 public readonly record struct ReportRange

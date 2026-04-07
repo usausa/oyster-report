@@ -20,7 +20,7 @@ public readonly record struct ReportRect
             X = X + thickness.Left,
             Y = Y + thickness.Top,
             Width = Math.Max(0, Width - thickness.Left - thickness.Right),
-            Height = Math.Max(0, Height - thickness.Top - thickness.Bottom),
+            Height = Math.Max(0, Height - thickness.Top - thickness.Bottom)
         };
 
     public static ReportRect Union(ReportRect first, ReportRect second)
@@ -34,7 +34,7 @@ public readonly record struct ReportRect
             X = x,
             Y = y,
             Width = right - x,
-            Height = bottom - y,
+            Height = bottom - y
         };
     }
 }
@@ -55,7 +55,7 @@ public readonly record struct ReportThickness
             Left = value,
             Top = value,
             Right = value,
-            Bottom = value,
+            Bottom = value
         };
 }
 

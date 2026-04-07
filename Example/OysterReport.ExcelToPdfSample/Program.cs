@@ -13,7 +13,7 @@ var workbook = engine.Read(inputPath);
 
 var options = new PdfGenerateOptions
 {
-    FontResolver = new JapaneseFontResolver(),
+    FontResolver = new JapaneseFontResolver()
 };
 
 using var output = File.Create(outputPath);

@@ -21,7 +21,7 @@ public sealed class ExcelReader
         {
             TemplateName = Path.GetFileNameWithoutExtension(filePath),
             SourceFilePath = filePath,
-            SourceLastWriteTime = File.Exists(filePath) ? File.GetLastWriteTimeUtc(filePath) : null,
+            SourceLastWriteTime = File.Exists(filePath) ? File.GetLastWriteTimeUtc(filePath) : null
         };
         return ReadInternal(stream, options, metadata);
     }
@@ -51,7 +51,7 @@ public sealed class ExcelReader
         {
             DefaultFontName = workbook.Style.Font.FontName,
             DefaultFontSize = workbook.Style.Font.FontSize,
-            MaxDigitWidth = FontMeasurementHelper.ResolveMaxDigitWidth(workbook.Style.Font.FontName, workbook.Style.Font.FontSize),
+            MaxDigitWidth = FontMeasurementHelper.ResolveMaxDigitWidth(workbook.Style.Font.FontName, workbook.Style.Font.FontSize)
         };
         var reportWorkbook = new ReportWorkbook(
             metadata ?? new ReportMetadata { TemplateName = workbook.Properties.Title ?? "Workbook" },
@@ -176,7 +176,7 @@ public sealed class ExcelReader
             XLDataType.DateTime => new ReportCellValue { Kind = ReportCellValueKind.DateTime, RawValue = cell.Value.GetDateTime() },
             XLDataType.Text => new ReportCellValue { Kind = ReportCellValueKind.Text, RawValue = cell.Value.GetText() },
             XLDataType.Error => new ReportCellValue { Kind = ReportCellValueKind.Error, RawValue = cell.Value.ToString(CultureInfo.InvariantCulture) },
-            _ => new ReportCellValue { Kind = ReportCellValueKind.Blank, RawValue = cell.Value.ToString(CultureInfo.InvariantCulture) },
+            _ => new ReportCellValue { Kind = ReportCellValueKind.Blank, RawValue = cell.Value.ToString(CultureInfo.InvariantCulture) }
         };
     }
 
@@ -193,18 +193,18 @@ public sealed class ExcelReader
                 Italic = style.Font.Italic,
                 Underline = style.Font.Underline != XLFontUnderlineValues.None,
                 Strikeout = style.Font.Strikethrough,
-                ColorHex = ColorHelper.ResolveHex(style.Font.FontColor, cell.Worksheet.Workbook, "#FF000000"),
+                ColorHex = ColorHelper.ResolveHex(style.Font.FontColor, cell.Worksheet.Workbook, "#FF000000")
             },
             Fill = new ReportFill
             {
-                BackgroundColorHex = ResolveFillColorHex(style.Fill, cell.Worksheet.Workbook),
+                BackgroundColorHex = ResolveFillColorHex(style.Fill, cell.Worksheet.Workbook)
             },
             Borders = new ReportBorders
             {
                 Left = ReadBorder(style.Border.LeftBorder, ColorHelper.ResolveHex(style.Border.LeftBorderColor, cell.Worksheet.Workbook, "#FF000000")),
                 Top = ReadBorder(style.Border.TopBorder, ColorHelper.ResolveHex(style.Border.TopBorderColor, cell.Worksheet.Workbook, "#FF000000")),
                 Right = ReadBorder(style.Border.RightBorder, ColorHelper.ResolveHex(style.Border.RightBorderColor, cell.Worksheet.Workbook, "#FF000000")),
-                Bottom = ReadBorder(style.Border.BottomBorder, ColorHelper.ResolveHex(style.Border.BottomBorderColor, cell.Worksheet.Workbook, "#FF000000")),
+                Bottom = ReadBorder(style.Border.BottomBorder, ColorHelper.ResolveHex(style.Border.BottomBorderColor, cell.Worksheet.Workbook, "#FF000000"))
             },
             Alignment = new ReportAlignment
             {
@@ -215,20 +215,20 @@ public sealed class ExcelReader
                     XLAlignmentHorizontalValues.Center => ReportHorizontalAlignment.Center,
                     XLAlignmentHorizontalValues.Right => ReportHorizontalAlignment.Right,
                     XLAlignmentHorizontalValues.Justify => ReportHorizontalAlignment.Justify,
-                    _ => ReportHorizontalAlignment.Left,
+                    _ => ReportHorizontalAlignment.Left
                 },
                 Vertical = style.Alignment.Vertical switch
                 {
                     XLAlignmentVerticalValues.Center => ReportVerticalAlignment.Center,
                     XLAlignmentVerticalValues.Bottom => ReportVerticalAlignment.Bottom,
                     XLAlignmentVerticalValues.Justify => ReportVerticalAlignment.Justify,
-                    _ => ReportVerticalAlignment.Top,
-                },
+                    _ => ReportVerticalAlignment.Top
+                }
             },
             NumberFormat = style.NumberFormat.Format,
             WrapText = style.Alignment.WrapText,
             Rotation = style.Alignment.TextRotation,
-            ShrinkToFit = style.Alignment.ShrinkToFit,
+            ShrinkToFit = style.Alignment.ShrinkToFit
         };
     }
 
@@ -244,7 +244,7 @@ public sealed class ExcelReader
             XLBorderStyleValues.Hair => ReportBorderStyle.Hair,
             XLBorderStyleValues.DashDot => ReportBorderStyle.DashDot,
             XLBorderStyleValues.None => ReportBorderStyle.None,
-            _ => ReportBorderStyle.Thin,
+            _ => ReportBorderStyle.Thin
         };
 
         var resolvedColorHex = ColorHelper.NormalizeHex(colorHex);
@@ -263,8 +263,8 @@ public sealed class ExcelReader
                 ReportBorderStyle.Medium => 1.5d,
                 ReportBorderStyle.DoubleLine => 0.75d,
                 ReportBorderStyle.Hair => 0.25d,
-                _ => 0.75d,
-            },
+                _ => 0.75d
+            }
         };
     }
 
@@ -275,7 +275,7 @@ public sealed class ExcelReader
             {
                 XLPaperSize.LetterPaper => ReportPaperSize.Letter,
                 XLPaperSize.LegalPaper => ReportPaperSize.Legal,
-                _ => ReportPaperSize.A4,
+                _ => ReportPaperSize.A4
             },
             Orientation = worksheet.PageSetup.PageOrientation == XLPageOrientation.Landscape
                 ? ReportPageOrientation.Landscape
@@ -285,7 +285,7 @@ public sealed class ExcelReader
                 Left = ConvertInchToPoint(worksheet.PageSetup.Margins.Left),
                 Top = ConvertInchToPoint(worksheet.PageSetup.Margins.Top),
                 Right = ConvertInchToPoint(worksheet.PageSetup.Margins.Right),
-                Bottom = ConvertInchToPoint(worksheet.PageSetup.Margins.Bottom),
+                Bottom = ConvertInchToPoint(worksheet.PageSetup.Margins.Bottom)
             },
             HeaderMarginPoint = ConvertInchToPoint(worksheet.PageSetup.Margins.Header),
             FooterMarginPoint = ConvertInchToPoint(worksheet.PageSetup.Margins.Footer),
@@ -293,7 +293,7 @@ public sealed class ExcelReader
             FitToPagesWide = worksheet.PageSetup.PagesWide == 0 ? null : worksheet.PageSetup.PagesWide,
             FitToPagesTall = worksheet.PageSetup.PagesTall == 0 ? null : worksheet.PageSetup.PagesTall,
             CenterHorizontally = worksheet.PageSetup.CenterHorizontally,
-            CenterVertically = worksheet.PageSetup.CenterVertically,
+            CenterVertically = worksheet.PageSetup.CenterVertically
         };
 
     private static ReportHeaderFooter ReadHeaderFooter(IXLWorksheet worksheet) =>
@@ -310,7 +310,7 @@ public sealed class ExcelReader
             EvenHeader = worksheet.PageSetup.Header.GetText(XLHFOccurrence.EvenPages),
             EvenFooter = worksheet.PageSetup.Footer.GetText(XLHFOccurrence.EvenPages),
             FirstHeader = worksheet.PageSetup.Header.GetText(XLHFOccurrence.FirstPage),
-            FirstFooter = worksheet.PageSetup.Footer.GetText(XLHFOccurrence.FirstPage),
+            FirstFooter = worksheet.PageSetup.Footer.GetText(XLHFOccurrence.FirstPage)
         };
 
     private static ReportPrintArea? ReadPrintArea(IXLWorksheet worksheet)
@@ -327,7 +327,7 @@ public sealed class ExcelReader
                 printArea.RangeAddress.FirstAddress.RowNumber,
                 printArea.RangeAddress.FirstAddress.ColumnNumber,
                 printArea.RangeAddress.LastAddress.RowNumber,
-                printArea.RangeAddress.LastAddress.ColumnNumber),
+                printArea.RangeAddress.LastAddress.ColumnNumber)
         };
     }
 
@@ -404,7 +404,7 @@ public sealed class ExcelReader
         {
             XLPicturePlacement.FreeFloating => ReportAnchorType.Absolute,
             XLPicturePlacement.Move => ReportAnchorType.MoveWithCells,
-            _ => ReportAnchorType.MoveAndSizeWithCells,
+            _ => ReportAnchorType.MoveAndSizeWithCells
         };
         return new ReportImage(
             picture.Name,
@@ -414,7 +414,7 @@ public sealed class ExcelReader
             new ReportOffset
             {
                 X = picture.Left * 72d / 96d,
-                Y = picture.Top * 72d / 96d,
+                Y = picture.Top * 72d / 96d
             },
             picture.Width * 72d / 96d,
             picture.Height * 72d / 96d,
@@ -499,8 +499,8 @@ public sealed class ExcelReader
                     {
                         Fill = cell.Style.Fill with
                         {
-                            BackgroundColorHex = stripeFillHex,
-                        },
+                            BackgroundColorHex = stripeFillHex
+                        }
                     });
                 }
             }
@@ -522,7 +522,7 @@ public sealed class ExcelReader
                 {
                     OwnerCellAddress = mergedRange.OwnerCellAddress,
                     IsOwner = string.Equals(cell.Address, mergedRange.OwnerCellAddress, StringComparison.Ordinal),
-                    Range = mergedRange.Range,
+                    Range = mergedRange.Range
                 });
             }
         }

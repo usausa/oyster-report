@@ -17,7 +17,7 @@ internal static class PdfRenderPlanner
         var sheets = workbook.Sheets.Select((sheet, index) => BuildSheetPlan(sheet, index + 1)).ToList();
         return new PdfRenderPlan
         {
-            Sheets = sheets,
+            Sheets = sheets
         };
     }
 
@@ -29,7 +29,7 @@ internal static class PdfRenderPlanner
             X = sheet.PageSetup.Margins.Left,
             Y = sheet.PageSetup.Margins.Top,
             Width = pageBounds.Width - sheet.PageSetup.Margins.Left - sheet.PageSetup.Margins.Right,
-            Height = pageBounds.Height - sheet.PageSetup.Margins.Top - sheet.PageSetup.Margins.Bottom,
+            Height = pageBounds.Height - sheet.PageSetup.Margins.Top - sheet.PageSetup.Margins.Bottom
         };
 
         var renderRange = sheet.PrintArea?.Range ?? sheet.UsedRange;
@@ -80,7 +80,7 @@ internal static class PdfRenderPlanner
                 X = columnOffsets[cell.Column],
                 Y = rowOffsets[cell.Row],
                 Width = visibleColumns.First(column => column.Index == cell.Column).WidthPoint,
-                Height = visibleRows.First(row => row.Index == cell.Row).HeightPoint,
+                Height = visibleRows.First(row => row.Index == cell.Row).HeightPoint
             };
 
             var isMergedOwner = mergedRanges.TryGetValue(cell.Address, out var mergedRange);
@@ -106,7 +106,7 @@ internal static class PdfRenderPlanner
                     columnOffsets,
                     mergedRangeByCell),
                 IsMergedOwner = isMergedOwner,
-                IsClipped = false,
+                IsClipped = false
             });
         }
 
@@ -121,11 +121,11 @@ internal static class PdfRenderPlanner
                     PageBounds = pageBounds,
                     PrintableBounds = printableBounds,
                     HeaderFooter = BuildHeaderFooter(sheet, pageBounds, printableBounds, sheetNumber),
-                    Cells = pageCells,
-                },
+                    Cells = pageCells
+                }
             ],
             Borders = BuildBorderInfos(sheet, pageCells),
-            Images = BuildImageInfos(sheet, rowOffsets, columnOffsets),
+            Images = BuildImageInfos(sheet, rowOffsets, columnOffsets)
         };
     }
 
@@ -156,7 +156,7 @@ internal static class PdfRenderPlanner
             X = columnOffsets[targetColumns[0].Index],
             Y = rowOffsets[targetRows[0].Index],
             Width = targetColumns.Sum(column => column.WidthPoint),
-            Height = targetRows.Sum(row => row.HeightPoint),
+            Height = targetRows.Sum(row => row.HeightPoint)
         };
     }
 
@@ -239,7 +239,7 @@ internal static class PdfRenderPlanner
 
         return contentBounds with
         {
-            Width = Math.Max(contentBounds.Width, overflowRight - contentBounds.X),
+            Width = Math.Max(contentBounds.Width, overflowRight - contentBounds.X)
         };
     }
 
@@ -265,15 +265,15 @@ internal static class PdfRenderPlanner
                 X = printableBounds.X,
                 Y = sheet.PageSetup.HeaderMarginPoint,
                 Width = printableBounds.Width,
-                Height = Math.Max(0d, sheet.PageSetup.Margins.Top - sheet.PageSetup.HeaderMarginPoint),
+                Height = Math.Max(0d, sheet.PageSetup.Margins.Top - sheet.PageSetup.HeaderMarginPoint)
             },
             FooterBounds = new ReportRect
             {
                 X = printableBounds.X,
                 Y = pageBounds.Height - sheet.PageSetup.Margins.Bottom,
                 Width = printableBounds.Width,
-                Height = Math.Max(0d, sheet.PageSetup.Margins.Bottom - sheet.PageSetup.FooterMarginPoint),
-            },
+                Height = Math.Max(0d, sheet.PageSetup.Margins.Bottom - sheet.PageSetup.FooterMarginPoint)
+            }
         };
     }
 
@@ -291,7 +291,7 @@ internal static class PdfRenderPlanner
                     X1 = cellInfo.OuterBounds.X,
                     Y1 = cellInfo.OuterBounds.Y,
                     X2 = cellInfo.OuterBounds.X,
-                    Y2 = cellInfo.OuterBounds.Bottom,
+                    Y2 = cellInfo.OuterBounds.Bottom
                 },
                 cell.Style.Borders.Left,
                 cell.Address);
@@ -303,7 +303,7 @@ internal static class PdfRenderPlanner
                     X1 = cellInfo.OuterBounds.X,
                     Y1 = cellInfo.OuterBounds.Y,
                     X2 = cellInfo.OuterBounds.Right,
-                    Y2 = cellInfo.OuterBounds.Y,
+                    Y2 = cellInfo.OuterBounds.Y
                 },
                 cell.Style.Borders.Top,
                 cell.Address);
@@ -315,7 +315,7 @@ internal static class PdfRenderPlanner
                     X1 = cellInfo.OuterBounds.Right,
                     Y1 = cellInfo.OuterBounds.Y,
                     X2 = cellInfo.OuterBounds.Right,
-                    Y2 = cellInfo.OuterBounds.Bottom,
+                    Y2 = cellInfo.OuterBounds.Bottom
                 },
                 cell.Style.Borders.Right,
                 cell.Address);
@@ -327,7 +327,7 @@ internal static class PdfRenderPlanner
                     X1 = cellInfo.OuterBounds.X,
                     Y1 = cellInfo.OuterBounds.Bottom,
                     X2 = cellInfo.OuterBounds.Right,
-                    Y2 = cellInfo.OuterBounds.Bottom,
+                    Y2 = cellInfo.OuterBounds.Bottom
                 },
                 cell.Style.Borders.Bottom,
                 cell.Address);
@@ -354,7 +354,7 @@ internal static class PdfRenderPlanner
             Style = border.Style,
             Width = border.Width,
             ColorHex = border.ColorHex,
-            OwnerCellAddress = ownerCellAddress,
+            OwnerCellAddress = ownerCellAddress
         };
 
         if (!borders.TryGetValue(key, out var existingBorder) || GetBorderPriority(candidate.Style) > GetBorderPriority(existingBorder.Style))
@@ -385,9 +385,9 @@ internal static class PdfRenderPlanner
                     X = left + image.Offset.X,
                     Y = top + image.Offset.Y,
                     Width = image.WidthPoint,
-                    Height = image.HeightPoint,
+                    Height = image.HeightPoint
                 },
-                ImageBytes = image.ImageBytes,
+                ImageBytes = image.ImageBytes
             });
         }
 
@@ -426,6 +426,6 @@ internal static class PdfRenderPlanner
             ReportBorderStyle.DashDot => 2,
             ReportBorderStyle.Dotted => 1,
             ReportBorderStyle.Hair => 0,
-            _ => -1,
+            _ => -1
         };
 }
