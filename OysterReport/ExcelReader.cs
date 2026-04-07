@@ -15,7 +15,6 @@ public sealed class ExcelReader
 
     public ReportWorkbook Read(string filePath, ExcelReadOptions? options = null)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
         using var stream = File.OpenRead(filePath);
         var metadata = new ReportMetadata
         {
@@ -28,7 +27,6 @@ public sealed class ExcelReader
 
     public ReportWorkbook Read(Stream stream, ExcelReadOptions? options = null)
     {
-        ArgumentNullException.ThrowIfNull(stream);
         return ReadInternal(stream, options, null);
     }
 
@@ -333,8 +331,6 @@ public sealed class ExcelReader
 
     private static bool TryResolveSheetRange(IXLWorksheet worksheet, ReportPrintArea? printArea, out ReportRange range)
     {
-        ArgumentNullException.ThrowIfNull(worksheet);
-
         var contentRange = worksheet.RangeUsed();
         var formattedRange = worksheet.RangeUsed(XLCellsUsedOptions.All);
         if (contentRange is null && formattedRange is null && worksheet.MergedRanges.Count == 0 && printArea is null)
@@ -440,9 +436,6 @@ public sealed class ExcelReader
 
     private static string ResolveFillColorHex(IXLFill fill, IXLWorkbook workbook)
     {
-        ArgumentNullException.ThrowIfNull(fill);
-        ArgumentNullException.ThrowIfNull(workbook);
-
         if (fill.PatternType == XLFillPatternValues.None)
         {
             return "#00000000";
@@ -460,12 +453,8 @@ public sealed class ExcelReader
     private static void ApplyTableStyles(
         ReportSheet reportSheet,
         IXLWorkbook workbook,
-        IReadOnlyList<TableStyleInfo> tableStyles)
+        IEnumerable<TableStyleInfo> tableStyles)
     {
-        ArgumentNullException.ThrowIfNull(reportSheet);
-        ArgumentNullException.ThrowIfNull(workbook);
-        ArgumentNullException.ThrowIfNull(tableStyles);
-
         foreach (var tableStyle in tableStyles)
         {
             if (!tableStyle.ShowRowStripes ||
@@ -543,8 +532,6 @@ public sealed class ExcelReader
 
         public static WorkbookRawColumnWidths Load(byte[] workbookBytes)
         {
-            ArgumentNullException.ThrowIfNull(workbookBytes);
-
             using var stream = new MemoryStream(workbookBytes, writable: false);
             using var archive = new ZipArchive(stream, ZipArchiveMode.Read, leaveOpen: false);
             var mainNamespace = XNamespace.Get("http://schemas.openxmlformats.org/spreadsheetml/2006/main");
@@ -651,8 +638,6 @@ public sealed class ExcelReader
 
         public static WorkbookTableStyleMap Load(byte[] workbookBytes)
         {
-            ArgumentNullException.ThrowIfNull(workbookBytes);
-
             using var stream = new MemoryStream(workbookBytes, writable: false);
             using var archive = new ZipArchive(stream, ZipArchiveMode.Read, leaveOpen: false);
             var mainNamespace = XNamespace.Get("http://schemas.openxmlformats.org/spreadsheetml/2006/main");

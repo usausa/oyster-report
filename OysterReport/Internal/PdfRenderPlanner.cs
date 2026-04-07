@@ -8,9 +8,6 @@ internal static class PdfRenderPlanner
 {
     public static PdfRenderPlan BuildPlan(ReportWorkbook workbook, PdfGenerateOptions options)
     {
-        ArgumentNullException.ThrowIfNull(workbook);
-        ArgumentNullException.ThrowIfNull(options);
-
         var sheets = workbook.Sheets.Select((sheet, index) => BuildSheetPlan(sheet, index + 1)).ToList();
         return new PdfRenderPlan
         {

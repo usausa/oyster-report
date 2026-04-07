@@ -6,9 +6,6 @@ internal static class AddressHelper
 {
     public static string ToAddress(int row, int column)
     {
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(row);
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(column);
-
         var current = column;
         var result = string.Empty;
         while (current > 0)
@@ -23,8 +20,6 @@ internal static class AddressHelper
 
     public static (int Row, int Column) ParseAddress(string address)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(address);
-
         var letters = string.Empty;
         var digits = string.Empty;
 

@@ -54,13 +54,11 @@ public sealed class ReportWorkbook
 
     public void AddSheet(ReportSheet sheet)
     {
-        ArgumentNullException.ThrowIfNull(sheet);
         sheets.Add(sheet);
     }
 
     internal void AddDiagnostic(ReportDiagnostic diagnostic)
     {
-        ArgumentNullException.ThrowIfNull(diagnostic);
         diagnostics.Add(diagnostic);
     }
 }
@@ -109,8 +107,6 @@ public sealed class ReportSheet
 
     public int ReplacePlaceholder(string markerName, string value)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(markerName);
-
         var replaceCount = 0;
         foreach (var cell in cells.Where(static x => x.Placeholder is not null))
         {
@@ -129,8 +125,6 @@ public sealed class ReportSheet
 
     public int ReplacePlaceholders(IReadOnlyDictionary<string, string?> values)
     {
-        ArgumentNullException.ThrowIfNull(values);
-
         var replaceCount = 0;
         foreach (var (key, value) in values)
         {
@@ -142,8 +136,6 @@ public sealed class ReportSheet
 
     public void AddRows(RowExpansionRequest request)
     {
-        ArgumentNullException.ThrowIfNull(request);
-
         var repeatCount = request.GetRepeatCount();
         var templateRows = rows
             .Where(row => row.Index >= request.TemplateStartRowIndex && row.Index <= request.TemplateEndRowIndex)
@@ -318,7 +310,7 @@ public sealed class ReportRow
 
     public int Index { get; private set; } // 1 始まりの行番号
 
-    public double HeightPoint { get; private set; } // 行高(point)
+    public double HeightPoint { get; } // 行高(point)
 
     public double TopPoint { get; private set; } // シート先頭からの上端位置(point)
 
@@ -344,9 +336,9 @@ public sealed class ReportColumn
         OriginalExcelWidth = originalExcelWidth;
     }
 
-    public int Index { get; private set; } // 1 始まりの列番号
+    public int Index { get; } // 1 始まりの列番号
 
-    public double WidthPoint { get; private set; } // 列幅(point)
+    public double WidthPoint { get; } // 列幅(point)
 
     public double LeftPoint { get; private set; } // シート左端からの左端位置(point)
 
@@ -424,7 +416,7 @@ public sealed class ReportCell
 
     internal ReportCell CloneWithPosition(int row, int column)
     {
-        var placeholder = Placeholder is null ? null : Placeholder.Clone();
+        var placeholder = Placeholder?.Clone();
         return new ReportCell(row, column, Value, SourceText, DisplayText, Style, placeholder)
         {
             Bounds = Bounds,

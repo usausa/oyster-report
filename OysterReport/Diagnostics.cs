@@ -24,9 +24,6 @@ public sealed class ReportDebugDumper
 
     public void DumpWorkbook(ReportWorkbook workbook, Stream output, ReportDumpFormat format = ReportDumpFormat.Json)
     {
-        ArgumentNullException.ThrowIfNull(workbook);
-        ArgumentNullException.ThrowIfNull(output);
-
         var payload = DumpPayloadFactory.CreateWorkbookPayload(workbook);
         WritePayload(output, payload, format, "Workbook");
     }
@@ -37,9 +34,6 @@ public sealed class ReportDebugDumper
         PdfGenerateOptions? options = null,
         ReportDumpFormat format = ReportDumpFormat.Json)
     {
-        ArgumentNullException.ThrowIfNull(workbook);
-        ArgumentNullException.ThrowIfNull(output);
-
         var renderPlan = PdfGenerator.BuildRenderPlan(workbook, options ?? new PdfGenerateOptions());
         var payload = DumpPayloadFactory.CreatePdfPreparationPayload(workbook, renderPlan);
         WritePayload(output, payload, format, "PdfPreparation");

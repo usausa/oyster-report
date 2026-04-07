@@ -82,10 +82,6 @@ public readonly record struct ReportRange
 {
     public ReportRange(int startRow, int startColumn, int endRow, int endColumn)
     {
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(startRow);
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(startColumn);
-        ArgumentOutOfRangeException.ThrowIfLessThan(endRow, startRow);
-        ArgumentOutOfRangeException.ThrowIfLessThan(endColumn, startColumn);
         StartRow = startRow;
         StartColumn = startColumn;
         EndRow = endRow;

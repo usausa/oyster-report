@@ -114,8 +114,6 @@ internal static class ColorHelper
 
     public static string ResolveHex(XLColor color, IXLWorkbook workbook, string defaultHex)
     {
-        ArgumentNullException.ThrowIfNull(workbook);
-
         var fallback = NormalizeHex(defaultHex);
         if (!color.HasValue)
         {

@@ -30,9 +30,6 @@ public sealed class PdfGenerator
         Stream output,
         PdfGenerateOptions? options = null)
     {
-        ArgumentNullException.ThrowIfNull(workbook);
-        ArgumentNullException.ThrowIfNull(output);
-
         EnsurePdfSharpFontConfiguration();
 
         var effectiveOptions = options ?? new PdfGenerateOptions();
@@ -55,11 +52,6 @@ public sealed class PdfGenerator
         Stream output,
         PdfGenerateOptions options)
     {
-        ArgumentNullException.ThrowIfNull(workbook);
-        ArgumentNullException.ThrowIfNull(renderPlan);
-        ArgumentNullException.ThrowIfNull(output);
-        ArgumentNullException.ThrowIfNull(options);
-
         using var document = new PdfDocument();
         document.Options.CompressContentStreams = options.CompressContentStreams;
 
@@ -698,9 +690,6 @@ public sealed class PdfGenerator
 
     private static ReportBorders ResolveMergedBorders(ReportSheet sourceSheet, ReportCell ownerCell)
     {
-        ArgumentNullException.ThrowIfNull(sourceSheet);
-        ArgumentNullException.ThrowIfNull(ownerCell);
-
         var mergeInfo = ownerCell.Merge ?? throw new InvalidOperationException("Merged border resolution requires merge info.");
         var mergedCells = sourceSheet.Cells
             .Where(cell => mergeInfo.Range.Contains(cell.Row, cell.Column))
