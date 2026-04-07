@@ -28,11 +28,11 @@ public sealed class PdfGenerator
     public void Generate(
         ReportWorkbook workbook,
         Stream output,
-        PdfGenerateOptions? options = null)
+        PdfGeneratorOption? option = null)
     {
         EnsurePdfSharpFontConfiguration();
 
-        var effectiveOptions = options ?? new PdfGenerateOptions();
+        var effectiveOptions = option ?? new PdfGeneratorOption();
         effectiveOptions.FontResolver ??= DefaultFontResolver;
 
         var renderPlan = BuildRenderPlan(workbook);
@@ -48,12 +48,12 @@ public sealed class PdfGenerator
         ReportWorkbook workbook,
         PdfRenderPlan renderPlan,
         Stream output,
-        PdfGenerateOptions options)
+        PdfGeneratorOption option)
     {
         using var document = new PdfDocument();
-        document.Options.CompressContentStreams = options.CompressContentStreams;
+        document.Options.CompressContentStreams = option.CompressContentStreams;
 
-        if (options.EmbedDocumentMetadata)
+        if (option.EmbedDocumentMetadata)
         {
             document.Info.Title = workbook.Metadata.TemplateName;
         }
@@ -69,7 +69,7 @@ public sealed class PdfGenerator
                 page.Height = XUnit.FromPoint(pagePlan.PageBounds.Height);
                 using var graphics = XGraphics.FromPdfPage(page);
                 DrawPageBackground(graphics, pagePlan.PageBounds);
-                DrawCells(graphics, sourceSheet, pagePlan.Cells, options);
+                DrawCells(graphics, sourceSheet, pagePlan.Cells, option);
                 DrawBorders(graphics, sourceSheet, pagePlan.Cells);
                 DrawImages(graphics, sheetPlan.Images);
                 DrawHeaderFooter(graphics, pagePlan.HeaderFooter, pagePlan.PageNumber, sheetPlan.Pages.Count);
@@ -115,7 +115,7 @@ public sealed class PdfGenerator
         XGraphics graphics,
         ReportSheet sourceSheet,
         IReadOnlyList<PdfCellRenderInfo> cells,
-        PdfGenerateOptions options)
+        PdfGeneratorOption option)
     {
         var sourceCellsByAddress = sourceSheet.Cells.ToDictionary(cell => cell.Address, StringComparer.Ordinal);
 
@@ -171,7 +171,7 @@ public sealed class PdfGenerator
                 continue;
             }
 
-            var font = ResolveFont(sourceCell.Style.Font, options);
+            var font = ResolveFont(sourceCell.Style.Font, option);
             var textBrush = new XSolidBrush(ToColor(sourceCell.Style.Font.ColorHex));
             var textRect = new XRect(
                 renderCell.ContentBounds.X,
@@ -453,7 +453,7 @@ public sealed class PdfGenerator
             right.ToString().Trim());
     }
 
-    private static XFont ResolveFont(ReportFont font, PdfGenerateOptions options)
+    private static XFont ResolveFont(ReportFont font, PdfGeneratorOption option)
     {
         var fontSize = font.Size <= 0 ? 11d : font.Size;
         var style = XFontStyleEx.Regular;
@@ -467,7 +467,7 @@ public sealed class PdfGenerator
             style |= XFontStyleEx.Italic;
         }
 
-        foreach (var fontName in EnumerateCandidateFontNames(font, options))
+        foreach (var fontName in EnumerateCandidateFontNames(font, option))
         {
             if (TryCreateFont(fontName, fontSize, style, out var resolvedFont))
             {
@@ -478,13 +478,13 @@ public sealed class PdfGenerator
         throw new InvalidOperationException($"No appropriate font found for family name '{font.Name}' and known fallbacks.");
     }
 
-    private static IEnumerable<string> EnumerateCandidateFontNames(ReportFont font, PdfGenerateOptions options)
+    private static IEnumerable<string> EnumerateCandidateFontNames(ReportFont font, PdfGeneratorOption option)
     {
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        if (options.FontResolver is not null)
+        if (option.FontResolver is not null)
         {
-            var resolution = options.FontResolver.Resolve(new ReportFontRequest
+            var resolution = option.FontResolver.Resolve(new ReportFontRequest
             {
                 FontName = font.Name,
                 Bold = font.Bold,

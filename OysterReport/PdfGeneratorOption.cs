@@ -1,6 +1,6 @@
 namespace OysterReport;
 
-public sealed class PdfGenerateOptions
+public sealed class PdfGeneratorOption
 {
     public IReportFontResolver? FontResolver { get; set; } // Font resolver used during PDF rendering
 

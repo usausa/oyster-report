@@ -13,7 +13,7 @@ public sealed class ExcelReader
 {
     private readonly StringComparer sheetNameComparer = StringComparer.OrdinalIgnoreCase;
 
-    public ReportWorkbook Read(string filePath, ExcelReadOptions? options = null)
+    public ReportWorkbook Read(string filePath, ExcelReaderOption? option = null)
     {
         using var stream = File.OpenRead(filePath);
         var metadata = new ReportMetadata
@@ -22,15 +22,15 @@ public sealed class ExcelReader
             SourceFilePath = filePath,
             SourceLastWriteTime = File.Exists(filePath) ? File.GetLastWriteTimeUtc(filePath) : null
         };
-        return ReadInternal(stream, options, metadata);
+        return ReadInternal(stream, option, metadata);
     }
 
-    public ReportWorkbook Read(Stream stream, ExcelReadOptions? options = null)
+    public ReportWorkbook Read(Stream stream, ExcelReaderOption? option = null)
     {
-        return ReadInternal(stream, options, null);
+        return ReadInternal(stream, option, null);
     }
 
-    private ReportWorkbook ReadInternal(Stream stream, ExcelReadOptions? options, ReportMetadata? metadata)
+    private ReportWorkbook ReadInternal(Stream stream, ExcelReaderOption? option, ReportMetadata? metadata)
     {
         if (stream.CanSeek)
         {
@@ -54,8 +54,8 @@ public sealed class ExcelReader
         var reportWorkbook = new ReportWorkbook(
             metadata ?? new ReportMetadata { TemplateName = workbook.Properties.Title ?? "Workbook" },
             measurementProfile);
-        var targetSheets = options?.TargetSheets is { Count: > 0 }
-            ? new HashSet<string>(options.TargetSheets, sheetNameComparer)
+        var targetSheets = option?.TargetSheets is { Count: > 0 }
+            ? new HashSet<string>(option.TargetSheets, sheetNameComparer)
             : null;
 
         foreach (var (worksheet, worksheetIndex) in workbook.Worksheets.Select((worksheet, index) => (worksheet, index)))
@@ -66,7 +66,7 @@ public sealed class ExcelReader
             }
 
             var sheetTableStyles = workbookTableStyles.GetTableStyles(worksheetIndex);
-            reportWorkbook.AddSheet(ReadSheet(worksheet, measurementProfile, options?.IncludeImages ?? true, sheetTableStyles, worksheetIndex, rawColumnWidths));
+            reportWorkbook.AddSheet(ReadSheet(worksheet, measurementProfile, option?.IncludeImages ?? true, sheetTableStyles, worksheetIndex, rawColumnWidths));
         }
 
         return reportWorkbook;

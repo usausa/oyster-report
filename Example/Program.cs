@@ -12,13 +12,13 @@ var outputPath = ResolveOutputPath(args, inputPath);
 var engine = new OysterReportEngine();
 var workbook = engine.Read(inputPath);
 
-var options = new PdfGenerateOptions
+var option = new PdfGeneratorOption
 {
     FontResolver = new JapaneseFontResolver()
 };
 
 using var output = File.Create(outputPath);
-engine.GeneratePdf(workbook, output, options);
+engine.GeneratePdf(workbook, output, option);
 
 Console.WriteLine($"Input : {inputPath}");
 Console.WriteLine($"Output: {outputPath}");

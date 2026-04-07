@@ -98,7 +98,7 @@ dotnet_code_quality_unused_parameters = all:warning
 # Suppression preferences
 dotnet_remove_unnecessary_suppression_exclusions = all:warning
 
-# Whitespace options
+# Whitespace option
 dotnet_style_allow_multiple_blank_lines_experimental = false:warning
 dotnet_style_allow_statement_immediately_after_block_experimental = true:silent
 

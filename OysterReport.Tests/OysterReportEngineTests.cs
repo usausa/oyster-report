@@ -26,7 +26,7 @@ public sealed class OysterReportEngineTests
             }
 
             var engine = new OysterReportEngine();
-            var workbook = engine.Read(tempFile, new ExcelReadOptions());
+            var workbook = engine.Read(tempFile, new ExcelReaderOption());
             var sheet = Assert.Single(workbook.Sheets);
             sheet.ReplacePlaceholder("Name", "Bob");
 

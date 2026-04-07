@@ -21,7 +21,7 @@ public sealed class PdfGeneratorTests
         var workbook = new ExcelReader().Read(stream);
         using var output = new MemoryStream();
 
-        new PdfGenerator().Generate(workbook, output, new PdfGenerateOptions());
+        new PdfGenerator().Generate(workbook, output, new PdfGeneratorOption());
 
         output.Position = 0;
         using var reader = new StreamReader(output, leaveOpen: true);
