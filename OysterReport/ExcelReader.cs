@@ -3,8 +3,10 @@ namespace OysterReport;
 using System.Globalization;
 using System.IO.Compression;
 using System.Xml.Linq;
+
 using ClosedXML.Excel;
 using ClosedXML.Excel.Drawings;
+
 using OysterReport.Internal;
 
 public sealed class ExcelReader

@@ -3,7 +3,9 @@ namespace OysterReport.Internal;
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.Versioning;
+
 using Microsoft.Win32;
+
 using PdfSharp.Fonts;
 
 [SupportedOSPlatform("windows")]

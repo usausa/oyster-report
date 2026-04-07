@@ -2,6 +2,7 @@ namespace OysterReport;
 
 using System.Text;
 using System.Text.Json;
+
 using OysterReport.Internal;
 
 public sealed class ReportDiagnostic

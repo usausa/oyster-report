@@ -2,6 +2,7 @@ namespace OysterReport.Internal;
 
 using System.Globalization;
 using System.Text.Json;
+
 using OysterReport;
 
 internal static class DumpPayloadFactory

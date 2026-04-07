@@ -1,6 +1,7 @@
 namespace OysterReport;
 
 using System.Globalization;
+
 using OysterReport.Internal;
 
 public enum ReportDumpFormat

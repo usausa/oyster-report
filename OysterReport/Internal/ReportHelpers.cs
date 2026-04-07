@@ -4,7 +4,9 @@ using System.Drawing;
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
+
 using ClosedXML.Excel;
+
 using OysterReport;
 
 internal static partial class PlaceholderParser

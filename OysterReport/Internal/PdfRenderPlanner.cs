@@ -1,6 +1,7 @@
 namespace OysterReport.Internal;
 
 using System.Globalization;
+
 using OysterReport;
 
 internal static class PdfRenderPlanner

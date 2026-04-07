@@ -3,7 +3,9 @@ namespace OysterReport;
 using System.Globalization;
 using System.Reflection;
 using System.Text;
+
 using OysterReport.Internal;
+
 using PdfSharp.Drawing;
 using PdfSharp.Drawing.Layout;
 using PdfSharp.Pdf;
