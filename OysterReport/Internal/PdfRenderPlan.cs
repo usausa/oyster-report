@@ -4,77 +4,60 @@ using OysterReport;
 
 internal sealed record PdfRenderPlan
 {
-    public IReadOnlyList<PdfRenderSheetPlan> Sheets { get; init; } = Array.Empty<PdfRenderSheetPlan>(); // 解決済みシートレンダリング情報一覧
+    public IReadOnlyList<PdfRenderSheetPlan> Sheets { get; init; } = Array.Empty<PdfRenderSheetPlan>(); // Resolved sheet render plans
 }
 
 internal sealed record PdfRenderSheetPlan
 {
-    public string SheetName { get; init; } = string.Empty; // 対象シート名
+    public string SheetName { get; init; } = string.Empty; // Target sheet name
 
-    public IReadOnlyList<PdfRenderPagePlan> Pages { get; init; } = Array.Empty<PdfRenderPagePlan>(); // ページ分割後のページ一覧
+    public IReadOnlyList<PdfRenderPagePlan> Pages { get; init; } = Array.Empty<PdfRenderPagePlan>(); // Pages after layout resolution
 
-    public IReadOnlyList<PdfBorderRenderInfo> Borders { get; init; } = Array.Empty<PdfBorderRenderInfo>(); // 罫線競合解決後の罫線一覧
-
-    public IReadOnlyList<PdfImageRenderInfo> Images { get; init; } = Array.Empty<PdfImageRenderInfo>(); // 画像の最終配置一覧
+    public IReadOnlyList<PdfImageRenderInfo> Images { get; init; } = Array.Empty<PdfImageRenderInfo>(); // Final image placements
 }
 
 internal sealed record PdfRenderPagePlan
 {
-    public int PageNumber { get; init; } // 1 始まりのページ番号
+    public int PageNumber { get; init; } // Page number (1-based)
 
-    public ReportRect PageBounds { get; init; } // 用紙全体の矩形
+    public ReportRect PageBounds { get; init; } // Rectangle of the entire page
 
-    public ReportRect PrintableBounds { get; init; } // 余白を除いた印字可能領域
+    public ReportRect PrintableBounds { get; init; } // Printable area excluding margins
 
-    public PdfHeaderFooterRenderInfo HeaderFooter { get; init; } = new(); // 当該ページのヘッダ、フッタ描画情報
+    public PdfHeaderFooterRenderInfo HeaderFooter { get; init; } = new(); // Header and footer render info for this page
 
-    public IReadOnlyList<PdfCellRenderInfo> Cells { get; init; } = Array.Empty<PdfCellRenderInfo>(); // 当該ページに描画するセル一覧
+    public IReadOnlyList<PdfCellRenderInfo> Cells { get; init; } = Array.Empty<PdfCellRenderInfo>(); // Cells to render on this page
 }
 
 internal sealed record PdfCellRenderInfo
 {
-    public string CellAddress { get; init; } = string.Empty; // 対象セルの番地
+    public string CellAddress { get; init; } = string.Empty; // Target cell address
 
-    public ReportRect OuterBounds { get; init; } // セル外枠の最終矩形
+    public ReportRect OuterBounds { get; init; } // Final outer bounds of the cell
 
-    public ReportRect ContentBounds { get; init; } // 内容描画領域の最終矩形
+    public ReportRect ContentBounds { get; init; } // Final content drawing bounds
 
-    public ReportRect TextBounds { get; init; } // テキスト描画に使う最終矩形
+    public ReportRect TextBounds { get; init; } // Final text overflow bounds
 
-    public bool IsMergedOwner { get; init; } // 結合セルの代表セルかどうか
-
-    public bool IsClipped { get; init; } // 描画時にクリップが必要かどうか
-}
-
-internal sealed record PdfBorderRenderInfo
-{
-    public ReportLine Line { get; init; } // 描画する線分
-
-    public ReportBorderStyle Style { get; init; } // 線分に適用する罫線スタイル
-
-    public double Width { get; init; } // 線分に適用する罫線幅
-
-    public string ColorHex { get; init; } = "#FF000000"; // 線分に適用する罫線色
-
-    public string OwnerCellAddress { get; init; } = string.Empty; // この線分の由来となる代表セル番地
+    public bool IsMergedOwner { get; init; } // Whether this is the owner cell of a merged range
 }
 
 internal sealed record PdfImageRenderInfo
 {
-    public string Name { get; init; } = string.Empty; // 画像識別名
+    public string Name { get; init; } = string.Empty; // Image identifier name
 
-    public ReportRect Bounds { get; init; } // 描画に使う最終矩形
+    public ReportRect Bounds { get; init; } // Final bounding rectangle for drawing
 
-    public ReadOnlyMemory<byte> ImageBytes { get; init; } // 画像バイトデータ
+    public ReadOnlyMemory<byte> ImageBytes { get; init; } // Image byte data
 }
 
 internal sealed record PdfHeaderFooterRenderInfo
 {
-    public string? HeaderText { get; init; } // 当該ページに描画するヘッダ文字列
+    public string? HeaderText { get; init; } // Header text for this page (null if none)
 
-    public string? FooterText { get; init; } // 当該ページに描画するフッタ文字列
+    public string? FooterText { get; init; } // Footer text for this page (null if none)
 
-    public ReportRect HeaderBounds { get; init; } // ヘッダ描画領域
+    public ReportRect HeaderBounds { get; init; } // Header drawing area
 
-    public ReportRect FooterBounds { get; init; } // フッタ描画領域
+    public ReportRect FooterBounds { get; init; } // Footer drawing area
 }

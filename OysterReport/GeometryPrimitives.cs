@@ -2,17 +2,17 @@ namespace OysterReport;
 
 public readonly record struct ReportRect
 {
-    public double X { get; init; } // 左上 X 座標(point)
+    public double X { get; init; } // Upper-left X coordinate (points)
 
-    public double Y { get; init; } // 左上 Y 座標(point)
+    public double Y { get; init; } // Upper-left Y coordinate (points)
 
-    public double Width { get; init; } // 幅(point)
+    public double Width { get; init; } // Width (points)
 
-    public double Height { get; init; } // 高さ(point)
+    public double Height { get; init; } // Height (points)
 
-    public double Right => X + Width; // 右端 X 座標(point)
+    public double Right => X + Width; // Right edge X coordinate (points)
 
-    public double Bottom => Y + Height; // 下端 Y 座標(point)
+    public double Bottom => Y + Height; // Bottom edge Y coordinate (points)
 
     public ReportRect Deflate(ReportThickness thickness) =>
         new()
@@ -41,13 +41,13 @@ public readonly record struct ReportRect
 
 public readonly record struct ReportThickness
 {
-    public double Left { get; init; } // 左余白(point)
+    public double Left { get; init; } // Left margin (points)
 
-    public double Top { get; init; } // 上余白(point)
+    public double Top { get; init; } // Top margin (points)
 
-    public double Right { get; init; } // 右余白(point)
+    public double Right { get; init; } // Right margin (points)
 
-    public double Bottom { get; init; } // 下余白(point)
+    public double Bottom { get; init; } // Bottom margin (points)
 
     public static ReportThickness Uniform(double value) =>
         new()
@@ -61,11 +61,11 @@ public readonly record struct ReportThickness
 
 public readonly record struct ReportLine
 {
-    public double X1 { get; init; } // 始点 X 座標(point)
+    public double X1 { get; init; } // Start point X coordinate (points)
 
-    public double Y1 { get; init; } // 始点 Y 座標(point)
+    public double Y1 { get; init; } // Start point Y coordinate (points)
 
-    public double X2 { get; init; } // 終点 X 座標(point)
+    public double X2 { get; init; } // End point X coordinate (points)
 
-    public double Y2 { get; init; } // 終点 Y 座標(point)
+    public double Y2 { get; init; } // End point Y coordinate (points)
 }

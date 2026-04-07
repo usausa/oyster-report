@@ -2,15 +2,11 @@ namespace OysterReport;
 
 public sealed class PdfGenerateOptions
 {
-    public IReportFontResolver? FontResolver { get; set; } // PDF 描画時に使うフォントリゾルバ
+    public IReportFontResolver? FontResolver { get; set; } // Font resolver used during PDF rendering
 
-    public bool StrictMode { get; set; } // 未解決要素をエラー扱いする厳格モードか
+    public bool EmbedDocumentMetadata { get; set; } = true; // Whether to embed document metadata into the PDF
 
-    public double MinimumReadableScale { get; set; } = 0.5d; // 許容する最小拡大縮小率
-
-    public bool EmbedDocumentMetadata { get; set; } = true; // PDF 文書メタデータを書き込むか
-
-    public bool CompressContentStreams { get; set; } = true; // PDF コンテンツを圧縮するか
+    public bool CompressContentStreams { get; set; } = true; // Whether to compress PDF content streams
 }
 
 public interface IReportFontResolver
@@ -20,18 +16,18 @@ public interface IReportFontResolver
 
 public sealed record ReportFontRequest
 {
-    public string FontName { get; init; } = string.Empty; // 要求フォント名
+    public string FontName { get; init; } = string.Empty; // Requested font name
 
-    public bool Bold { get; init; } // 太字要求フラグ
+    public bool Bold { get; init; } // Bold request flag
 
-    public bool Italic { get; init; } // 斜体要求フラグ
+    public bool Italic { get; init; } // Italic request flag
 }
 
 public sealed record ReportFontResolveResult
 {
-    public bool IsResolved { get; init; } // 解決成功したか
+    public bool IsResolved { get; init; } // Whether the font was successfully resolved
 
-    public string ResolvedFontName { get; init; } = string.Empty; // 解決後フォント名
+    public string ResolvedFontName { get; init; } = string.Empty; // Resolved font name
 
-    public string? Message { get; init; } // 診断メッセージ
+    public string? Message { get; init; } // Diagnostic message (optional)
 }

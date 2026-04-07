@@ -38,7 +38,7 @@ internal sealed class WindowsInstalledFontResolver : IFontResolver
 
         var rawBytes = File.ReadAllBytes(path);
 
-        // TTC ファイルの場合は該当フェイスを TTF として抽出する。
+        // For TTC files, extract the target face as a TTF.
         if (string.Equals(Path.GetExtension(path), ".ttc", StringComparison.OrdinalIgnoreCase))
         {
             rawBytes = ExtractTtfFaceFromTtc(rawBytes, faceIndex);
@@ -64,7 +64,7 @@ internal sealed class WindowsInstalledFontResolver : IFontResolver
         var faceOffset = (int)ReadUInt32(12 + (4 * faceIndex));
         var numTables = ReadUInt16(faceOffset + 4);
 
-        // テーブルレコードを読み込む (tag, checkSum, offset, length)
+        // Read table records (tag, checkSum, offset, length).
         var tables = new (string Tag, uint CheckSum, int SrcOffset, int Length)[numTables];
         for (var i = 0; i < numTables; i++)
         {
@@ -76,7 +76,7 @@ internal sealed class WindowsInstalledFontResolver : IFontResolver
                 Length: (int)ReadUInt32(rec + 12));
         }
 
-        // 新しい TTF ファイルのレイアウトを計算する
+        // Compute the layout of the new TTF file.
         // OffsetTable (12 bytes) + TableRecords (numTables * 16 bytes) + table data
         var headerSize = 12 + (numTables * 16);
         var tableOffsets = new int[numTables];
@@ -85,14 +85,14 @@ internal sealed class WindowsInstalledFontResolver : IFontResolver
         {
             tableOffsets[i] = totalSize;
             totalSize += tables[i].Length;
-            // 4 バイト境界にアライン
+            // Align to a 4-byte boundary.
             if (totalSize % 4 != 0)
             {
                 totalSize += 4 - (totalSize % 4);
             }
         }
 
-        // TTF バイト列を組み立てる
+        // Assemble the TTF byte array.
         var ttf = new byte[totalSize];
         void WriteUInt32(int offset, uint value)
         {
@@ -102,10 +102,10 @@ internal sealed class WindowsInstalledFontResolver : IFontResolver
             ttf[offset + 3] = (byte)value;
         }
 
-        // sfnt OffsetTable をコピー (sfVersion + numTables + searchRange + entrySelector + rangeShift)
+        // Copy the sfnt OffsetTable (sfVersion + numTables + searchRange + entrySelector + rangeShift).
         Array.Copy(ttc, faceOffset, ttf, 0, 12);
 
-        // TableRecord を新しいオフセットで書き込む
+        // Write TableRecords with updated offsets.
         for (var i = 0; i < numTables; i++)
         {
             var rec = 12 + (i * 16);
@@ -114,7 +114,7 @@ internal sealed class WindowsInstalledFontResolver : IFontResolver
             WriteUInt32(rec + 8, (uint)tableOffsets[i]);
             WriteUInt32(rec + 12, (uint)tables[i].Length);
 
-            // テーブルデータをコピー
+            // Copy table data.
             Array.Copy(ttc, tables[i].SrcOffset, ttf, tableOffsets[i], tables[i].Length);
         }
 
@@ -181,9 +181,9 @@ internal sealed class WindowsInstalledFontResolver : IFontResolver
                 continue;
             }
 
-            // レジストリキーは "FontA & FontB & FontC (TrueType)" のような複合名になることがある。
-            // 末尾の "(TrueType)" 等の括弧内テキストを除去して "&" で分割し、
-            // 各フォント名とその TTC フェイスインデックス (分割順序) を登録する。
+            // Registry keys can be compound names like "FontA & FontB & FontC (TrueType)".
+            // Strip the trailing parenthetical (e.g. "(TrueType)"), split by "&",
+            // and register each font name with its TTC face index (position in the split).
             var namesPart = valueName;
             var parenIdx = namesPart.LastIndexOf('(');
             if (parenIdx > 0)

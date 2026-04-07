@@ -4,26 +4,26 @@ using OysterReport.Internal;
 
 public sealed record ReportMetadata
 {
-    public string TemplateName { get; init; } = string.Empty; // テンプレート名
+    public string TemplateName { get; init; } = string.Empty; // Template name
 
-    public string? SourceFilePath { get; init; } // 読み込み元ファイルパス
+    public string? SourceFilePath { get; init; } // Source file path
 
-    public DateTimeOffset? SourceLastWriteTime { get; init; } // 読み込み元の最終更新日時
+    public DateTimeOffset? SourceLastWriteTime { get; init; } // Last write time of the source file
 
-    public string? Author { get; init; } // テンプレート作成者
+    public string? Author { get; init; } // Template author
 }
 
 public sealed record ReportMeasurementProfile
 {
-    public double Dpi { get; init; } = 96d; // 計測時に前提とする DPI
+    public double Dpi { get; init; } = 96d; // DPI assumed during measurement
 
-    public double MaxDigitWidth { get; init; } = 7d; // 既定フォントでの最大数字幅
+    public double MaxDigitWidth { get; init; } = 7d; // Maximum digit width in the default font
 
-    public string DefaultFontName { get; init; } = "Arial"; // 既定フォント名
+    public string DefaultFontName { get; init; } = "Arial"; // Default font name
 
-    public double DefaultFontSize { get; init; } = 11d; // 既定フォントサイズ
+    public double DefaultFontSize { get; init; } = 11d; // Default font size (points)
 
-    public double ColumnWidthAdjustment { get; init; } = 1d; // 列幅換算の補正係数
+    public double ColumnWidthAdjustment { get; init; } = 1d; // Adjustment factor for column width conversion
 }
 
 public sealed class ReportWorkbook
@@ -37,13 +37,13 @@ public sealed class ReportWorkbook
         MeasurementProfile = measurementProfile ?? new ReportMeasurementProfile();
     }
 
-    public IReadOnlyList<ReportSheet> Sheets => sheets; // ワークブックに含まれるシート一覧
+    public IReadOnlyList<ReportSheet> Sheets => sheets; // List of sheets in the workbook
 
-    public ReportMetadata Metadata { get; } // 帳票全体に関するメタデータ
+    public ReportMetadata Metadata { get; } // Metadata for the entire report workbook
 
-    public ReportMeasurementProfile MeasurementProfile { get; } // 計測条件と環境差吸収設定
+    public ReportMeasurementProfile MeasurementProfile { get; } // Measurement settings and environment normalization profile
 
-    public IReadOnlyList<ReportDiagnostic> Diagnostics => diagnostics; // 読み込み時点で収集した診断情報
+    public IReadOnlyList<ReportDiagnostic> Diagnostics => diagnostics; // Diagnostics collected during reading
 
     public ReportSheet AddSheet(string name)
     {
@@ -79,31 +79,31 @@ public sealed class ReportSheet
         UsedRange = new ReportRange(1, 1, 1, 1);
     }
 
-    public string Name { get; } // シート名
+    public string Name { get; } // Sheet name
 
-    public ReportRange UsedRange { get; private set; } // 使用範囲
+    public ReportRange UsedRange { get; private set; } // Used cell range
 
-    public IReadOnlyList<ReportRow> Rows => rows; // 行定義一覧
+    public IReadOnlyList<ReportRow> Rows => rows; // Row definitions
 
-    public IReadOnlyList<ReportColumn> Columns => columns; // 列定義一覧
+    public IReadOnlyList<ReportColumn> Columns => columns; // Column definitions
 
-    public IReadOnlyList<ReportCell> Cells => cells; // 使用範囲内のセル一覧
+    public IReadOnlyList<ReportCell> Cells => cells; // List of cells in the used range
 
-    public IReadOnlyList<ReportMergedRange> MergedRanges => mergedRanges; // 結合セル範囲一覧
+    public IReadOnlyList<ReportMergedRange> MergedRanges => mergedRanges; // List of merged cell ranges
 
-    public IReadOnlyList<ReportImage> Images => images; // シート上の画像一覧
+    public IReadOnlyList<ReportImage> Images => images; // List of images on the sheet
 
-    public ReportPageSetup PageSetup { get; private set; } = new(); // 印刷時のページ設定
+    public ReportPageSetup PageSetup { get; private set; } = new(); // Page setup for printing
 
-    public ReportHeaderFooter HeaderFooter { get; private set; } = new(); // ヘッダ、フッタ定義
+    public ReportHeaderFooter HeaderFooter { get; private set; } = new(); // Header and footer definition
 
-    public ReportPrintArea? PrintArea { get; private set; } // 明示的な印刷範囲
+    public ReportPrintArea? PrintArea { get; private set; } // Explicit print area (null if not set)
 
-    public IReadOnlyList<ReportPageBreak> HorizontalPageBreaks => horizontalPageBreaks; // 水平手動改ページ一覧
+    public IReadOnlyList<ReportPageBreak> HorizontalPageBreaks => horizontalPageBreaks; // List of manual horizontal page breaks
 
-    public IReadOnlyList<ReportPageBreak> VerticalPageBreaks => verticalPageBreaks; // 垂直手動改ページ一覧
+    public IReadOnlyList<ReportPageBreak> VerticalPageBreaks => verticalPageBreaks; // List of manual vertical page breaks
 
-    public bool ShowGridLines { get; private set; } // グリッド線表示フラグ
+    public bool ShowGridLines { get; private set; } // Whether to show grid lines
 
     public int ReplacePlaceholder(string markerName, string value)
     {
@@ -308,15 +308,15 @@ public sealed class ReportRow
         OutlineLevel = outlineLevel;
     }
 
-    public int Index { get; private set; } // 1 始まりの行番号
+    public int Index { get; private set; } // Row number (1-based)
 
-    public double HeightPoint { get; } // 行高(point)
+    public double HeightPoint { get; } // Row height (points)
 
-    public double TopPoint { get; private set; } // シート先頭からの上端位置(point)
+    public double TopPoint { get; private set; } // Top position from the sheet origin (points)
 
-    public bool IsHidden { get; } // 非表示行かどうか
+    public bool IsHidden { get; } // Whether the row is hidden
 
-    public int OutlineLevel { get; } // アウトラインレベル
+    public int OutlineLevel { get; } // Outline level
 
     internal ReportRow CloneWithIndex(int index) => new(index, HeightPoint, IsHidden, OutlineLevel);
 
@@ -336,26 +336,26 @@ public sealed class ReportColumn
         OriginalExcelWidth = originalExcelWidth;
     }
 
-    public int Index { get; } // 1 始まりの列番号
+    public int Index { get; } // Column number (1-based)
 
-    public double WidthPoint { get; } // 列幅(point)
+    public double WidthPoint { get; } // Column width (points)
 
-    public double LeftPoint { get; private set; } // シート左端からの左端位置(point)
+    public double LeftPoint { get; private set; } // Left position from the sheet origin (points)
 
-    public bool IsHidden { get; } // 非表示列かどうか
+    public bool IsHidden { get; } // Whether the column is hidden
 
-    public int OutlineLevel { get; } // アウトラインレベル
+    public int OutlineLevel { get; } // Outline level
 
-    public double OriginalExcelWidth { get; } // Excel 上の元列幅値
+    public double OriginalExcelWidth { get; } // Original column width value from Excel
 
     internal void SetLeft(double leftPoint) => LeftPoint = leftPoint;
 }
 
 public sealed record ReportCellValue
 {
-    public ReportCellValueKind Kind { get; init; } // 元データの種別
+    public ReportCellValueKind Kind { get; init; } // Original data type
 
-    public object? RawValue { get; init; } // Excel から取得した元値
+    public object? RawValue { get; init; } // Raw value retrieved from Excel
 }
 
 public sealed class ReportCell
@@ -379,25 +379,25 @@ public sealed class ReportCell
         Style = style;
     }
 
-    public int Row { get; private set; } // 1 始まりの行番号
+    public int Row { get; private set; } // Row number (1-based)
 
-    public int Column { get; private set; } // 1 始まりの列番号
+    public int Column { get; private set; } // Column number (1-based)
 
-    public string Address { get; private set; } // A1 形式のセル番地
+    public string Address { get; private set; } // Cell address in A1 notation
 
-    public ReportCellValue Value { get; } // 元データ値
+    public ReportCellValue Value { get; } // Original cell value
 
-    public string SourceText { get; } // Excel から読んだ元の表示文字列
+    public string SourceText { get; } // Original display text read from Excel
 
-    public string DisplayText { get; private set; } // 現在の表示文字列
+    public string DisplayText { get; private set; } // Current display text (may be modified by placeholder substitution)
 
-    public ReportPlaceholderText? Placeholder { get; } // プレースホルダ情報
+    public ReportPlaceholderText? Placeholder { get; } // Placeholder information (null if not a placeholder cell)
 
-    public ReportCellStyle Style { get; private set; } // セルスタイル
+    public ReportCellStyle Style { get; private set; } // Cell style
 
-    public ReportRect Bounds { get; private set; } // セル外枠の物理矩形
+    public ReportRect Bounds { get; private set; } // Physical bounding rectangle of the cell
 
-    public ReportMergeInfo? Merge { get; private set; } // 結合セル参加情報
+    public ReportMergeInfo? Merge { get; private set; } // Merge membership info (null if not part of a merge)
 
     internal void SetDisplayText(string displayText) => DisplayText = displayText;
 
@@ -433,11 +433,11 @@ public sealed class ReportPlaceholderText
         MarkerName = markerName;
     }
 
-    public string MarkerText { get; } // Excel 上の特殊値そのもの
+    public string MarkerText { get; } // Raw placeholder token as it appears in Excel
 
-    public string MarkerName { get; } // アプリケーションから指定する識別子
+    public string MarkerName { get; } // Identifier used by the application for replacement
 
-    public string? ResolvedText { get; private set; } // 置換後の表示文字列
+    public string? ResolvedText { get; private set; } // Display text after substitution
 
     internal ReportPlaceholderText Clone() =>
         new(MarkerText, MarkerName)
@@ -450,11 +450,11 @@ public sealed class ReportPlaceholderText
 
 public sealed record ReportMergeInfo
 {
-    public string OwnerCellAddress { get; init; } = string.Empty; // 結合セルの代表セル番地
+    public string OwnerCellAddress { get; init; } = string.Empty; // Address of the owner cell in the merged range
 
-    public bool IsOwner { get; init; } // 結合セルの代表セルかどうか
+    public bool IsOwner { get; init; } // Whether this cell is the owner of the merge
 
-    public ReportRange Range { get; init; } // 結合セル範囲
+    public ReportRange Range { get; init; } // Merged cell range
 }
 
 public sealed class ReportMergedRange
@@ -465,9 +465,9 @@ public sealed class ReportMergedRange
         OwnerCellAddress = AddressHelper.ToAddress(range.StartRow, range.StartColumn);
     }
 
-    public ReportRange Range { get; private set; } // 結合セル範囲
+    public ReportRange Range { get; private set; } // Merged cell range
 
-    public string OwnerCellAddress { get; } // 代表セル番地
+    public string OwnerCellAddress { get; } // Owner cell address
 
     internal ReportMergedRange CloneShifted(int rowOffset) => new(Range.ShiftRows(rowOffset));
 
@@ -476,14 +476,14 @@ public sealed class ReportMergedRange
 
 public sealed record RowExpansionRequest
 {
-    public int TemplateStartRowIndex { get; init; } // 繰り返し元の開始行番号
+    public int TemplateStartRowIndex { get; init; } // Start row index of the template block
 
-    public int TemplateEndRowIndex { get; init; } // 繰り返し元の終了行番号
+    public int TemplateEndRowIndex { get; init; } // End row index of the template block
 
-    public int RepeatCount { get; init; } // 追加する繰り返し回数
+    public int RepeatCount { get; init; } // Number of additional repetitions to insert
 
     public IReadOnlyList<IReadOnlyDictionary<string, string?>> PlaceholderValuesByIteration { get; init; } =
-        Array.Empty<IReadOnlyDictionary<string, string?>>(); // 各繰り返し行に適用するプレースホルダ値
+        Array.Empty<IReadOnlyDictionary<string, string?>>(); // Placeholder values applied to each repeated row
 
     internal int GetRepeatCount()
     {

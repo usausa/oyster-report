@@ -2,7 +2,7 @@ namespace OysterReport;
 
 public sealed class ExcelReadOptions
 {
-    public IReadOnlyList<string>? TargetSheets { get; set; } // 読み込み対象シート名一覧
+    public IReadOnlyList<string>? TargetSheets { get; set; } // Sheet names to include (null or empty means all sheets)
 
-    public bool IncludeImages { get; set; } = true; // 画像も読み込むか
+    public bool IncludeImages { get; set; } = true; // Whether to include images
 }

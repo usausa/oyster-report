@@ -76,7 +76,7 @@ public sealed class ExcelReader
         IXLWorksheet worksheet,
         ReportMeasurementProfile measurementProfile,
         bool includeImages,
-        IReadOnlyList<TableStyleInfo> tableStyles,
+        IEnumerable<TableStyleInfo> tableStyles,
         int sheetIndex,
         WorkbookRawColumnWidths rawColumnWidths)
     {
@@ -161,7 +161,7 @@ public sealed class ExcelReader
 
         reportSheet.RecalculateLayout();
         ApplyMergedRanges(reportSheet);
-        ApplyTableStyles(reportSheet, worksheet.Workbook, tableStyles);
+        ApplyTableStyles(reportSheet, tableStyles);
         return reportSheet;
     }
 
@@ -452,7 +452,6 @@ public sealed class ExcelReader
 
     private static void ApplyTableStyles(
         ReportSheet reportSheet,
-        IXLWorkbook workbook,
         IEnumerable<TableStyleInfo> tableStyles)
     {
         foreach (var tableStyle in tableStyles)

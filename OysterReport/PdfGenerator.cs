@@ -35,15 +35,13 @@ public sealed class PdfGenerator
         var effectiveOptions = options ?? new PdfGenerateOptions();
         effectiveOptions.FontResolver ??= DefaultFontResolver;
 
-        var renderPlan = BuildRenderPlan(workbook, effectiveOptions);
+        var renderPlan = BuildRenderPlan(workbook);
         WritePdf(workbook, renderPlan, output, effectiveOptions);
     }
 
-    internal static PdfRenderPlan BuildRenderPlan(
-        ReportWorkbook workbook,
-        PdfGenerateOptions options)
+    internal static PdfRenderPlan BuildRenderPlan(ReportWorkbook workbook)
     {
-        return PdfRenderPlanner.BuildPlan(workbook, options);
+        return PdfRenderPlanner.BuildPlan(workbook);
     }
 
     internal static void WritePdf(

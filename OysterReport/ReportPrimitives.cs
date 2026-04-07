@@ -88,17 +88,17 @@ public readonly record struct ReportRange
         EndColumn = endColumn;
     }
 
-    public int StartRow { get; init; } // 開始行番号
+    public int StartRow { get; init; } // Start row number (1-based)
 
-    public int StartColumn { get; init; } // 開始列番号
+    public int StartColumn { get; init; } // Start column number (1-based)
 
-    public int EndRow { get; init; } // 終了行番号
+    public int EndRow { get; init; } // End row number (1-based)
 
-    public int EndColumn { get; init; } // 終了列番号
+    public int EndColumn { get; init; } // End column number (1-based)
 
-    public int RowCount => EndRow - StartRow + 1; // 範囲の行数
+    public int RowCount => EndRow - StartRow + 1; // Number of rows in range
 
-    public int ColumnCount => EndColumn - StartColumn + 1; // 範囲の列数
+    public int ColumnCount => EndColumn - StartColumn + 1; // Number of columns in range
 
     public bool Contains(int row, int column) =>
         row >= StartRow &&
@@ -119,7 +119,7 @@ public readonly record struct ReportRange
 
 public readonly record struct ReportOffset
 {
-    public double X { get; init; } // X オフセット(point)
+    public double X { get; init; } // X offset (points)
 
-    public double Y { get; init; } // Y オフセット(point)
+    public double Y { get; init; } // Y offset (points)
 }

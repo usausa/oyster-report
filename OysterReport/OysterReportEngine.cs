@@ -18,7 +18,6 @@ public sealed class OysterReportEngine
     public void DumpPdfPreparation(
         ReportWorkbook workbook,
         Stream output,
-        PdfGenerateOptions? options = null,
         ReportDumpFormat format = ReportDumpFormat.Json) =>
-        debugDumper.DumpPdfPreparation(workbook, output, options, format);
+        debugDumper.DumpPdfPreparation(workbook, output, format);
 }

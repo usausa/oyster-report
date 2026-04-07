@@ -1,12 +1,10 @@
 namespace OysterReport.Internal;
 
-using System.Globalization;
-
 using OysterReport;
 
 internal static class PdfRenderPlanner
 {
-    public static PdfRenderPlan BuildPlan(ReportWorkbook workbook, PdfGenerateOptions options)
+    public static PdfRenderPlan BuildPlan(ReportWorkbook workbook)
     {
         var sheets = workbook.Sheets.Select((sheet, index) => BuildSheetPlan(sheet, index + 1)).ToList();
         return new PdfRenderPlan
@@ -99,8 +97,7 @@ internal static class PdfRenderPlanner
                     columnByIndex,
                     columnOffsets,
                     mergedRangeByCell),
-                IsMergedOwner = isMergedOwner,
-                IsClipped = false
+                IsMergedOwner = isMergedOwner
             });
         }
 
@@ -118,7 +115,6 @@ internal static class PdfRenderPlanner
                     Cells = pageCells
                 }
             ],
-            Borders = BuildBorderInfos(sheet, pageCells),
             Images = BuildImageInfos(sheet, rowOffsets, columnOffsets)
         };
     }
@@ -271,92 +267,6 @@ internal static class PdfRenderPlanner
         };
     }
 
-    private static List<PdfBorderRenderInfo> BuildBorderInfos(ReportSheet sheet, IEnumerable<PdfCellRenderInfo> cellInfos)
-    {
-        var borderInfos = new Dictionary<string, PdfBorderRenderInfo>(StringComparer.Ordinal);
-        foreach (var cellInfo in cellInfos)
-        {
-            var cell = sheet.Cells.First(sourceCell => sourceCell.Address == cellInfo.CellAddress);
-            AddBorder(
-                borderInfos,
-                BuildLineKey("L", cellInfo.OuterBounds.X, cellInfo.OuterBounds.Y, cellInfo.OuterBounds.X, cellInfo.OuterBounds.Bottom),
-                new ReportLine
-                {
-                    X1 = cellInfo.OuterBounds.X,
-                    Y1 = cellInfo.OuterBounds.Y,
-                    X2 = cellInfo.OuterBounds.X,
-                    Y2 = cellInfo.OuterBounds.Bottom
-                },
-                cell.Style.Borders.Left,
-                cell.Address);
-            AddBorder(
-                borderInfos,
-                BuildLineKey("T", cellInfo.OuterBounds.X, cellInfo.OuterBounds.Y, cellInfo.OuterBounds.Right, cellInfo.OuterBounds.Y),
-                new ReportLine
-                {
-                    X1 = cellInfo.OuterBounds.X,
-                    Y1 = cellInfo.OuterBounds.Y,
-                    X2 = cellInfo.OuterBounds.Right,
-                    Y2 = cellInfo.OuterBounds.Y
-                },
-                cell.Style.Borders.Top,
-                cell.Address);
-            AddBorder(
-                borderInfos,
-                BuildLineKey("R", cellInfo.OuterBounds.Right, cellInfo.OuterBounds.Y, cellInfo.OuterBounds.Right, cellInfo.OuterBounds.Bottom),
-                new ReportLine
-                {
-                    X1 = cellInfo.OuterBounds.Right,
-                    Y1 = cellInfo.OuterBounds.Y,
-                    X2 = cellInfo.OuterBounds.Right,
-                    Y2 = cellInfo.OuterBounds.Bottom
-                },
-                cell.Style.Borders.Right,
-                cell.Address);
-            AddBorder(
-                borderInfos,
-                BuildLineKey("B", cellInfo.OuterBounds.X, cellInfo.OuterBounds.Bottom, cellInfo.OuterBounds.Right, cellInfo.OuterBounds.Bottom),
-                new ReportLine
-                {
-                    X1 = cellInfo.OuterBounds.X,
-                    Y1 = cellInfo.OuterBounds.Bottom,
-                    X2 = cellInfo.OuterBounds.Right,
-                    Y2 = cellInfo.OuterBounds.Bottom
-                },
-                cell.Style.Borders.Bottom,
-                cell.Address);
-        }
-
-        return borderInfos.Values.ToList();
-    }
-
-    private static void AddBorder(
-        Dictionary<string, PdfBorderRenderInfo> borders,
-        string key,
-        ReportLine line,
-        ReportBorder border,
-        string ownerCellAddress)
-    {
-        if (border.Style == ReportBorderStyle.None)
-        {
-            return;
-        }
-
-        var candidate = new PdfBorderRenderInfo
-        {
-            Line = line,
-            Style = border.Style,
-            Width = border.Width,
-            ColorHex = border.ColorHex,
-            OwnerCellAddress = ownerCellAddress
-        };
-
-        if (!borders.TryGetValue(key, out var existingBorder) || GetBorderPriority(candidate.Style) > GetBorderPriority(existingBorder.Style))
-        {
-            borders[key] = candidate;
-        }
-    }
-
     private static List<PdfImageRenderInfo> BuildImageInfos(
         ReportSheet sheet,
         Dictionary<int, double> rowOffsets,
@@ -388,11 +298,6 @@ internal static class PdfRenderPlanner
         return results;
     }
 
-    private static string BuildLineKey(string prefix, double x1, double y1, double x2, double y2) =>
-        string.Create(
-            CultureInfo.InvariantCulture,
-            $"{prefix}:{Math.Round(x1, 4)}:{Math.Round(y1, 4)}:{Math.Round(x2, 4)}:{Math.Round(y2, 4)}");
-
     private static double ComputeFittingHeight(IEnumerable<ReportRow> rows, double maxHeight)
     {
         var height = 0d;
@@ -408,18 +313,4 @@ internal static class PdfRenderPlanner
 
         return height;
     }
-
-    private static int GetBorderPriority(ReportBorderStyle style) =>
-        style switch
-        {
-            ReportBorderStyle.DoubleLine => 7,
-            ReportBorderStyle.Thick => 6,
-            ReportBorderStyle.Medium => 5,
-            ReportBorderStyle.Thin => 4,
-            ReportBorderStyle.Dashed => 3,
-            ReportBorderStyle.DashDot => 2,
-            ReportBorderStyle.Dotted => 1,
-            ReportBorderStyle.Hair => 0,
-            _ => -1
-        };
 }

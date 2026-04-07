@@ -7,15 +7,15 @@ using OysterReport.Internal;
 
 public sealed class ReportDiagnostic
 {
-    public ReportDiagnosticSeverity Severity { get; init; } // 重大度
+    public ReportDiagnosticSeverity Severity { get; init; } // Severity level
 
-    public string Code { get; init; } = string.Empty; // 診断コード
+    public string Code { get; init; } = string.Empty; // Diagnostic code
 
-    public string Message { get; init; } = string.Empty; // 利用者向け診断メッセージ
+    public string Message { get; init; } = string.Empty; // Diagnostic message for the user
 
-    public string? SheetName { get; init; } // 関連シート名
+    public string? SheetName { get; init; } // Associated sheet name (null if not sheet-specific)
 
-    public string? CellAddress { get; init; } // 関連セル番地
+    public string? CellAddress { get; init; } // Associated cell address (null if not cell-specific)
 }
 
 public sealed class ReportDebugDumper
@@ -31,10 +31,9 @@ public sealed class ReportDebugDumper
     public void DumpPdfPreparation(
         ReportWorkbook workbook,
         Stream output,
-        PdfGenerateOptions? options = null,
         ReportDumpFormat format = ReportDumpFormat.Json)
     {
-        var renderPlan = PdfGenerator.BuildRenderPlan(workbook, options ?? new PdfGenerateOptions());
+        var renderPlan = PdfGenerator.BuildRenderPlan(workbook);
         var payload = DumpPayloadFactory.CreatePdfPreparationPayload(workbook, renderPlan);
         WritePayload(output, payload, format, "PdfPreparation");
     }

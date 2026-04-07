@@ -4,60 +4,60 @@ using OysterReport.Internal;
 
 public sealed record ReportPageSetup
 {
-    public ReportPaperSize PaperSize { get; init; } = ReportPaperSize.A4; // 用紙サイズ
+    public ReportPaperSize PaperSize { get; init; } = ReportPaperSize.A4; // Paper size
 
-    public ReportPageOrientation Orientation { get; init; } = ReportPageOrientation.Portrait; // 用紙向き
+    public ReportPageOrientation Orientation { get; init; } = ReportPageOrientation.Portrait; // Page orientation
 
-    public ReportThickness Margins { get; init; } = new() { Left = 36d, Top = 36d, Right = 36d, Bottom = 36d }; // 本文余白
+    public ReportThickness Margins { get; init; } = new() { Left = 36d, Top = 36d, Right = 36d, Bottom = 36d }; // Page body margins
 
-    public double HeaderMarginPoint { get; init; } = 18d; // ヘッダ余白(point)
+    public double HeaderMarginPoint { get; init; } = 18d; // Header margin (points)
 
-    public double FooterMarginPoint { get; init; } = 18d; // フッタ余白(point)
+    public double FooterMarginPoint { get; init; } = 18d; // Footer margin (points)
 
-    public int ScalePercent { get; init; } = 100; // 印刷倍率(%)
+    public int ScalePercent { get; init; } = 100; // Print scale percentage
 
-    public int? FitToPagesWide { get; init; } // 横方向の目標ページ数
+    public int? FitToPagesWide { get; init; } // Target page count in horizontal direction
 
-    public int? FitToPagesTall { get; init; } // 縦方向の目標ページ数
+    public int? FitToPagesTall { get; init; } // Target page count in vertical direction
 
-    public bool CenterHorizontally { get; init; } // 水平中央寄せフラグ
+    public bool CenterHorizontally { get; init; } // Center horizontally on page flag
 
-    public bool CenterVertically { get; init; } // 垂直中央寄せフラグ
+    public bool CenterVertically { get; init; } // Center vertically on page flag
 }
 
 public sealed record ReportHeaderFooter
 {
-    public bool AlignWithMargins { get; init; } = true; // 余白に合わせるか
+    public bool AlignWithMargins { get; init; } = true; // Whether to align with page margins
 
-    public bool DifferentFirst { get; init; } // 先頭ページを別定義にするか
+    public bool DifferentFirst { get; init; } // Whether the first page uses a different header/footer
 
-    public bool DifferentOddEven { get; init; } // 奇数偶数ページを別定義にするか
+    public bool DifferentOddEven { get; init; } // Whether odd and even pages use different headers/footers
 
-    public bool ScaleWithDocument { get; init; } = true; // 本文の拡大縮小に追従するか
+    public bool ScaleWithDocument { get; init; } = true; // Whether to scale with the document
 
-    public string? OddHeader { get; init; } // 通常ページのヘッダ原文
+    public string? OddHeader { get; init; } // Header text for odd pages
 
-    public string? OddFooter { get; init; } // 通常ページのフッタ原文
+    public string? OddFooter { get; init; } // Footer text for odd pages
 
-    public string? EvenHeader { get; init; } // 偶数ページのヘッダ原文
+    public string? EvenHeader { get; init; } // Header text for even pages
 
-    public string? EvenFooter { get; init; } // 偶数ページのフッタ原文
+    public string? EvenFooter { get; init; } // Footer text for even pages
 
-    public string? FirstHeader { get; init; } // 先頭ページのヘッダ原文
+    public string? FirstHeader { get; init; } // Header text for the first page
 
-    public string? FirstFooter { get; init; } // 先頭ページのフッタ原文
+    public string? FirstFooter { get; init; } // Footer text for the first page
 }
 
 public sealed record ReportPrintArea
 {
-    public ReportRange Range { get; init; } // 印刷範囲
+    public ReportRange Range { get; init; } // Print area range
 }
 
 public sealed record ReportPageBreak
 {
-    public int Index { get; init; } // 改ページ位置の行番号または列番号
+    public int Index { get; init; } // Row or column index of the page break
 
-    public bool IsHorizontal { get; init; } // 水平方向改ページかどうか
+    public bool IsHorizontal { get; init; } // Whether this is a horizontal page break
 }
 
 public sealed class ReportImage
@@ -85,23 +85,23 @@ public sealed class ReportImage
         FromRow = row;
     }
 
-    public string Name { get; } // 画像識別名
+    public string Name { get; } // Image identifier name
 
-    public ReportAnchorType AnchorType { get; } // アンカー種別
+    public ReportAnchorType AnchorType { get; } // Anchor type
 
-    public string FromCellAddress { get; private set; } // 開始セル番地
+    public string FromCellAddress { get; private set; } // Starting cell address
 
-    public string? ToCellAddress { get; private set; } // 終了セル番地
+    public string? ToCellAddress { get; private set; } // Ending cell address
 
-    public ReportOffset Offset { get; } // セル内オフセット
+    public ReportOffset Offset { get; } // Offset within the starting cell
 
-    public double WidthPoint { get; } // 画像幅(point)
+    public double WidthPoint { get; } // Image width (points)
 
-    public double HeightPoint { get; } // 画像高さ(point)
+    public double HeightPoint { get; } // Image height (points)
 
-    public ReadOnlyMemory<byte> ImageBytes { get; } // 元画像データ
+    public ReadOnlyMemory<byte> ImageBytes { get; } // Raw image data
 
-    internal int FromRow { get; private set; } // 開始行番号
+    internal int FromRow { get; private set; } // Starting row number (1-based)
 
     internal ReportImage CloneShifted(int rowOffset)
     {
