@@ -2,30 +2,6 @@ namespace OysterReport;
 
 using OysterReport.Internal;
 
-public sealed record ReportMetadata
-{
-    public string TemplateName { get; init; } = string.Empty; // Template name
-
-    public string? SourceFilePath { get; init; } // Source file path
-
-    public DateTimeOffset? SourceLastWriteTime { get; init; } // Last write time of the source file
-
-    public string? Author { get; init; } // Template author
-}
-
-public sealed record ReportMeasurementProfile
-{
-    public double Dpi { get; init; } = 96d; // DPI assumed during measurement
-
-    public double MaxDigitWidth { get; init; } = 7d; // Maximum digit width in the default font
-
-    public string DefaultFontName { get; init; } = "Arial"; // Default font name
-
-    public double DefaultFontSize { get; init; } = 11d; // Default font size (points)
-
-    public double ColumnWidthAdjustment { get; init; } = 1d; // Adjustment factor for column width conversion
-}
-
 public sealed class ReportWorkbook
 {
     private readonly List<ReportSheet> sheets = [];
@@ -351,13 +327,6 @@ public sealed class ReportColumn
     internal void SetLeft(double leftPoint) => LeftPoint = leftPoint;
 }
 
-public sealed record ReportCellValue
-{
-    public ReportCellValueKind Kind { get; init; } // Original data type
-
-    public object? RawValue { get; init; } // Raw value retrieved from Excel
-}
-
 public sealed class ReportCell
 {
     public ReportCell(
@@ -448,15 +417,6 @@ public sealed class ReportPlaceholderText
     internal void SetResolvedText(string? text) => ResolvedText = text;
 }
 
-public sealed record ReportMergeInfo
-{
-    public string OwnerCellAddress { get; init; } = string.Empty; // Address of the owner cell in the merged range
-
-    public bool IsOwner { get; init; } // Whether this cell is the owner of the merge
-
-    public ReportRange Range { get; init; } // Merged cell range
-}
-
 public sealed class ReportMergedRange
 {
     public ReportMergedRange(ReportRange range)
@@ -472,6 +432,77 @@ public sealed class ReportMergedRange
     internal ReportMergedRange CloneShifted(int rowOffset) => new(Range.ShiftRows(rowOffset));
 
     internal void SetRange(ReportRange range) => Range = range;
+}
+
+public sealed class ReportImage
+{
+    public ReportImage(
+        string name,
+        ReportAnchorType anchorType,
+        string fromCellAddress,
+        string? toCellAddress,
+        ReportOffset offset,
+        double widthPoint,
+        double heightPoint,
+        ReadOnlyMemory<byte> imageBytes)
+    {
+        Name = name;
+        AnchorType = anchorType;
+        FromCellAddress = fromCellAddress;
+        ToCellAddress = toCellAddress;
+        Offset = offset;
+        WidthPoint = widthPoint;
+        HeightPoint = heightPoint;
+        ImageBytes = imageBytes;
+
+        var (row, _) = AddressHelper.ParseAddress(fromCellAddress);
+        FromRow = row;
+    }
+
+    public string Name { get; } // Image identifier name
+
+    public ReportAnchorType AnchorType { get; } // Anchor type
+
+    public string FromCellAddress { get; private set; } // Starting cell address
+
+    public string? ToCellAddress { get; private set; } // Ending cell address
+
+    public ReportOffset Offset { get; } // Offset within the starting cell
+
+    public double WidthPoint { get; } // Image width (points)
+
+    public double HeightPoint { get; } // Image height (points)
+
+    public ReadOnlyMemory<byte> ImageBytes { get; } // Raw image data
+
+    internal int FromRow { get; private set; } // Starting row number (1-based)
+
+    internal ReportImage CloneShifted(int rowOffset)
+    {
+        var (_, fromColumn) = AddressHelper.ParseAddress(FromCellAddress);
+        var shiftedFrom = AddressHelper.ToAddress(FromRow + rowOffset, fromColumn);
+        string? shiftedTo = null;
+        if (!string.IsNullOrWhiteSpace(ToCellAddress))
+        {
+            var (toRow, toColumn) = AddressHelper.ParseAddress(ToCellAddress);
+            shiftedTo = AddressHelper.ToAddress(toRow + rowOffset, toColumn);
+        }
+
+        return new ReportImage(Name, AnchorType, shiftedFrom, shiftedTo, Offset, WidthPoint, HeightPoint, ImageBytes);
+    }
+
+    internal void ShiftRows(int rowOffset)
+    {
+        var (_, fromColumn) = AddressHelper.ParseAddress(FromCellAddress);
+        FromCellAddress = AddressHelper.ToAddress(FromRow + rowOffset, fromColumn);
+        FromRow += rowOffset;
+
+        if (!string.IsNullOrWhiteSpace(ToCellAddress))
+        {
+            var (toRow, toColumn) = AddressHelper.ParseAddress(ToCellAddress);
+            ToCellAddress = AddressHelper.ToAddress(toRow + rowOffset, toColumn);
+        }
+    }
 }
 
 public sealed record RowExpansionRequest

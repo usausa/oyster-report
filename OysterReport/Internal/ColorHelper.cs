@@ -2,99 +2,8 @@ namespace OysterReport.Internal;
 
 using System.Drawing;
 using System.Globalization;
-using System.Text;
-using System.Text.RegularExpressions;
 
 using ClosedXML.Excel;
-
-using OysterReport;
-
-internal static partial class PlaceholderParser
-{
-    public static bool TryParse(string? text, out string markerName)
-    {
-        markerName = string.Empty;
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return false;
-        }
-
-        var match = PlaceholderRegex().Match(text);
-        if (!match.Success)
-        {
-            return false;
-        }
-
-        markerName = match.Groups["name"].Value.Trim();
-        return markerName.Length > 0;
-    }
-
-    [GeneratedRegex(@"^\{\{(?<name>[^{}]+)\}\}$", RegexOptions.CultureInvariant)]
-    private static partial Regex PlaceholderRegex();
-}
-
-internal static class ColumnWidthConverter
-{
-    public static double ToPoint(double excelWidth, double maxDigitWidth, double adjustment)
-    {
-        var normalizedWidth = Math.Max(0, excelWidth);
-        var effectiveMaxDigitWidth = maxDigitWidth <= 0d ? 7d : maxDigitWidth;
-        var pixelPadding = (2d * Math.Ceiling(effectiveMaxDigitWidth / 4d)) + 1d;
-        double pixelWidth;
-        if (normalizedWidth < 1d)
-        {
-            pixelWidth = normalizedWidth * (effectiveMaxDigitWidth + pixelPadding);
-        }
-        else
-        {
-            var normalizedCharacters = ((256d * normalizedWidth) + Math.Round(128d / effectiveMaxDigitWidth)) / 256d;
-            pixelWidth = (normalizedCharacters * effectiveMaxDigitWidth) + pixelPadding;
-        }
-
-        return pixelWidth * 72d / 96d * adjustment;
-    }
-}
-
-internal static class FontMeasurementHelper
-{
-    public static double ResolveMaxDigitWidth(string? fontName, double fontSize, double fallback = 7d)
-    {
-        if (string.IsNullOrWhiteSpace(fontName) || fontSize <= 0d)
-        {
-            return fallback;
-        }
-
-        var normalized = NormalizeFontName(fontName);
-        var baseWidth = normalized switch
-        {
-            var value when value.Contains("meiryoui", StringComparison.Ordinal) => 8.28125d,
-            var value when value.Contains("meiryo", StringComparison.Ordinal) => 8.28125d,
-            var value when value.Contains("yugothicui", StringComparison.Ordinal) => 8.5d,
-            var value when value.Contains("yugothic", StringComparison.Ordinal) => 8.5d,
-            var value when value.Contains("mspgothic", StringComparison.Ordinal) => 6.66667d,
-            var value when value.Contains("msgothic", StringComparison.Ordinal) => 6.66667d,
-            var value when value.Contains("arial", StringComparison.Ordinal) => 7.41536d,
-            _ => fallback
-        };
-
-        return Math.Max(fallback, baseWidth * (fontSize / 10d));
-    }
-
-    private static string NormalizeFontName(string fontName)
-    {
-        var normalized = fontName.Normalize(NormalizationForm.FormKC);
-        var builder = new StringBuilder(normalized.Length);
-        foreach (var character in normalized)
-        {
-            if (char.IsLetterOrDigit(character))
-            {
-                builder.Append(char.ToLowerInvariant(character));
-            }
-        }
-
-        return builder.ToString();
-    }
-}
 
 internal static class ColorHelper
 {
@@ -264,17 +173,4 @@ internal static class ColorHelper
 
     private static int ToByte(double value) =>
         (int)Math.Round(Math.Clamp(value, 0d, 255d), MidpointRounding.AwayFromZero);
-}
-
-internal static class PageSizeResolver
-{
-    public static (double Width, double Height) GetPageSize(ReportPaperSize paperSize)
-    {
-        return paperSize switch
-        {
-            ReportPaperSize.Letter => (612d, 792d),
-            ReportPaperSize.Legal => (612d, 1008d),
-            _ => (595.28d, 841.89d)
-        };
-    }
 }
