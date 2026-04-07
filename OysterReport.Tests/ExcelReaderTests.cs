@@ -5,8 +5,10 @@
 namespace OysterReport.Tests;
 
 using System.Linq;
+
 using ClosedXML.Excel;
 using ClosedXML.Excel.Drawings;
+
 using Xunit;
 
 public sealed class ExcelReaderTests

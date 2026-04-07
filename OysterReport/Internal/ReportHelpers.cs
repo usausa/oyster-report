@@ -117,7 +117,7 @@ internal static class ColorHelper
         ArgumentNullException.ThrowIfNull(workbook);
 
         var fallback = NormalizeHex(defaultHex);
-        if (color is null || !color.HasValue)
+        if (!color.HasValue)
         {
             return fallback;
         }

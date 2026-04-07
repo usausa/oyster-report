@@ -391,17 +391,17 @@ public sealed class ReportCell
 
     public int Column { get; private set; } // 1 始まりの列番号
 
-    public string Address { get; private set; } = string.Empty; // A1 形式のセル番地
+    public string Address { get; private set; } // A1 形式のセル番地
 
     public ReportCellValue Value { get; } // 元データ値
 
-    public string SourceText { get; } = string.Empty; // Excel から読んだ元の表示文字列
+    public string SourceText { get; } // Excel から読んだ元の表示文字列
 
-    public string DisplayText { get; private set; } = string.Empty; // 現在の表示文字列
+    public string DisplayText { get; private set; } // 現在の表示文字列
 
     public ReportPlaceholderText? Placeholder { get; } // プレースホルダ情報
 
-    public ReportCellStyle Style { get; private set; } = new(); // セルスタイル
+    public ReportCellStyle Style { get; private set; } // セルスタイル
 
     public ReportRect Bounds { get; private set; } // セル外枠の物理矩形
 
@@ -441,9 +441,9 @@ public sealed class ReportPlaceholderText
         MarkerName = markerName;
     }
 
-    public string MarkerText { get; } = string.Empty; // Excel 上の特殊値そのもの
+    public string MarkerText { get; } // Excel 上の特殊値そのもの
 
-    public string MarkerName { get; } = string.Empty; // アプリケーションから指定する識別子
+    public string MarkerName { get; } // アプリケーションから指定する識別子
 
     public string? ResolvedText { get; private set; } // 置換後の表示文字列
 
