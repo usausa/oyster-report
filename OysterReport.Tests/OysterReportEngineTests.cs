@@ -17,7 +17,7 @@ public sealed class OysterReportEngineTests
             sheet.Cell("A1").Value = "{{Name}}";
         });
 
-        var tempFile = Path.GetTempFileName();
+        var tempFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".xlsx");
         try
         {
             using (var file = File.Create(tempFile))
@@ -26,7 +26,7 @@ public sealed class OysterReportEngineTests
             }
 
             var engine = new OysterReportEngine();
-            var workbook = engine.Read(tempFile, new ExcelReaderOption());
+            using var workbook = engine.Load(tempFile);
             var sheet = Assert.Single(workbook.Sheets);
             sheet.ReplacePlaceholder("Name", "Bob");
 

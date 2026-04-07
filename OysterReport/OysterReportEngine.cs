@@ -1,23 +1,34 @@
 namespace OysterReport;
 
+using ClosedXML.Excel;
+
+using OysterReport.Generator;
+
 public sealed class OysterReportEngine
 {
     private readonly ExcelReader excelReader = new();
     private readonly PdfGenerator pdfGenerator = new();
-    private readonly ReportDebugDumper debugDumper = new();
 
-    public ReportWorkbook Read(string filePath, ExcelReaderOption? option = null) =>
-        excelReader.Read(filePath, option);
+    /// <summary>テンプレート Excel ファイルを読み込む。</summary>
+    public TemplateWorkbook Load(string filePath) =>
+        new(new XLWorkbook(filePath));
 
-    public void GeneratePdf(ReportWorkbook workbook, Stream output, PdfGeneratorOption? option = null) =>
-        pdfGenerator.Generate(workbook, output, option);
+    /// <summary>テンプレート Excel を Stream から読み込む。</summary>
+    public TemplateWorkbook Load(Stream stream) =>
+        new(new XLWorkbook(stream));
 
-    public void DumpWorkbook(ReportWorkbook workbook, Stream output, ReportDumpFormat format = ReportDumpFormat.Json) =>
-        debugDumper.DumpWorkbook(workbook, output, format);
+    /// <summary>テンプレートから PDF を生成する。</summary>
+    public void GeneratePdf(TemplateWorkbook template, Stream output, PdfGeneratorOption? option = null)
+    {
+        ArgumentNullException.ThrowIfNull(template);
+        ArgumentNullException.ThrowIfNull(output);
 
-    public void DumpPdfPreparation(
-        ReportWorkbook workbook,
-        Stream output,
-        ReportDumpFormat format = ReportDumpFormat.Json) =>
-        debugDumper.DumpPdfPreparation(workbook, output, format);
+        // ClosedXML ワークブックを保存して内部パイプラインで読み直す
+        using var buffer = new MemoryStream();
+        template.UnderlyingWorkbook.SaveAs(buffer);
+        buffer.Position = 0;
+
+        var reportWorkbook = excelReader.Read(buffer);
+        pdfGenerator.Generate(reportWorkbook, output, option);
+    }
 }

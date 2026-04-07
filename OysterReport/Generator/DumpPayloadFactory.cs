@@ -1,7 +1,9 @@
-namespace OysterReport;
+namespace OysterReport.Generator;
 
 using System.Globalization;
 using System.Text.Json;
+
+using OysterReport.Generator.Models;
 
 internal static class DumpPayloadFactory
 {

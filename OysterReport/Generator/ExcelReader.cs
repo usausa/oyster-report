@@ -1,4 +1,4 @@
-namespace OysterReport;
+namespace OysterReport.Generator;
 
 using System.Globalization;
 using System.IO.Compression;
@@ -7,9 +7,10 @@ using System.Xml.Linq;
 using ClosedXML.Excel;
 using ClosedXML.Excel.Drawings;
 
+using OysterReport.Generator.Models;
 using OysterReport.Helpers;
 
-public sealed class ExcelReader
+internal sealed class ExcelReader
 {
     private readonly StringComparer sheetNameComparer = StringComparer.OrdinalIgnoreCase;
 
@@ -314,10 +315,7 @@ public sealed class ExcelReader
     private static ReportPrintArea? ReadPrintArea(IXLWorksheet worksheet)
     {
         var printArea = worksheet.PageSetup.PrintAreas.FirstOrDefault();
-        if (printArea is null)
-        {
-            return null;
-        }
+        if (printArea is null) return null;
 
         return new ReportPrintArea
         {
@@ -368,25 +366,21 @@ public sealed class ExcelReader
         range = new ReportRange(startRow, startColumn, endRow, endColumn);
         return true;
 
-        void IncludeRange(IXLRange? range)
+        void IncludeRange(IXLRange? r)
         {
-            if (range is null)
-            {
-                return;
-            }
-
-            startRow = Math.Min(startRow, range.RangeAddress.FirstAddress.RowNumber);
-            startColumn = Math.Min(startColumn, range.RangeAddress.FirstAddress.ColumnNumber);
-            endRow = Math.Max(endRow, range.RangeAddress.LastAddress.RowNumber);
-            endColumn = Math.Max(endColumn, range.RangeAddress.LastAddress.ColumnNumber);
+            if (r is null) return;
+            startRow = Math.Min(startRow, r.RangeAddress.FirstAddress.RowNumber);
+            startColumn = Math.Min(startColumn, r.RangeAddress.FirstAddress.ColumnNumber);
+            endRow = Math.Max(endRow, r.RangeAddress.LastAddress.RowNumber);
+            endColumn = Math.Max(endColumn, r.RangeAddress.LastAddress.ColumnNumber);
         }
 
-        void IncludeReportRange(ReportRange range)
+        void IncludeReportRange(ReportRange r)
         {
-            startRow = Math.Min(startRow, range.StartRow);
-            startColumn = Math.Min(startColumn, range.StartColumn);
-            endRow = Math.Max(endRow, range.EndRow);
-            endColumn = Math.Max(endColumn, range.EndColumn);
+            startRow = Math.Min(startRow, r.StartRow);
+            startColumn = Math.Min(startColumn, r.StartColumn);
+            endRow = Math.Max(endRow, r.EndRow);
+            endColumn = Math.Max(endColumn, r.EndColumn);
         }
     }
 
@@ -419,10 +413,7 @@ public sealed class ExcelReader
 
     private static string? TryGetBottomRightCellAddress(IXLPicture picture)
     {
-        if (picture.Placement != XLPicturePlacement.MoveAndSize)
-        {
-            return null;
-        }
+        if (picture.Placement != XLPicturePlacement.MoveAndSize) return null;
 
         try
         {
@@ -436,23 +427,15 @@ public sealed class ExcelReader
 
     private static string ResolveFillColorHex(IXLFill fill, IXLWorkbook workbook)
     {
-        if (fill.PatternType == XLFillPatternValues.None)
-        {
-            return "#00000000";
-        }
+        if (fill.PatternType == XLFillPatternValues.None) return "#00000000";
 
         var background = ColorHelper.ResolveHex(fill.BackgroundColor, workbook, "#00000000");
-        if (!background.StartsWith("#00", StringComparison.Ordinal))
-        {
-            return background;
-        }
+        if (!background.StartsWith("#00", StringComparison.Ordinal)) return background;
 
         return ColorHelper.ResolveHex(fill.PatternColor, workbook, "#00000000");
     }
 
-    private static void ApplyTableStyles(
-        ReportSheet reportSheet,
-        IEnumerable<TableStyleInfo> tableStyles)
+    private static void ApplyTableStyles(ReportSheet reportSheet, IEnumerable<TableStyleInfo> tableStyles)
     {
         foreach (var tableStyle in tableStyles)
         {
@@ -468,20 +451,14 @@ public sealed class ExcelReader
             var lastDataRow = tableStyle.Range.EndRow - (tableStyle.HasTotalsRow ? 1 : 0);
             for (var rowIndex = firstDataRow; rowIndex <= lastDataRow; rowIndex++)
             {
-                if (((rowIndex - firstDataRow) % 2) != 0)
-                {
-                    continue;
-                }
+                if (((rowIndex - firstDataRow) % 2) != 0) continue;
 
                 foreach (var cell in reportSheet.Cells.Where(cell =>
                              cell.Row == rowIndex &&
                              cell.Column >= tableStyle.Range.StartColumn &&
                              cell.Column <= tableStyle.Range.EndColumn))
                 {
-                    if (!IsTransparentFill(cell.Style.Fill.BackgroundColorHex))
-                    {
-                        continue;
-                    }
+                    if (!IsTransparentFill(cell.Style.Fill.BackgroundColorHex)) continue;
 
                     cell.SetStyle(cell.Style with
                     {
@@ -547,17 +524,11 @@ public sealed class ExcelReader
 
         public double? TryGetRawWidth(int sheetIndex, int columnIndex)
         {
-            if (sheetIndex < 0 || sheetIndex >= sheetColumnRanges.Count)
-            {
-                return null;
-            }
+            if (sheetIndex < 0 || sheetIndex >= sheetColumnRanges.Count) return null;
 
             foreach (var (min, max, width) in sheetColumnRanges[sheetIndex])
             {
-                if (columnIndex >= min && columnIndex <= max)
-                {
-                    return width;
-                }
+                if (columnIndex >= min && columnIndex <= max) return width;
             }
 
             return null;
@@ -567,36 +538,16 @@ public sealed class ExcelReader
             ZipArchive archive, string sheetPath, XNamespace mainNamespace)
         {
             var doc = LoadXml(archive, sheetPath);
-            if (doc.Root is null)
-            {
-                return Array.Empty<(int, int, double)>();
-            }
+            if (doc.Root is null) return Array.Empty<(int, int, double)>();
 
             var results = new List<(int Min, int Max, double Width)>();
             var colsElement = doc.Root.Element(mainNamespace + "cols");
-            if (colsElement is null)
-            {
-                return results;
-            }
+            if (colsElement is null) return results;
 
             foreach (var col in colsElement.Elements(mainNamespace + "col"))
             {
-                if (!double.TryParse(
-                        col.Attribute("width")?.Value,
-                        NumberStyles.Number,
-                        CultureInfo.InvariantCulture,
-                        out var width) || width <= 0)
-                {
-                    continue;
-                }
-
-                if (!int.TryParse(col.Attribute("min")?.Value, out var min) ||
-                    !int.TryParse(col.Attribute("max")?.Value, out var max) ||
-                    min <= 0 || max < min)
-                {
-                    continue;
-                }
-
+                if (!double.TryParse(col.Attribute("width")?.Value, NumberStyles.Number, CultureInfo.InvariantCulture, out var width) || width <= 0) continue;
+                if (!int.TryParse(col.Attribute("min")?.Value, out var min) || !int.TryParse(col.Attribute("max")?.Value, out var max) || min <= 0 || max < min) continue;
                 results.Add((min, max, width));
             }
 
@@ -616,11 +567,7 @@ public sealed class ExcelReader
         {
             var normalizedPath = path.Replace('\\', '/');
             var entry = archive.GetEntry(normalizedPath);
-            if (entry is null)
-            {
-                return new XDocument();
-            }
-
+            if (entry is null) return new XDocument();
             using var entryStream = entry.Open();
             return XDocument.Load(entryStream);
         }
@@ -659,25 +606,16 @@ public sealed class ExcelReader
         }
 
         private static IReadOnlyList<TableStyleInfo> LoadSheetTableStyles(
-            ZipArchive archive,
-            string sheetPath,
-            XNamespace mainNamespace,
-            XNamespace relationshipNamespace)
+            ZipArchive archive, string sheetPath, XNamespace mainNamespace, XNamespace relationshipNamespace)
         {
             var sheetDocument = LoadXml(archive, sheetPath);
-            if (sheetDocument.Root is null)
-            {
-                return Array.Empty<TableStyleInfo>();
-            }
+            if (sheetDocument.Root is null) return Array.Empty<TableStyleInfo>();
 
             var tablePartElements = sheetDocument.Root
                 .Elements(mainNamespace + "tableParts")
                 .Elements(mainNamespace + "tablePart")
                 .ToList();
-            if (tablePartElements.Count == 0)
-            {
-                return Array.Empty<TableStyleInfo>();
-            }
+            if (tablePartElements.Count == 0) return Array.Empty<TableStyleInfo>();
 
             var sheetRelationshipsPath = BuildRelationshipPath(sheetPath);
             var sheetRelationships = LoadRelationships(archive, sheetRelationshipsPath);
@@ -685,25 +623,15 @@ public sealed class ExcelReader
             foreach (var tablePartElement in tablePartElements)
             {
                 var relationshipId = tablePartElement.Attribute(relationshipNamespace + "id")?.Value;
-                if (string.IsNullOrWhiteSpace(relationshipId) ||
-                    !sheetRelationships.TryGetValue(relationshipId, out var tablePath))
-                {
-                    continue;
-                }
+                if (string.IsNullOrWhiteSpace(relationshipId) || !sheetRelationships.TryGetValue(relationshipId, out var tablePath)) continue;
 
                 var tableDocument = LoadXml(archive, tablePath);
                 var tableRoot = tableDocument.Root;
-                if (tableRoot is null)
-                {
-                    continue;
-                }
+                if (tableRoot is null) continue;
 
                 var styleInfoElement = tableRoot.Element(mainNamespace + "tableStyleInfo");
                 var rangeReference = tableRoot.Attribute("ref")?.Value;
-                if (styleInfoElement is null || string.IsNullOrWhiteSpace(rangeReference))
-                {
-                    continue;
-                }
+                if (styleInfoElement is null || string.IsNullOrWhiteSpace(rangeReference)) continue;
 
                 results.Add(new TableStyleInfo(
                     ParseRange(rangeReference),
@@ -720,10 +648,7 @@ public sealed class ExcelReader
         {
             var document = LoadXml(archive, path);
             var root = document.Root;
-            if (root is null)
-            {
-                return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            }
+            if (root is null) return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
             var sourcePath = GetRelationshipSourcePath(path);
             return root.Elements()
@@ -738,11 +663,7 @@ public sealed class ExcelReader
         {
             var normalizedPath = path.Replace('\\', '/');
             var entry = archive.GetEntry(normalizedPath);
-            if (entry is null)
-            {
-                return new XDocument();
-            }
-
+            if (entry is null) return new XDocument();
             using var entryStream = entry.Open();
             return XDocument.Load(entryStream);
         }
@@ -761,10 +682,7 @@ public sealed class ExcelReader
             var normalizedPath = relationshipPath.Replace('\\', '/');
             var marker = "/_rels/";
             var markerIndex = normalizedPath.IndexOf(marker, StringComparison.Ordinal);
-            if (markerIndex < 0 || !normalizedPath.EndsWith(".rels", StringComparison.Ordinal))
-            {
-                return normalizedPath;
-            }
+            if (markerIndex < 0 || !normalizedPath.EndsWith(".rels", StringComparison.Ordinal)) return normalizedPath;
 
             var prefix = normalizedPath[..markerIndex];
             var fileName = normalizedPath[(markerIndex + marker.Length)..^".rels".Length];
@@ -773,10 +691,7 @@ public sealed class ExcelReader
 
         private static string ResolveZipPath(string sourcePath, string target)
         {
-            if (target.StartsWith('/'))
-            {
-                return target.TrimStart('/');
-            }
+            if (target.StartsWith('/')) return target.TrimStart('/');
 
             var normalizedTarget = target.Replace('\\', '/');
             var normalizedSource = sourcePath.Replace('\\', '/');
@@ -789,10 +704,7 @@ public sealed class ExcelReader
             {
                 if (part == "..")
                 {
-                    if (resultParts.Count > 0)
-                    {
-                        resultParts.RemoveAt(resultParts.Count - 1);
-                    }
+                    if (resultParts.Count > 0) resultParts.RemoveAt(resultParts.Count - 1);
                 }
                 else if (part.Length > 0 && part != ".")
                 {

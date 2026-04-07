@@ -1,22 +1,11 @@
-namespace OysterReport;
+namespace OysterReport.Generator;
 
 using System.Text;
 using System.Text.Json;
 
-public sealed class ReportDiagnostic
-{
-    public ReportDiagnosticSeverity Severity { get; init; } // Severity level
+using OysterReport.Generator.Models;
 
-    public string Code { get; init; } = string.Empty; // Diagnostic code
-
-    public string Message { get; init; } = string.Empty; // Diagnostic message for the user
-
-    public string? SheetName { get; init; } // Associated sheet name (null if not sheet-specific)
-
-    public string? CellAddress { get; init; } // Associated cell address (null if not cell-specific)
-}
-
-public sealed class ReportDebugDumper
+internal sealed class ReportDebugDumper
 {
     private readonly JsonSerializerOptions serializerOptions = DumpPayloadFactory.SerializerOptions;
 
@@ -31,7 +20,7 @@ public sealed class ReportDebugDumper
         Stream output,
         ReportDumpFormat format = ReportDumpFormat.Json)
     {
-        var renderPlan = PdfGenerator.BuildRenderPlan(workbook);
+        var renderPlan = PdfRenderPlanner.BuildPlan(workbook);
         var payload = DumpPayloadFactory.CreatePdfPreparationPayload(workbook, renderPlan);
         WritePayload(output, payload, format, "PdfPreparation");
     }

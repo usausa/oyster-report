@@ -10,7 +10,7 @@ var inputPath = ResolveInputPath(args);
 var outputPath = ResolveOutputPath(args, inputPath);
 
 var engine = new OysterReportEngine();
-var workbook = engine.Read(inputPath);
+using var workbook = engine.Load(inputPath);
 
 var option = new PdfGeneratorOption
 {

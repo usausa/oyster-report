@@ -1,4 +1,4 @@
-namespace OysterReport;
+namespace OysterReport.Generator;
 
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
@@ -38,7 +38,6 @@ internal sealed class WindowsInstalledFontResolver : IFontResolver
 
         var rawBytes = File.ReadAllBytes(path);
 
-        // For TTC files, extract the target face as a TTF.
         if (string.Equals(Path.GetExtension(path), ".ttc", StringComparison.OrdinalIgnoreCase))
         {
             rawBytes = ExtractTtfFaceFromTtc(rawBytes, faceIndex);
@@ -46,6 +45,11 @@ internal sealed class WindowsInstalledFontResolver : IFontResolver
 
         cache[faceName] = rawBytes;
         return rawBytes;
+    }
+
+    public FontResolverInfo ResolveTypeface(string familyName, bool isBold, bool isItalic)
+    {
+        return new FontResolverInfo(BuildFaceName(familyName, isBold, isItalic));
     }
 
     private static byte[] ExtractTtfFaceFromTtc(byte[] ttc, int faceIndex)
@@ -64,7 +68,6 @@ internal sealed class WindowsInstalledFontResolver : IFontResolver
         var faceOffset = (int)ReadUInt32(12 + (4 * faceIndex));
         var numTables = ReadUInt16(faceOffset + 4);
 
-        // Read table records (tag, checkSum, offset, length).
         var tables = new (string Tag, uint CheckSum, int SrcOffset, int Length)[numTables];
         for (var i = 0; i < numTables; i++)
         {
@@ -76,8 +79,6 @@ internal sealed class WindowsInstalledFontResolver : IFontResolver
                 Length: (int)ReadUInt32(rec + 12));
         }
 
-        // Compute the layout of the new TTF file.
-        // OffsetTable (12 bytes) + TableRecords (numTables * 16 bytes) + table data
         var headerSize = 12 + (numTables * 16);
         var tableOffsets = new int[numTables];
         var totalSize = headerSize;
@@ -85,14 +86,12 @@ internal sealed class WindowsInstalledFontResolver : IFontResolver
         {
             tableOffsets[i] = totalSize;
             totalSize += tables[i].Length;
-            // Align to a 4-byte boundary.
             if (totalSize % 4 != 0)
             {
                 totalSize += 4 - (totalSize % 4);
             }
         }
 
-        // Assemble the TTF byte array.
         var ttf = new byte[totalSize];
         void WriteUInt32(int offset, uint value)
         {
@@ -102,10 +101,8 @@ internal sealed class WindowsInstalledFontResolver : IFontResolver
             ttf[offset + 3] = (byte)value;
         }
 
-        // Copy the sfnt OffsetTable (sfVersion + numTables + searchRange + entrySelector + rangeShift).
         Array.Copy(ttc, faceOffset, ttf, 0, 12);
 
-        // Write TableRecords with updated offsets.
         for (var i = 0; i < numTables; i++)
         {
             var rec = 12 + (i * 16);
@@ -113,32 +110,17 @@ internal sealed class WindowsInstalledFontResolver : IFontResolver
             WriteUInt32(rec + 4, tables[i].CheckSum);
             WriteUInt32(rec + 8, (uint)tableOffsets[i]);
             WriteUInt32(rec + 12, (uint)tables[i].Length);
-
-            // Copy table data.
             Array.Copy(ttc, tables[i].SrcOffset, ttf, tableOffsets[i], tables[i].Length);
         }
 
         return ttf;
     }
 
-    public FontResolverInfo ResolveTypeface(string familyName, bool isBold, bool isItalic)
-    {
-        return new FontResolverInfo(BuildFaceName(familyName, isBold, isItalic));
-    }
-
     private static string BuildFaceName(string family, bool bold, bool italic)
     {
         var faceName = family;
-        if (bold)
-        {
-            faceName += "#b";
-        }
-
-        if (italic)
-        {
-            faceName += "#i";
-        }
-
+        if (bold) faceName += "#b";
+        if (italic) faceName += "#i";
         return faceName;
     }
 
@@ -158,17 +140,12 @@ internal sealed class WindowsInstalledFontResolver : IFontResolver
     {
         var map = new Dictionary<string, (string, int)>(StringComparer.OrdinalIgnoreCase);
         using var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts");
-        if (key is null)
-        {
-            return map;
-        }
+        if (key is null) return map;
 
         foreach (var valueName in key.GetValueNames())
         {
             if (key.GetValue(valueName) is not string registryValue || string.IsNullOrWhiteSpace(registryValue))
-            {
                 continue;
-            }
 
             var path = Path.IsPathRooted(registryValue)
                 ? registryValue
@@ -181,24 +158,16 @@ internal sealed class WindowsInstalledFontResolver : IFontResolver
                 continue;
             }
 
-            // Registry keys can be compound names like "FontA & FontB & FontC (TrueType)".
-            // Strip the trailing parenthetical (e.g. "(TrueType)"), split by "&",
-            // and register each font name with its TTC face index (position in the split).
             var namesPart = valueName;
             var parenIdx = namesPart.LastIndexOf('(');
-            if (parenIdx > 0)
-            {
-                namesPart = namesPart[..parenIdx].TrimEnd(';', ' ');
-            }
+            if (parenIdx > 0) namesPart = namesPart[..parenIdx].TrimEnd(';', ' ');
 
             var parts = namesPart.Split(CompoundNameSeparator, StringSplitOptions.RemoveEmptyEntries);
             for (var i = 0; i < parts.Length; i++)
             {
                 var name = parts[i].Trim();
                 if (!string.IsNullOrEmpty(name) && !map.ContainsKey(name))
-                {
                     map[name] = (path, i);
-                }
             }
         }
 
@@ -216,42 +185,24 @@ internal sealed class WindowsInstalledFontResolver : IFontResolver
         faceIndex = 0;
         foreach (var candidate in GetCandidateNames(family, bold, italic))
         {
-            if (!fontNameToPathAndFace.TryGetValue(candidate, out var info))
-            {
-                continue;
-            }
-
-            if (!File.Exists(info.Path))
-            {
-                continue;
-            }
-
+            if (!fontNameToPathAndFace.TryGetValue(candidate, out var info)) continue;
+            if (!File.Exists(info.Path)) continue;
             path = info.Path;
             faceIndex = info.FaceIndex;
             return true;
         }
-
         return false;
     }
 
     private static IEnumerable<string> GetCandidateNames(string family, bool bold, bool italic)
     {
-        if (bold && italic)
-        {
-            yield return family + " Bold Italic";
-        }
-
+        if (bold && italic) yield return family + " Bold Italic";
         if (bold)
         {
             yield return family + " Bold";
             yield return family + " SemiBold";
         }
-
-        if (italic)
-        {
-            yield return family + " Italic";
-        }
-
+        if (italic) yield return family + " Italic";
         yield return family;
     }
 }

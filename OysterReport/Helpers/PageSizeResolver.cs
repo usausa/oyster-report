@@ -1,6 +1,6 @@
 namespace OysterReport.Helpers;
 
-using OysterReport;
+using OysterReport.Generator.Models;
 
 internal static class PageSizeResolver
 {

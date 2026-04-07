@@ -1,0 +1,238 @@
+namespace OysterReport.Generator.Models;
+
+using OysterReport.Helpers;
+
+internal sealed class ReportSheet
+{
+    private readonly List<ReportRow> rows = [];
+    private readonly List<ReportColumn> columns = [];
+    private readonly List<ReportCell> cells = [];
+    private readonly List<ReportMergedRange> mergedRanges = [];
+    private readonly List<ReportImage> images = [];
+    private readonly List<ReportPageBreak> horizontalPageBreaks = [];
+    private readonly List<ReportPageBreak> verticalPageBreaks = [];
+
+    public ReportSheet(string name)
+    {
+        Name = name;
+        UsedRange = new ReportRange(1, 1, 1, 1);
+    }
+
+    public string Name { get; } // Sheet name
+
+    public ReportRange UsedRange { get; private set; } // Used cell range
+
+    public IReadOnlyList<ReportRow> Rows => rows; // Row definitions
+
+    public IReadOnlyList<ReportColumn> Columns => columns; // Column definitions
+
+    public IReadOnlyList<ReportCell> Cells => cells; // List of cells in the used range
+
+    public IReadOnlyList<ReportMergedRange> MergedRanges => mergedRanges; // List of merged cell ranges
+
+    public IReadOnlyList<ReportImage> Images => images; // List of images on the sheet
+
+    public ReportPageSetup PageSetup { get; private set; } = new(); // Page setup for printing
+
+    public ReportHeaderFooter HeaderFooter { get; private set; } = new(); // Header and footer definition
+
+    public ReportPrintArea? PrintArea { get; private set; } // Explicit print area (null if not set)
+
+    public IReadOnlyList<ReportPageBreak> HorizontalPageBreaks => horizontalPageBreaks; // List of manual horizontal page breaks
+
+    public IReadOnlyList<ReportPageBreak> VerticalPageBreaks => verticalPageBreaks; // List of manual vertical page breaks
+
+    public bool ShowGridLines { get; private set; } // Whether to show grid lines
+
+    public int ReplacePlaceholder(string markerName, string value)
+    {
+        var replaceCount = 0;
+        foreach (var cell in cells.Where(static x => x.Placeholder is not null))
+        {
+            if (!string.Equals(cell.Placeholder!.MarkerName, markerName, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            cell.SetDisplayText(value);
+            cell.Placeholder.SetResolvedText(value);
+            replaceCount++;
+        }
+
+        return replaceCount;
+    }
+
+    public int ReplacePlaceholders(IReadOnlyDictionary<string, string?> values)
+    {
+        var replaceCount = 0;
+        foreach (var (key, value) in values)
+        {
+            replaceCount += ReplacePlaceholder(key, value ?? string.Empty);
+        }
+
+        return replaceCount;
+    }
+
+    public void AddRows(RowExpansionRequest request)
+    {
+        var repeatCount = request.GetRepeatCount();
+        var templateRows = rows
+            .Where(row => row.Index >= request.TemplateStartRowIndex && row.Index <= request.TemplateEndRowIndex)
+            .OrderBy(row => row.Index)
+            .ToList();
+
+        if (templateRows.Count == 0)
+        {
+            throw new InvalidOperationException("Template rows were not found.");
+        }
+
+        var blockSize = request.TemplateEndRowIndex - request.TemplateStartRowIndex + 1;
+        var additionalRows = repeatCount * blockSize;
+
+        foreach (var row in rows.Where(row => row.Index > request.TemplateEndRowIndex))
+        {
+            row.SetIndex(row.Index + additionalRows);
+        }
+
+        foreach (var cell in cells.Where(cell => cell.Row > request.TemplateEndRowIndex))
+        {
+            cell.SetRowColumn(cell.Row + additionalRows, cell.Column);
+        }
+
+        foreach (var range in mergedRanges.Where(range => range.Range.StartRow > request.TemplateEndRowIndex))
+        {
+            range.SetRange(range.Range.ShiftRows(additionalRows));
+        }
+
+        foreach (var image in images.Where(image => image.FromRow > request.TemplateEndRowIndex))
+        {
+            image.ShiftRows(additionalRows);
+        }
+
+        var insertIndex = rows.FindLastIndex(row => row.Index <= request.TemplateEndRowIndex) + 1;
+        var templateCells = cells
+            .Where(cell => cell.Row >= request.TemplateStartRowIndex && cell.Row <= request.TemplateEndRowIndex)
+            .OrderBy(cell => cell.Row)
+            .ThenBy(cell => cell.Column)
+            .ToList();
+
+        for (var iteration = 0; iteration < repeatCount; iteration++)
+        {
+            var rowOffset = blockSize * (iteration + 1);
+            foreach (var templateRow in templateRows)
+            {
+                rows.Insert(insertIndex++, templateRow.CloneWithIndex(templateRow.Index + rowOffset));
+            }
+
+            foreach (var templateCell in templateCells)
+            {
+                var clone = templateCell.CloneWithPosition(templateCell.Row + rowOffset, templateCell.Column);
+                var placeholderValues = request.GetPlaceholderValues(iteration);
+                if (clone.Placeholder is not null &&
+                    placeholderValues.TryGetValue(clone.Placeholder.MarkerName, out var replacement))
+                {
+                    var resolvedText = replacement ?? string.Empty;
+                    clone.SetDisplayText(resolvedText);
+                    clone.Placeholder.SetResolvedText(resolvedText);
+                }
+
+                cells.Add(clone);
+            }
+
+            foreach (var templateRange in mergedRanges.Where(range => range.Range.StartRow >= request.TemplateStartRowIndex && range.Range.EndRow <= request.TemplateEndRowIndex).ToList())
+            {
+                mergedRanges.Add(templateRange.CloneShifted(rowOffset));
+            }
+
+            foreach (var templateImage in images.Where(image => image.FromRow >= request.TemplateStartRowIndex && image.FromRow <= request.TemplateEndRowIndex).ToList())
+            {
+                images.Add(templateImage.CloneShifted(rowOffset));
+            }
+        }
+
+        rows.Sort(static (left, right) => left.Index.CompareTo(right.Index));
+        cells.Sort(static (left, right) =>
+        {
+            var rowCompare = left.Row.CompareTo(right.Row);
+            return rowCompare != 0 ? rowCompare : left.Column.CompareTo(right.Column);
+        });
+        mergedRanges.Sort(static (left, right) => left.Range.StartRow.CompareTo(right.Range.StartRow));
+
+        UpdateUsedRange();
+        RecalculateLayout();
+    }
+
+    internal void AddRowDefinition(ReportRow row) => rows.Add(row);
+
+    internal void AddColumnDefinition(ReportColumn column) => columns.Add(column);
+
+    internal void AddCell(ReportCell cell) => cells.Add(cell);
+
+    internal void AddMergedRange(ReportMergedRange range) => mergedRanges.Add(range);
+
+    internal void AddImage(ReportImage image) => images.Add(image);
+
+    internal void AddHorizontalPageBreak(ReportPageBreak pageBreak) => horizontalPageBreaks.Add(pageBreak);
+
+    internal void AddVerticalPageBreak(ReportPageBreak pageBreak) => verticalPageBreaks.Add(pageBreak);
+
+    internal void SetPageSetup(ReportPageSetup pageSetup) => PageSetup = pageSetup;
+
+    internal void SetHeaderFooter(ReportHeaderFooter headerFooter) => HeaderFooter = headerFooter;
+
+    internal void SetPrintArea(ReportPrintArea? printArea) => PrintArea = printArea;
+
+    internal void SetShowGridLines(bool showGridLines) => ShowGridLines = showGridLines;
+
+    internal void SetUsedRange(ReportRange usedRange) => UsedRange = usedRange;
+
+    internal void RecalculateLayout()
+    {
+        var top = 0d;
+        foreach (var row in rows.OrderBy(static row => row.Index))
+        {
+            row.SetTop(top);
+            top += row.HeightPoint;
+        }
+
+        var left = 0d;
+        foreach (var column in columns.OrderBy(static column => column.Index))
+        {
+            column.SetLeft(left);
+            left += column.WidthPoint;
+        }
+
+        foreach (var cell in cells)
+        {
+            var row = rows.FirstOrDefault(item => item.Index == cell.Row);
+            var column = columns.FirstOrDefault(item => item.Index == cell.Column);
+            if (row is null || column is null)
+            {
+                continue;
+            }
+
+            cell.SetBounds(new ReportRect
+            {
+                X = column.LeftPoint,
+                Y = row.TopPoint,
+                Width = column.WidthPoint,
+                Height = row.HeightPoint
+            });
+        }
+    }
+
+    private void UpdateUsedRange()
+    {
+        if (cells.Count == 0)
+        {
+            UsedRange = new ReportRange(1, 1, 1, 1);
+            return;
+        }
+
+        UsedRange = new ReportRange(
+            cells.Min(static cell => cell.Row),
+            cells.Min(static cell => cell.Column),
+            cells.Max(static cell => cell.Row),
+            cells.Max(static cell => cell.Column));
+    }
+}

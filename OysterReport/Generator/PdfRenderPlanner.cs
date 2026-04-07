@@ -1,5 +1,6 @@
-namespace OysterReport;
+namespace OysterReport.Generator;
 
+using OysterReport.Generator.Models;
 using OysterReport.Helpers;
 
 internal static class PdfRenderPlanner

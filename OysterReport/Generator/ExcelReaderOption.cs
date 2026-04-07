@@ -1,6 +1,6 @@
-namespace OysterReport;
+namespace OysterReport.Generator;
 
-public sealed class ExcelReaderOption
+internal sealed class ExcelReaderOption
 {
     public IReadOnlyList<string>? TargetSheets { get; set; } // Sheet names to include (null or empty means all sheets)
 

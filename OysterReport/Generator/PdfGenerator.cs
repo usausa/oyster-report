@@ -1,18 +1,19 @@
-namespace OysterReport;
+namespace OysterReport.Generator;
 
 using System.Globalization;
 using System.Reflection;
 using System.Text;
 
+using OysterReport.Generator.Models;
 using OysterReport.Helpers;
 
 using PdfSharp.Drawing;
 using PdfSharp.Drawing.Layout;
 using PdfSharp.Pdf;
 
-public sealed class PdfGenerator
+internal sealed class PdfGenerator
 {
-    public IReportFontResolver? DefaultFontResolver { get; set; } // 既定のフォントリゾルバ
+    public IReportFontResolver? DefaultFontResolver { get; set; }
 
     private static int fontPlatformConfigured;
 
@@ -241,46 +242,10 @@ public sealed class PdfGenerator
                 ? sourceCell.Style.Borders
                 : ResolveMergedBorders(sourceSheet, sourceCell);
             var cellBounds = renderCell.OuterBounds;
-            CollectBorderSide(
-                borders.Top,
-                new ReportLine
-                {
-                    X1 = cellBounds.X,
-                    Y1 = cellBounds.Y,
-                    X2 = cellBounds.Right,
-                    Y2 = cellBounds.Y
-                },
-                collectedLines);
-            CollectBorderSide(
-                borders.Right,
-                new ReportLine
-                {
-                    X1 = cellBounds.Right,
-                    Y1 = cellBounds.Y,
-                    X2 = cellBounds.Right,
-                    Y2 = cellBounds.Bottom
-                },
-                collectedLines);
-            CollectBorderSide(
-                borders.Bottom,
-                new ReportLine
-                {
-                    X1 = cellBounds.Right,
-                    Y1 = cellBounds.Bottom,
-                    X2 = cellBounds.X,
-                    Y2 = cellBounds.Bottom
-                },
-                collectedLines);
-            CollectBorderSide(
-                borders.Left,
-                new ReportLine
-                {
-                    X1 = cellBounds.X,
-                    Y1 = cellBounds.Bottom,
-                    X2 = cellBounds.X,
-                    Y2 = cellBounds.Y
-                },
-                collectedLines);
+            CollectBorderSide(borders.Top, new ReportLine { X1 = cellBounds.X, Y1 = cellBounds.Y, X2 = cellBounds.Right, Y2 = cellBounds.Y }, collectedLines);
+            CollectBorderSide(borders.Right, new ReportLine { X1 = cellBounds.Right, Y1 = cellBounds.Y, X2 = cellBounds.Right, Y2 = cellBounds.Bottom }, collectedLines);
+            CollectBorderSide(borders.Bottom, new ReportLine { X1 = cellBounds.Right, Y1 = cellBounds.Bottom, X2 = cellBounds.X, Y2 = cellBounds.Bottom }, collectedLines);
+            CollectBorderSide(borders.Left, new ReportLine { X1 = cellBounds.X, Y1 = cellBounds.Bottom, X2 = cellBounds.X, Y2 = cellBounds.Y }, collectedLines);
         }
 
         foreach (var (line, border) in collectedLines.Values.OrderBy(entry => GetBorderPriority(entry.Border.Style)))
@@ -373,32 +338,20 @@ public sealed class PdfGenerator
     {
         if (!string.IsNullOrWhiteSpace(sections.Left))
         {
-            graphics.DrawString(
-                sections.Left,
-                font,
-                XBrushes.Black,
-                new XRect(bounds.X, bounds.Y, bounds.Width, bounds.Height),
-                XStringFormats.TopLeft);
+            graphics.DrawString(sections.Left, font, XBrushes.Black,
+                new XRect(bounds.X, bounds.Y, bounds.Width, bounds.Height), XStringFormats.TopLeft);
         }
 
         if (!string.IsNullOrWhiteSpace(sections.Center))
         {
-            graphics.DrawString(
-                sections.Center,
-                font,
-                XBrushes.Black,
-                new XRect(bounds.X, bounds.Y, bounds.Width, bounds.Height),
-                XStringFormats.TopCenter);
+            graphics.DrawString(sections.Center, font, XBrushes.Black,
+                new XRect(bounds.X, bounds.Y, bounds.Width, bounds.Height), XStringFormats.TopCenter);
         }
 
         if (!string.IsNullOrWhiteSpace(sections.Right))
         {
-            graphics.DrawString(
-                sections.Right,
-                font,
-                XBrushes.Black,
-                new XRect(bounds.X, bounds.Y, bounds.Width, bounds.Height),
-                XStringFormats.TopRight);
+            graphics.DrawString(sections.Right, font, XBrushes.Black,
+                new XRect(bounds.X, bounds.Y, bounds.Width, bounds.Height), XStringFormats.TopRight);
         }
     }
 
@@ -426,24 +379,12 @@ public sealed class PdfGenerator
             index++;
             switch (char.ToUpperInvariant(text[index]))
             {
-                case 'L':
-                    current = left;
-                    break;
-                case 'C':
-                    current = center;
-                    break;
-                case 'R':
-                    current = right;
-                    break;
-                case 'P':
-                    current.Append(pageNumber.ToString(CultureInfo.InvariantCulture));
-                    break;
-                case 'N':
-                    current.Append(totalPages.ToString(CultureInfo.InvariantCulture));
-                    break;
-                case '&':
-                    current.Append('&');
-                    break;
+                case 'L': current = left; break;
+                case 'C': current = center; break;
+                case 'R': current = right; break;
+                case 'P': current.Append(pageNumber.ToString(CultureInfo.InvariantCulture)); break;
+                case 'N': current.Append(totalPages.ToString(CultureInfo.InvariantCulture)); break;
+                case '&': current.Append('&'); break;
             }
         }
 
@@ -457,15 +398,8 @@ public sealed class PdfGenerator
     {
         var fontSize = font.Size <= 0 ? 11d : font.Size;
         var style = XFontStyleEx.Regular;
-        if (font.Bold)
-        {
-            style |= XFontStyleEx.Bold;
-        }
-
-        if (font.Italic)
-        {
-            style |= XFontStyleEx.Italic;
-        }
+        if (font.Bold) style |= XFontStyleEx.Bold;
+        if (font.Italic) style |= XFontStyleEx.Italic;
 
         foreach (var fontName in EnumerateCandidateFontNames(font, option))
         {
@@ -523,15 +457,9 @@ public sealed class PdfGenerator
             font = new XFont(fontName, size, style, new XPdfFontOptions(PdfFontEncoding.Unicode, PdfFontEmbedding.TryComputeSubset));
             return true;
         }
-        catch (InvalidOperationException)
-        {
-        }
-        catch (ArgumentException)
-        {
-        }
-        catch (NullReferenceException)
-        {
-        }
+        catch (InvalidOperationException) { }
+        catch (ArgumentException) { }
+        catch (NullReferenceException) { }
 
         font = null!;
         return false;
@@ -581,45 +509,13 @@ public sealed class PdfGenerator
         var gap = Math.Max(1.5d, width * 1.5d);
         if (Math.Abs(line.Y1 - line.Y2) < 0.01d)
         {
-            DrawSolidBorder(
-                graphics,
-                color,
-                width,
-                line with
-                {
-                    Y1 = line.Y1 - (gap / 2d),
-                    Y2 = line.Y2 - (gap / 2d)
-                });
-            DrawSolidBorder(
-                graphics,
-                color,
-                width,
-                line with
-                {
-                    Y1 = line.Y1 + (gap / 2d),
-                    Y2 = line.Y2 + (gap / 2d)
-                });
+            DrawSolidBorder(graphics, color, width, line with { Y1 = line.Y1 - (gap / 2d), Y2 = line.Y2 - (gap / 2d) });
+            DrawSolidBorder(graphics, color, width, line with { Y1 = line.Y1 + (gap / 2d), Y2 = line.Y2 + (gap / 2d) });
             return;
         }
 
-        DrawSolidBorder(
-            graphics,
-            color,
-            width,
-            line with
-            {
-                X1 = line.X1 - (gap / 2d),
-                X2 = line.X2 - (gap / 2d)
-            });
-        DrawSolidBorder(
-            graphics,
-            color,
-            width,
-            line with
-            {
-                X1 = line.X1 + (gap / 2d),
-                X2 = line.X2 + (gap / 2d)
-            });
+        DrawSolidBorder(graphics, color, width, line with { X1 = line.X1 - (gap / 2d), X2 = line.X2 - (gap / 2d) });
+        DrawSolidBorder(graphics, color, width, line with { X1 = line.X1 + (gap / 2d), X2 = line.X2 + (gap / 2d) });
     }
 
     private static XStringFormat ResolveStringFormat(ReportCell cell)
@@ -693,43 +589,17 @@ public sealed class PdfGenerator
             .Where(cell => mergeInfo.Range.Contains(cell.Row, cell.Column))
             .ToList();
 
-        var mergedBorders = new ReportBorders
+        return new ReportBorders
         {
-            Top = ResolveMergedBorder(
-                mergedCells,
-                mergeInfo.Range.StartRow,
-                mergeInfo.Range.StartColumn,
-                mergeInfo.Range.EndColumn,
-                static cell => cell.Row,
-                static cell => cell.Column,
-                static cell => cell.Style.Borders.Top),
-            Right = ResolveMergedBorder(
-                mergedCells,
-                mergeInfo.Range.EndColumn,
-                mergeInfo.Range.StartRow,
-                mergeInfo.Range.EndRow,
-                static cell => cell.Column,
-                static cell => cell.Row,
-                static cell => cell.Style.Borders.Right),
-            Bottom = ResolveMergedBorder(
-                mergedCells,
-                mergeInfo.Range.EndRow,
-                mergeInfo.Range.StartColumn,
-                mergeInfo.Range.EndColumn,
-                static cell => cell.Row,
-                static cell => cell.Column,
-                static cell => cell.Style.Borders.Bottom),
-            Left = ResolveMergedBorder(
-                mergedCells,
-                mergeInfo.Range.StartColumn,
-                mergeInfo.Range.StartRow,
-                mergeInfo.Range.EndRow,
-                static cell => cell.Column,
-                static cell => cell.Row,
-                static cell => cell.Style.Borders.Left)
+            Top = ResolveMergedBorder(mergedCells, mergeInfo.Range.StartRow, mergeInfo.Range.StartColumn, mergeInfo.Range.EndColumn,
+                static cell => cell.Row, static cell => cell.Column, static cell => cell.Style.Borders.Top),
+            Right = ResolveMergedBorder(mergedCells, mergeInfo.Range.EndColumn, mergeInfo.Range.StartRow, mergeInfo.Range.EndRow,
+                static cell => cell.Column, static cell => cell.Row, static cell => cell.Style.Borders.Right),
+            Bottom = ResolveMergedBorder(mergedCells, mergeInfo.Range.EndRow, mergeInfo.Range.StartColumn, mergeInfo.Range.EndColumn,
+                static cell => cell.Row, static cell => cell.Column, static cell => cell.Style.Borders.Bottom),
+            Left = ResolveMergedBorder(mergedCells, mergeInfo.Range.StartColumn, mergeInfo.Range.StartRow, mergeInfo.Range.EndRow,
+                static cell => cell.Column, static cell => cell.Row, static cell => cell.Style.Borders.Left)
         };
-
-        return mergedBorders;
     }
 
     private static ReportBorder ResolveMergedBorder(
@@ -768,15 +638,15 @@ public sealed class PdfGenerator
             _ => 0
         };
 
-    private sealed record HeaderFooterSections(string Left, string Center, string Right)
-    {
-        public static HeaderFooterSections Empty { get; } = new(string.Empty, string.Empty, string.Empty);
-    }
-
     private static string BuildLineKey(ReportLine line)
     {
         return string.Create(
             CultureInfo.InvariantCulture,
             $"{Math.Round(Math.Min(line.X1, line.X2), 4)}:{Math.Round(Math.Min(line.Y1, line.Y2), 4)}:{Math.Round(Math.Max(line.X1, line.X2), 4)}:{Math.Round(Math.Max(line.Y1, line.Y2), 4)}");
+    }
+
+    private sealed record HeaderFooterSections(string Left, string Center, string Right)
+    {
+        public static HeaderFooterSections Empty { get; } = new(string.Empty, string.Empty, string.Empty);
     }
 }
