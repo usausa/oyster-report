@@ -9,6 +9,9 @@ using System.Linq;
 using ClosedXML.Excel;
 using ClosedXML.Excel.Drawings;
 
+using OysterReport.Generator;
+using OysterReport.Generator.Models;
+
 using Xunit;
 
 public sealed class ExcelReaderTests
@@ -38,7 +41,6 @@ public sealed class ExcelReaderTests
         Assert.Equal("&LFooter", sheet.HeaderFooter.OddFooter);
         Assert.True(sheet.PageSetup.CenterHorizontally);
         Assert.Contains(sheet.Rows, row => row.Index == 2 && row.IsHidden);
-        Assert.Contains(sheet.Cells, cell => cell.Address == "A2" && cell.Placeholder?.MarkerName == "Name");
     }
 
     [Fact]
@@ -54,7 +56,7 @@ public sealed class ExcelReaderTests
         var sheet = Assert.Single(workbook.Sheets);
         var cell = sheet.Cells.Single(item => item.Address == "A1");
 
-        Assert.Equal(ReportHorizontalAlignment.General, cell.Style.Alignment.Horizontal);
+        Assert.Equal(XLAlignmentHorizontalValues.General, cell.Style.Alignment.Horizontal);
     }
 
     [Fact]

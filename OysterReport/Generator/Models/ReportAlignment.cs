@@ -1,8 +1,10 @@
 namespace OysterReport.Generator.Models;
 
+using ClosedXML.Excel;
+
 internal sealed record ReportAlignment
 {
-    public ReportHorizontalAlignment Horizontal { get; init; } = ReportHorizontalAlignment.General; // Horizontal alignment
+    public XLAlignmentHorizontalValues Horizontal { get; init; } = XLAlignmentHorizontalValues.General;
 
-    public ReportVerticalAlignment Vertical { get; init; } = ReportVerticalAlignment.Top; // Vertical alignment
+    public XLAlignmentVerticalValues Vertical { get; init; } = XLAlignmentVerticalValues.Top;
 }

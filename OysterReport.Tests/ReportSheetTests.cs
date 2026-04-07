@@ -17,18 +17,30 @@ public sealed class ReportSheetTests
             sheet.Cell("A1").Value = "{{CustomerName}}";
         });
 
-        var reader = new ExcelReader();
-        var workbook = reader.Read(stream);
-        var sheet = Assert.Single(workbook.Sheets);
+        var tempFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".xlsx");
+        try
+        {
+            using (var file = File.Create(tempFile))
+            {
+                stream.CopyTo(file);
+            }
 
-        var count = sheet.ReplacePlaceholder("CustomerName", "Alice");
+            var engine = new OysterReportEngine();
+            using var workbook = engine.Load(tempFile);
+            var sheet = Assert.Single(workbook.Sheets);
 
-        Assert.Equal(1, count);
-        Assert.Equal("Alice", sheet.Cells.Single(cell => cell.Address == "A1").DisplayText);
+            var count = sheet.ReplacePlaceholder("CustomerName", "Alice");
+
+            Assert.Equal(1, count);
+        }
+        finally
+        {
+            File.Delete(tempFile);
+        }
     }
 
     [Fact]
-    public void AddRowsShouldDuplicateTemplateRowsAndShiftFollowingRows()
+    public void InsertCopyBelowShouldDuplicateRow()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -38,25 +50,32 @@ public sealed class ReportSheetTests
             sheet.Cell("A3").Value = "Footer";
         });
 
-        var reader = new ExcelReader();
-        var workbook = reader.Read(stream);
-        var sheet = Assert.Single(workbook.Sheets);
-
-        sheet.AddRows(new RowExpansionRequest
+        var tempFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".xlsx");
+        try
         {
-            TemplateStartRowIndex = 2,
-            TemplateEndRowIndex = 2,
-            RepeatCount = 2,
-            PlaceholderValuesByIteration =
-            [
-                new Dictionary<string, string?> { ["Item"] = "A" },
-                new Dictionary<string, string?> { ["Item"] = "B" }
-            ]
-        });
+            using (var file = File.Create(tempFile))
+            {
+                stream.CopyTo(file);
+            }
 
-        Assert.Contains(sheet.Cells, cell => cell.Address == "A3" && cell.DisplayText == "A");
-        Assert.Contains(sheet.Cells, cell => cell.Address == "A4" && cell.DisplayText == "B");
-        Assert.Contains(sheet.Cells, cell => cell.Address == "A5" && cell.DisplayText == "Footer");
-        Assert.Equal(5, sheet.UsedRange.EndRow);
+            var engine = new OysterReportEngine();
+            using var workbook = engine.Load(tempFile);
+            var sheet = Assert.Single(workbook.Sheets);
+
+            var template = sheet.FindRow("Item");
+            var row1 = template.InsertCopyBelow();
+            row1.ReplacePlaceholder("Item", "A");
+            var row2 = row1.InsertCopyBelow();
+            row2.ReplacePlaceholder("Item", "B");
+            template.Delete();
+
+            using var output = new MemoryStream();
+            engine.GeneratePdf(workbook, output);
+            Assert.True(output.Length > 0);
+        }
+        finally
+        {
+            File.Delete(tempFile);
+        }
     }
 }

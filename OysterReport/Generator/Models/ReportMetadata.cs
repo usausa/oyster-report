@@ -2,11 +2,9 @@ namespace OysterReport.Generator.Models;
 
 internal sealed record ReportMetadata
 {
-    public string TemplateName { get; init; } = string.Empty; // Template name
+    public string TemplateName { get; init; } = string.Empty;
 
-    public string? SourceFilePath { get; init; } // Source file path
+    public string? SourceFilePath { get; init; }
 
-    public DateTimeOffset? SourceLastWriteTime { get; init; } // Last write time of the source file
-
-    public string? Author { get; init; } // Template author
+    public DateTimeOffset? SourceLastWriteTime { get; init; }
 }

@@ -1,8 +1,10 @@
 namespace OysterReport.Generator.Models;
 
+using ClosedXML.Excel;
+
 internal sealed record ReportCellValue
 {
-    public ReportCellValueKind Kind { get; init; } // Original data type
+    public XLDataType Kind { get; init; } = XLDataType.Blank;
 
-    public object? RawValue { get; init; } // Raw value retrieved from Excel
+    public object? RawValue { get; init; }
 }

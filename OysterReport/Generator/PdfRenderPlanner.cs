@@ -1,5 +1,7 @@
 namespace OysterReport.Generator;
 
+using ClosedXML.Excel;
+
 using OysterReport.Generator.Models;
 using OysterReport.Helpers;
 
@@ -123,7 +125,7 @@ internal static class PdfRenderPlanner
     private static ReportRect ResolvePageBounds(ReportPageSetup pageSetup)
     {
         var (width, height) = PageSizeResolver.GetPageSize(pageSetup.PaperSize);
-        return pageSetup.Orientation == ReportPageOrientation.Landscape
+        return pageSetup.Orientation == XLPageOrientation.Landscape
             ? new ReportRect { X = 0, Y = 0, Width = height, Height = width }
             : new ReportRect { X = 0, Y = 0, Width = width, Height = height };
     }
@@ -185,8 +187,8 @@ internal static class PdfRenderPlanner
             return contentBounds;
         }
 
-        if (cell.Style.Alignment.Horizontal != ReportHorizontalAlignment.General &&
-            cell.Style.Alignment.Horizontal != ReportHorizontalAlignment.Left)
+        if (cell.Style.Alignment.Horizontal != XLAlignmentHorizontalValues.General &&
+            cell.Style.Alignment.Horizontal != XLAlignmentHorizontalValues.Left)
         {
             return contentBounds;
         }
@@ -210,7 +212,7 @@ internal static class PdfRenderPlanner
                     break;
                 }
 
-                if (adjacentCell.Style.Borders.Left.Style != ReportBorderStyle.None)
+                if (adjacentCell.Style.Borders.Left.Style != XLBorderStyleValues.None)
                 {
                     break;
                 }

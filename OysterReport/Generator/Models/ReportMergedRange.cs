@@ -10,11 +10,7 @@ internal sealed class ReportMergedRange
         OwnerCellAddress = AddressHelper.ToAddress(range.StartRow, range.StartColumn);
     }
 
-    public ReportRange Range { get; private set; } // Merged cell range
+    public ReportRange Range { get; }
 
-    public string OwnerCellAddress { get; } // Owner cell address
-
-    internal ReportMergedRange CloneShifted(int rowOffset) => new(Range.ShiftRows(rowOffset));
-
-    internal void SetRange(ReportRange range) => Range = range;
+    public string OwnerCellAddress { get; }
 }

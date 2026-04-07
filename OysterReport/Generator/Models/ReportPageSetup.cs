@@ -1,10 +1,12 @@
 namespace OysterReport.Generator.Models;
 
+using ClosedXML.Excel;
+
 internal sealed record ReportPageSetup
 {
-    public ReportPaperSize PaperSize { get; init; } = ReportPaperSize.A4; // Paper size
+    public XLPaperSize PaperSize { get; init; } = XLPaperSize.A4Paper;
 
-    public ReportPageOrientation Orientation { get; init; } = ReportPageOrientation.Portrait; // Page orientation
+    public XLPageOrientation Orientation { get; init; } = XLPageOrientation.Default;
 
     public ReportThickness Margins { get; init; } = new() { Left = 36d, Top = 36d, Right = 36d, Bottom = 36d }; // Page body margins
 

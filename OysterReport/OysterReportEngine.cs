@@ -23,12 +23,7 @@ public sealed class OysterReportEngine
         ArgumentNullException.ThrowIfNull(template);
         ArgumentNullException.ThrowIfNull(output);
 
-        // ClosedXML ワークブックを保存して内部パイプラインで読み直す
-        using var buffer = new MemoryStream();
-        template.UnderlyingWorkbook.SaveAs(buffer);
-        buffer.Position = 0;
-
-        var reportWorkbook = excelReader.Read(buffer);
+        var reportWorkbook = excelReader.Read(template.UnderlyingWorkbook);
         pdfGenerator.Generate(reportWorkbook, output, option);
     }
 }

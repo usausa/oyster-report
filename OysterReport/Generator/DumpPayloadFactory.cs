@@ -17,7 +17,6 @@ internal static class DumpPayloadFactory
         {
             workbook.Metadata,
             workbook.MeasurementProfile,
-            workbook.Diagnostics,
             Sheets = workbook.Sheets.Select(sheet => new
             {
                 sheet.Name,
@@ -45,8 +44,7 @@ internal static class DumpPayloadFactory
                     cell.Row,
                     cell.Column,
                     cell.Address,
-                    cell.DisplayText,
-                    Placeholder = cell.Placeholder?.MarkerName
+                    cell.DisplayText
                 }),
                 sheet.MergedRanges,
                 sheet.Images,

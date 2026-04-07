@@ -4,6 +4,8 @@ using System.Globalization;
 using System.Reflection;
 using System.Text;
 
+using ClosedXML.Excel;
+
 using OysterReport.Generator.Models;
 using OysterReport.Helpers;
 
@@ -259,7 +261,7 @@ internal sealed class PdfGenerator
         ReportLine line,
         Dictionary<string, (ReportLine Line, ReportBorder Border)> collectedLines)
     {
-        if (border.Style == ReportBorderStyle.None)
+        if (border.Style == XLBorderStyleValues.None)
         {
             return;
         }
@@ -280,7 +282,7 @@ internal sealed class PdfGenerator
         var borderWidth = border.Width > 0d ? border.Width : ResolveBorderWidth(border.Style);
         var pen = new XPen(borderColor, borderWidth);
         ApplyBorderStyle(pen, border.Style);
-        if (border.Style == ReportBorderStyle.DoubleLine)
+        if (border.Style == XLBorderStyleValues.Double)
         {
             DrawDoubleBorder(graphics, borderColor, borderWidth, line);
             return;
@@ -483,23 +485,23 @@ internal sealed class PdfGenerator
     private static bool IsTransparentColor(string colorHex) =>
         ColorHelper.NormalizeHex(colorHex).StartsWith("#00", StringComparison.Ordinal);
 
-    private static double ResolveBorderWidth(ReportBorderStyle style) =>
+    private static double ResolveBorderWidth(XLBorderStyleValues style) =>
         style switch
         {
-            ReportBorderStyle.Thick => 2.25d,
-            ReportBorderStyle.Medium => 1.5d,
-            ReportBorderStyle.DoubleLine => 0.75d,
-            ReportBorderStyle.Hair => 0.25d,
+            XLBorderStyleValues.Thick => 2.25d,
+            XLBorderStyleValues.Medium => 1.5d,
+            XLBorderStyleValues.Double => 0.75d,
+            XLBorderStyleValues.Hair => 0.25d,
             _ => 0.75d
         };
 
-    private static void ApplyBorderStyle(XPen pen, ReportBorderStyle style)
+    private static void ApplyBorderStyle(XPen pen, XLBorderStyleValues style)
     {
         pen.DashStyle = style switch
         {
-            ReportBorderStyle.Dashed => XDashStyle.Dash,
-            ReportBorderStyle.Dotted => XDashStyle.Dot,
-            ReportBorderStyle.DashDot => XDashStyle.DashDot,
+            XLBorderStyleValues.Dashed => XDashStyle.Dash,
+            XLBorderStyleValues.Dotted => XDashStyle.Dot,
+            XLBorderStyleValues.DashDot => XDashStyle.DashDot,
             _ => pen.DashStyle
         };
     }
@@ -526,14 +528,14 @@ internal sealed class PdfGenerator
         {
             Alignment = horizontalAlignment switch
             {
-                ReportHorizontalAlignment.Center => XStringAlignment.Center,
-                ReportHorizontalAlignment.Right => XStringAlignment.Far,
+                XLAlignmentHorizontalValues.Center => XStringAlignment.Center,
+                XLAlignmentHorizontalValues.Right => XStringAlignment.Far,
                 _ => XStringAlignment.Near
             },
             LineAlignment = verticalAlignment switch
             {
-                ReportVerticalAlignment.Center => XLineAlignment.Center,
-                ReportVerticalAlignment.Bottom => XLineAlignment.Far,
+                XLAlignmentVerticalValues.Center => XLineAlignment.Center,
+                XLAlignmentVerticalValues.Bottom => XLineAlignment.Far,
                 _ => XLineAlignment.Near
             }
         };
@@ -542,24 +544,24 @@ internal sealed class PdfGenerator
     private static XParagraphAlignment ResolveParagraphAlignment(ReportCell cell) =>
         ResolveHorizontalAlignment(cell) switch
         {
-            ReportHorizontalAlignment.Center => XParagraphAlignment.Center,
-            ReportHorizontalAlignment.Right => XParagraphAlignment.Right,
-            ReportHorizontalAlignment.Justify => XParagraphAlignment.Justify,
+            XLAlignmentHorizontalValues.Center => XParagraphAlignment.Center,
+            XLAlignmentHorizontalValues.Right => XParagraphAlignment.Right,
+            XLAlignmentHorizontalValues.Justify => XParagraphAlignment.Justify,
             _ => XParagraphAlignment.Left
         };
 
-    private static ReportHorizontalAlignment ResolveHorizontalAlignment(ReportCell cell)
+    private static XLAlignmentHorizontalValues ResolveHorizontalAlignment(ReportCell cell)
     {
-        if (cell.Style.Alignment.Horizontal != ReportHorizontalAlignment.General)
+        if (cell.Style.Alignment.Horizontal != XLAlignmentHorizontalValues.General)
         {
             return cell.Style.Alignment.Horizontal;
         }
 
         return cell.Value.Kind switch
         {
-            ReportCellValueKind.Number => ReportHorizontalAlignment.Right,
-            ReportCellValueKind.DateTime => ReportHorizontalAlignment.Right,
-            _ => ReportHorizontalAlignment.Left
+            XLDataType.Number => XLAlignmentHorizontalValues.Right,
+            XLDataType.DateTime => XLAlignmentHorizontalValues.Right,
+            _ => XLAlignmentHorizontalValues.Left
         };
     }
 
@@ -579,8 +581,8 @@ internal sealed class PdfGenerator
         graphics.DrawRectangle(brush, leftEdge, topEdge, width, Math.Abs(line.Y2 - line.Y1));
     }
 
-    private static bool IsSolidBorder(ReportBorderStyle style) =>
-        style is ReportBorderStyle.Hair or ReportBorderStyle.Thin or ReportBorderStyle.Medium or ReportBorderStyle.Thick;
+    private static bool IsSolidBorder(XLBorderStyleValues style) =>
+        style is XLBorderStyleValues.Hair or XLBorderStyleValues.Thin or XLBorderStyleValues.Medium or XLBorderStyleValues.Thick;
 
     private static ReportBorders ResolveMergedBorders(ReportSheet sourceSheet, ReportCell ownerCell)
     {
@@ -624,17 +626,17 @@ internal sealed class PdfGenerator
         return bestBorder ?? new ReportBorder();
     }
 
-    private static int GetBorderPriority(ReportBorderStyle style) =>
+    private static int GetBorderPriority(XLBorderStyleValues style) =>
         style switch
         {
-            ReportBorderStyle.DoubleLine => 6,
-            ReportBorderStyle.Thick => 5,
-            ReportBorderStyle.Medium => 4,
-            ReportBorderStyle.Thin => 3,
-            ReportBorderStyle.DashDot => 2,
-            ReportBorderStyle.Dashed => 2,
-            ReportBorderStyle.Dotted => 2,
-            ReportBorderStyle.Hair => 1,
+            XLBorderStyleValues.Double => 6,
+            XLBorderStyleValues.Thick => 5,
+            XLBorderStyleValues.Medium => 4,
+            XLBorderStyleValues.Thin => 3,
+            XLBorderStyleValues.DashDot => 2,
+            XLBorderStyleValues.Dashed => 2,
+            XLBorderStyleValues.Dotted => 2,
+            XLBorderStyleValues.Hair => 1,
             _ => 0
         };
 

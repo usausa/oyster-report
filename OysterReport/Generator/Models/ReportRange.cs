@@ -22,18 +22,11 @@ internal readonly record struct ReportRange
 
     public int EndColumn { get; init; } // End column number (1-based)
 
-    public int RowCount => EndRow - StartRow + 1; // Number of rows in range
-
-    public int ColumnCount => EndColumn - StartColumn + 1; // Number of columns in range
-
     public bool Contains(int row, int column) =>
         row >= StartRow &&
         row <= EndRow &&
         column >= StartColumn &&
         column <= EndColumn;
-
-    public ReportRange ShiftRows(int offset) =>
-        new(StartRow + offset, StartColumn, EndRow + offset, EndColumn);
 
     public override string ToString()
     {

@@ -10,19 +10,15 @@ internal sealed class ReportRow
         OutlineLevel = outlineLevel;
     }
 
-    public int Index { get; private set; } // Row number (1-based)
+    public int Index { get; }
 
-    public double HeightPoint { get; } // Row height (points)
+    public double HeightPoint { get; }
 
-    public double TopPoint { get; private set; } // Top position from the sheet origin (points)
+    public double TopPoint { get; private set; }
 
-    public bool IsHidden { get; } // Whether the row is hidden
+    public bool IsHidden { get; }
 
-    public int OutlineLevel { get; } // Outline level
-
-    internal ReportRow CloneWithIndex(int index) => new(index, HeightPoint, IsHidden, OutlineLevel);
-
-    internal void SetIndex(int index) => Index = index;
+    public int OutlineLevel { get; }
 
     internal void SetTop(double topPoint) => TopPoint = topPoint;
 }

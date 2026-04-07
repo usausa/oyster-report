@@ -22,19 +22,4 @@ internal readonly record struct ReportRect
             Width = Math.Max(0, Width - thickness.Left - thickness.Right),
             Height = Math.Max(0, Height - thickness.Top - thickness.Bottom)
         };
-
-    public static ReportRect Union(ReportRect first, ReportRect second)
-    {
-        var x = Math.Min(first.X, second.X);
-        var y = Math.Min(first.Y, second.Y);
-        var right = Math.Max(first.Right, second.Right);
-        var bottom = Math.Max(first.Bottom, second.Bottom);
-        return new ReportRect
-        {
-            X = x,
-            Y = y,
-            Width = right - x,
-            Height = bottom - y
-        };
-    }
 }
