@@ -1,6 +1,6 @@
-namespace OysterReport.Internal;
+namespace OysterReport;
 
-using OysterReport;
+using OysterReport.Helpers;
 
 internal static class PdfRenderPlanner
 {

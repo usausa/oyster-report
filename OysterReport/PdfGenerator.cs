@@ -4,7 +4,7 @@ using System.Globalization;
 using System.Reflection;
 using System.Text;
 
-using OysterReport.Internal;
+using OysterReport.Helpers;
 
 using PdfSharp.Drawing;
 using PdfSharp.Drawing.Layout;

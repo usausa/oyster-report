@@ -1,6 +1,4 @@
-namespace OysterReport.Internal;
-
-using OysterReport;
+namespace OysterReport;
 
 internal sealed record PdfRenderPlan
 {

@@ -7,7 +7,7 @@ using System.Xml.Linq;
 using ClosedXML.Excel;
 using ClosedXML.Excel.Drawings;
 
-using OysterReport.Internal;
+using OysterReport.Helpers;
 
 public sealed class ExcelReader
 {

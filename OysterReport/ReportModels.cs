@@ -1,6 +1,6 @@
 namespace OysterReport;
 
-using OysterReport.Internal;
+using OysterReport.Helpers;
 
 public sealed class ReportWorkbook
 {

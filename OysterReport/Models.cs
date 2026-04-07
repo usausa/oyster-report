@@ -2,7 +2,7 @@ namespace OysterReport;
 
 using System.Globalization;
 
-using OysterReport.Internal;
+using OysterReport.Helpers;
 
 // ── Geometry ──────────────────────────────────────────────────────────────────
 

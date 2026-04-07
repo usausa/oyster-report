@@ -1,4 +1,4 @@
-namespace OysterReport.Internal;
+namespace OysterReport.Helpers;
 
 internal static class ColumnWidthConverter
 {
