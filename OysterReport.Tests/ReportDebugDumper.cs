@@ -1,7 +1,9 @@
-namespace OysterReport.Generator;
+namespace OysterReport.Tests;
 
 using System.Text;
 using System.Text.Json;
+
+using OysterReport.Generator;
 
 internal enum ReportDumpFormat
 {
@@ -13,19 +15,21 @@ internal sealed class ReportDebugDumper
 {
     private readonly JsonSerializerOptions serializerOptions = DumpPayloadFactory.SerializerOptions;
 
-    public void DumpWorkbook(ReportWorkbook workbook, Stream output, ReportDumpFormat format = ReportDumpFormat.Json)
+    public void DumpWorkbook(ReportRenderContext context, Stream output, ReportDumpFormat format = ReportDumpFormat.Json)
     {
-        var payload = DumpPayloadFactory.CreateWorkbookPayload(workbook);
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(output);
+
+        var payload = DumpPayloadFactory.CreateWorkbookPayload(context.Workbook);
         WritePayload(output, payload, format, "Workbook");
     }
 
-    public void DumpPdfPreparation(
-        ReportWorkbook workbook,
-        Stream output,
-        ReportDumpFormat format = ReportDumpFormat.Json)
+    public void DumpPdfPreparation(ReportRenderContext context, Stream output, ReportDumpFormat format = ReportDumpFormat.Json)
     {
-        var sheetPlans = PdfRenderPlanner.BuildPlan(workbook);
-        var payload = DumpPayloadFactory.CreatePdfPreparationPayload(workbook, sheetPlans);
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(output);
+
+        var payload = DumpPayloadFactory.CreatePdfPreparationPayload(context.Workbook, context.SheetPlans);
         WritePayload(output, payload, format, "PdfPreparation");
     }
 

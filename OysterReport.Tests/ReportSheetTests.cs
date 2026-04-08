@@ -4,6 +4,8 @@
 
 namespace OysterReport.Tests;
 
+using ClosedXML.Excel;
+
 using Xunit;
 
 public sealed class ReportSheetTests
@@ -26,7 +28,7 @@ public sealed class ReportSheetTests
             }
 
             var engine = new OysterReportEngine();
-            using var workbook = engine.Load(tempFile);
+            using var workbook = new TemplateWorkbook(new XLWorkbook(tempFile));
             var sheet = Assert.Single(workbook.Sheets);
 
             var count = sheet.ReplacePlaceholder("CustomerName", "Alice");
@@ -59,7 +61,7 @@ public sealed class ReportSheetTests
             }
 
             var engine = new OysterReportEngine();
-            using var workbook = engine.Load(tempFile);
+            using var workbook = new TemplateWorkbook(new XLWorkbook(tempFile));
             var sheet = Assert.Single(workbook.Sheets);
 
             var template = sheet.FindRow("Item");

@@ -12,10 +12,8 @@ using PdfSharp.Drawing;
 using PdfSharp.Drawing.Layout;
 using PdfSharp.Pdf;
 
-internal sealed class PdfGenerator
+internal static class PdfGenerator
 {
-    public IReportFontResolver? DefaultFontResolver { get; set; }
-
     private static int fontPlatformConfigured;
 
     private static readonly string[] HeaderFooterFallbackFontNames =
@@ -27,43 +25,27 @@ internal sealed class PdfGenerator
         "DejaVu Sans"
     ];
 
-    public void Generate(
-        ReportWorkbook workbook,
-        Stream output,
-        PdfGeneratorOption? option = null)
+    internal static void WritePdf(
+        ReportRenderContext context,
+        Stream output)
     {
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(output);
+
         EnsurePdfSharpFontConfiguration();
 
-        var effectiveOptions = option ?? new PdfGeneratorOption();
-        effectiveOptions.FontResolver ??= DefaultFontResolver;
-
-        var renderPlan = BuildRenderPlan(workbook);
-        WritePdf(workbook, renderPlan, output, effectiveOptions);
-    }
-
-    internal static IReadOnlyList<PdfRenderSheetPlan> BuildRenderPlan(ReportWorkbook workbook)
-    {
-        return PdfRenderPlanner.BuildPlan(workbook);
-    }
-
-    internal static void WritePdf(
-        ReportWorkbook workbook,
-        IReadOnlyList<PdfRenderSheetPlan> sheetPlans,
-        Stream output,
-        PdfGeneratorOption option)
-    {
         using var document = new PdfDocument();
-        document.Options.CompressContentStreams = option.CompressContentStreams;
+        document.Options.CompressContentStreams = context.CompressContentStreams;
 
-        if (option.EmbedDocumentMetadata)
+        if (context.EmbedDocumentMetadata)
         {
-            document.Info.Title = workbook.Metadata.TemplateName;
+            document.Info.Title = context.Workbook.Metadata.TemplateName;
         }
 
-        for (var sheetIndex = 0; sheetIndex < sheetPlans.Count; sheetIndex++)
+        for (var sheetIndex = 0; sheetIndex < context.SheetPlans.Count; sheetIndex++)
         {
-            var sheetPlan = sheetPlans[sheetIndex];
-            var sourceSheet = workbook.Sheets[sheetIndex];
+            var sheetPlan = context.SheetPlans[sheetIndex];
+            var sourceSheet = context.Workbook.Sheets[sheetIndex];
             foreach (var pagePlan in sheetPlan.Pages)
             {
                 var page = document.AddPage();
@@ -71,7 +53,7 @@ internal sealed class PdfGenerator
                 page.Height = XUnit.FromPoint(pagePlan.PageBounds.Height);
                 using var graphics = XGraphics.FromPdfPage(page);
                 DrawPageBackground(graphics, pagePlan.PageBounds);
-                DrawCells(graphics, sourceSheet, pagePlan.Cells, option);
+                DrawCells(graphics, sourceSheet, pagePlan.Cells, context);
                 DrawBorders(graphics, sourceSheet, pagePlan.Cells);
                 DrawImages(graphics, sheetPlan.Images);
                 DrawHeaderFooter(graphics, pagePlan.HeaderFooter, pagePlan.PageNumber, sheetPlan.Pages.Count);
@@ -117,7 +99,7 @@ internal sealed class PdfGenerator
         XGraphics graphics,
         ReportSheet sourceSheet,
         IReadOnlyList<PdfCellRenderInfo> cells,
-        PdfGeneratorOption option)
+        ReportRenderContext context)
     {
         var sourceCellsByAddress = sourceSheet.Cells.ToDictionary(cell => cell.Address, StringComparer.Ordinal);
 
@@ -173,7 +155,7 @@ internal sealed class PdfGenerator
                 continue;
             }
 
-            var font = ResolveFont(sourceCell.Style.Font, option);
+            var font = ResolveFont(sourceCell.Style.Font, context);
             var textBrush = new XSolidBrush(ToColor(sourceCell.Style.Font.ColorHex));
             var textRect = new XRect(
                 renderCell.ContentBounds.X,
@@ -395,14 +377,14 @@ internal sealed class PdfGenerator
             right.ToString().Trim());
     }
 
-    private static XFont ResolveFont(ReportFont font, PdfGeneratorOption option)
+    private static XFont ResolveFont(ReportFont font, ReportRenderContext context)
     {
         var fontSize = font.Size <= 0 ? PdfRenderingConstants.DefaultCellFontSizePoints : font.Size;
         var style = XFontStyleEx.Regular;
         if (font.Bold) style |= XFontStyleEx.Bold;
         if (font.Italic) style |= XFontStyleEx.Italic;
 
-        foreach (var fontName in EnumerateCandidateFontNames(font, option))
+        foreach (var fontName in EnumerateCandidateFontNames(font, context))
         {
             if (TryCreateFont(fontName, fontSize, style, out var resolvedFont))
             {
@@ -413,13 +395,13 @@ internal sealed class PdfGenerator
         throw new InvalidOperationException($"No appropriate font found for family name '{font.Name}' and known fallbacks.");
     }
 
-    private static IEnumerable<string> EnumerateCandidateFontNames(ReportFont font, PdfGeneratorOption option)
+    private static IEnumerable<string> EnumerateCandidateFontNames(ReportFont font, ReportRenderContext context)
     {
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        if (option.FontResolver is not null)
+        if (context.FontResolver is not null)
         {
-            var resolution = option.FontResolver.Resolve(new ReportFontRequest
+            var resolution = context.FontResolver.Resolve(new ReportFontRequest
             {
                 FontName = font.Name,
                 Bold = font.Bold,

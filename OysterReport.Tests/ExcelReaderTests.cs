@@ -30,8 +30,7 @@ public sealed class ExcelReaderTests
             sheet.PageSetup.Footer.Left.AddText("Footer", XLHFOccurrence.OddPages);
         });
 
-        var reader = new ExcelReader();
-        var workbook = reader.Read(stream);
+        var workbook = ExcelReader.Read(stream);
 
         var sheet = Assert.Single(workbook.Sheets);
         Assert.Equal("Report", sheet.Name);
@@ -51,7 +50,7 @@ public sealed class ExcelReaderTests
             sheet.Cell("A1").Value = 123;
         });
 
-        var workbook = new ExcelReader().Read(stream);
+        var workbook = ExcelReader.Read(stream);
         var sheet = Assert.Single(workbook.Sheets);
         var cell = sheet.Cells.Single(item => item.Address == "A1");
 
@@ -72,8 +71,7 @@ public sealed class ExcelReaderTests
             cell.Style.Border.LeftBorderColor = XLColor.FromTheme(XLThemeColor.Accent3, 0.2);
         });
 
-        var reader = new ExcelReader();
-        var workbook = reader.Read(stream);
+        var workbook = ExcelReader.Read(stream);
 
         var sheet = Assert.Single(workbook.Sheets);
         var cell = sheet.Cells.Single(item => item.Address == "A1");
@@ -98,8 +96,7 @@ public sealed class ExcelReaderTests
                 .WithSize(24, 12);
         });
 
-        var reader = new ExcelReader();
-        var workbook = reader.Read(stream);
+        var workbook = ExcelReader.Read(stream);
 
         var sheet = Assert.Single(workbook.Sheets);
         var image = Assert.Single(sheet.Images);
@@ -122,7 +119,7 @@ public sealed class ExcelReaderTests
             sheet.PageSetup.Margins.Footer = 0.2;
         });
 
-        var workbook = new ExcelReader().Read(stream);
+        var workbook = ExcelReader.Read(stream);
         var sheet = Assert.Single(workbook.Sheets);
 
         Assert.Equal(90d, sheet.PageSetup.Margins.Left, 3);
@@ -151,7 +148,7 @@ public sealed class ExcelReaderTests
             table.ShowRowStripes = true;
         });
 
-        var workbook = new ExcelReader().Read(stream);
+        var workbook = ExcelReader.Read(stream);
         var sheet = Assert.Single(workbook.Sheets);
         var firstDataRowCell = sheet.Cells.Single(cell => cell.Address == "A2");
         var secondDataRowCell = sheet.Cells.Single(cell => cell.Address == "A3");

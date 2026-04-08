@@ -2,6 +2,8 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
+using ClosedXML.Excel;
+
 using Example;
 
 using OysterReport;
@@ -9,16 +11,15 @@ using OysterReport;
 var inputPath = ResolveInputPath(args);
 var outputPath = ResolveOutputPath(args, inputPath);
 
-var engine = new OysterReportEngine();
-using var workbook = engine.Load(inputPath);
-
-var option = new PdfGeneratorOption
+var engine = new OysterReportEngine
 {
     FontResolver = new JapaneseFontResolver()
 };
 
+using var workbook = new TemplateWorkbook(new XLWorkbook(inputPath));
+
 using var output = File.Create(outputPath);
-engine.GeneratePdf(workbook, output, option);
+engine.GeneratePdf(workbook, output);
 
 Console.WriteLine($"Input : {inputPath}");
 Console.WriteLine($"Output: {outputPath}");

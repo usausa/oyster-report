@@ -4,6 +4,8 @@
 
 namespace OysterReport.Tests;
 
+using ClosedXML.Excel;
+
 using OysterReport.Generator;
 
 using Xunit;
@@ -20,10 +22,17 @@ public sealed class PdfGeneratorTests
             sheet.Cell("A2").Value = "World";
         });
 
-        var workbook = new ExcelReader().Read(stream);
+        var workbook = ExcelReader.Read(stream);
+        var renderPlan = PdfRenderPlanner.BuildPlan(workbook);
         using var output = new MemoryStream();
 
-        new PdfGenerator().Generate(workbook, output, new PdfGeneratorOption());
+        var context = new ReportRenderContext
+        {
+            Workbook = workbook,
+            SheetPlans = renderPlan
+        };
+
+        PdfGenerator.WritePdf(context, output);
 
         output.Position = 0;
         using var reader = new StreamReader(output, leaveOpen: true);
@@ -46,8 +55,8 @@ public sealed class PdfGeneratorTests
             cell.Style.Alignment.Vertical = ClosedXML.Excel.XLAlignmentVerticalValues.Center;
         });
 
-        var workbook = new ExcelReader().Read(stream);
-        var renderPlan = PdfGenerator.BuildRenderPlan(workbook);
+        var workbook = ExcelReader.Read(stream);
+        var renderPlan = PdfRenderPlanner.BuildPlan(workbook);
         var cell = renderPlan[0].Pages[0].Cells.Single(info => info.CellAddress == "A1");
 
         Assert.Equal(cell.OuterBounds.Height, cell.ContentBounds.Height, 3);
@@ -62,16 +71,18 @@ public sealed class PdfGeneratorTests
             sheet.Cell("A1").Value = "Hello";
         });
 
-        var workbook = new ExcelReader().Read(stream);
+        using var template = new TemplateWorkbook(new XLWorkbook(stream));
+        var engine = new OysterReportEngine();
+        var context = engine.CreateRenderContext(template);
         var dumper = new ReportDebugDumper();
 
         using var workbookDump = new MemoryStream();
-        dumper.DumpWorkbook(workbook, workbookDump);
+        dumper.DumpWorkbook(context, workbookDump);
         var workbookJson = System.Text.Encoding.UTF8.GetString(workbookDump.ToArray());
         Assert.Contains("\"Sheets\"", workbookJson, StringComparison.Ordinal);
 
         using var pdfPreparationDump = new MemoryStream();
-        dumper.DumpPdfPreparation(workbook, pdfPreparationDump);
+        dumper.DumpPdfPreparation(context, pdfPreparationDump);
         var preparationJson = System.Text.Encoding.UTF8.GetString(pdfPreparationDump.ToArray());
         Assert.Contains("\"RenderPlan\"", preparationJson, StringComparison.Ordinal);
     }

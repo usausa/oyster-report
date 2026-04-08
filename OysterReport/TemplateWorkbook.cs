@@ -7,13 +7,17 @@ using ClosedXML.Excel;
 /// </summary>
 public sealed class TemplateWorkbook : IDisposable
 {
-    private readonly XLWorkbook workbook;
+    private readonly IXLWorkbook workbook;
     private readonly List<TemplateSheet> sheets;
 
-    internal TemplateWorkbook(XLWorkbook xlWorkbook)
+    /// <summary>ClosedXML のワークブックをテンプレートとしてラップする。</summary>
+    [CLSCompliant(false)]
+    public TemplateWorkbook(IXLWorkbook workbook)
     {
-        workbook = xlWorkbook;
-        sheets = xlWorkbook.Worksheets.Select(ws => new TemplateSheet(ws)).ToList();
+        ArgumentNullException.ThrowIfNull(workbook);
+
+        this.workbook = workbook;
+        sheets = workbook.Worksheets.Select(ws => new TemplateSheet(ws)).ToList();
     }
 
     /// <summary>シート一覧。</summary>

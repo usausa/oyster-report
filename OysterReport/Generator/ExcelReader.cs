@@ -7,22 +7,22 @@ using ClosedXML.Excel.Drawings;
 
 using OysterReport.Helpers;
 
-internal sealed class ExcelReader
+internal static class ExcelReader
 {
-    public ReportWorkbook Read(IXLWorkbook workbook)
+    public static ReportWorkbook Read(IXLWorkbook workbook)
     {
         var measurementProfile = CreateMeasurementProfile(workbook);
         var metadata = new ReportMetadata { TemplateName = workbook.Properties.Title ?? "Workbook" };
         return ReadInternal(workbook, measurementProfile, metadata);
     }
 
-    public ReportWorkbook Read(Stream stream)
+    public static ReportWorkbook Read(Stream stream)
     {
         using var workbook = new XLWorkbook(stream);
         return Read(workbook);
     }
 
-    public ReportWorkbook Read(string filePath)
+    public static ReportWorkbook Read(string filePath)
     {
         using var workbook = new XLWorkbook(filePath);
         var measurementProfile = CreateMeasurementProfile(workbook);
