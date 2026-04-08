@@ -8,4 +8,3 @@ public sealed class PdfGeneratorOption
 
     public bool CompressContentStreams { get; set; } = true; // Whether to compress PDF content streams
 }
-

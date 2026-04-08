@@ -585,14 +585,38 @@ internal sealed class PdfGenerator
 
         return new ReportBorders
         {
-            Top = ResolveMergedBorder(mergedCells, mergeInfo.Range.StartRow, mergeInfo.Range.StartColumn, mergeInfo.Range.EndColumn,
-                static cell => cell.Row, static cell => cell.Column, static cell => cell.Style.Borders.Top),
-            Right = ResolveMergedBorder(mergedCells, mergeInfo.Range.EndColumn, mergeInfo.Range.StartRow, mergeInfo.Range.EndRow,
-                static cell => cell.Column, static cell => cell.Row, static cell => cell.Style.Borders.Right),
-            Bottom = ResolveMergedBorder(mergedCells, mergeInfo.Range.EndRow, mergeInfo.Range.StartColumn, mergeInfo.Range.EndColumn,
-                static cell => cell.Row, static cell => cell.Column, static cell => cell.Style.Borders.Bottom),
-            Left = ResolveMergedBorder(mergedCells, mergeInfo.Range.StartColumn, mergeInfo.Range.StartRow, mergeInfo.Range.EndRow,
-                static cell => cell.Column, static cell => cell.Row, static cell => cell.Style.Borders.Left)
+            Top = ResolveMergedBorder(
+                mergedCells,
+                mergeInfo.Range.StartRow,
+                mergeInfo.Range.StartColumn,
+                mergeInfo.Range.EndColumn,
+                static cell => cell.Row,
+                static cell => cell.Column,
+                static cell => cell.Style.Borders.Top),
+            Right = ResolveMergedBorder(
+                mergedCells,
+                mergeInfo.Range.EndColumn,
+                mergeInfo.Range.StartRow,
+                mergeInfo.Range.EndRow,
+                static cell => cell.Column,
+                static cell => cell.Row,
+                static cell => cell.Style.Borders.Right),
+            Bottom = ResolveMergedBorder(
+                mergedCells,
+                mergeInfo.Range.EndRow,
+                mergeInfo.Range.StartColumn,
+                mergeInfo.Range.EndColumn,
+                static cell => cell.Row,
+                static cell => cell.Column,
+                static cell => cell.Style.Borders.Bottom),
+            Left = ResolveMergedBorder(
+                mergedCells,
+                mergeInfo.Range.StartColumn,
+                mergeInfo.Range.StartRow,
+                mergeInfo.Range.EndRow,
+                static cell => cell.Column,
+                static cell => cell.Row,
+                static cell => cell.Style.Borders.Left)
         };
     }
 

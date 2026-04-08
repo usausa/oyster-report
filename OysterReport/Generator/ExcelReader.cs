@@ -37,7 +37,11 @@ internal sealed class ExcelReader
 
     private static ReportWorkbook ReadInternal(IXLWorkbook workbook, ReportMeasurementProfile measurementProfile, ReportMetadata metadata)
     {
-        var reportWorkbook = new ReportWorkbook(metadata, measurementProfile);
+        var reportWorkbook = new ReportWorkbook
+        {
+            Metadata = metadata,
+            MeasurementProfile = measurementProfile
+        };
 
         foreach (var worksheet in workbook.Worksheets)
         {
@@ -57,7 +61,7 @@ internal sealed class ExcelReader
 
     private static ReportSheet ReadSheet(IXLWorksheet worksheet, ReportMeasurementProfile measurementProfile)
     {
-        var reportSheet = new ReportSheet(worksheet.Name);
+        var reportSheet = new ReportSheet { Name = worksheet.Name };
         var printArea = ReadPrintArea(worksheet);
         if (!TryResolveSheetRange(worksheet, printArea, out var range))
         {
@@ -73,23 +77,39 @@ internal sealed class ExcelReader
         for (var rowIndex = range.StartRow; rowIndex <= range.EndRow; rowIndex++)
         {
             var row = worksheet.Row(rowIndex);
-            reportSheet.AddRowDefinition(new ReportRow(rowIndex, row.Height, row.IsHidden, row.OutlineLevel));
+            reportSheet.AddRowDefinition(new ReportRow
+            {
+                Index = rowIndex,
+                HeightPoint = row.Height,
+                IsHidden = row.IsHidden,
+                OutlineLevel = row.OutlineLevel
+            });
         }
 
         for (var columnIndex = range.StartColumn; columnIndex <= range.EndColumn; columnIndex++)
         {
             var column = worksheet.Column(columnIndex);
             var widthPoint = ColumnWidthConverter.ToPoint(column.Width, measurementProfile.MaxDigitWidth, measurementProfile.ColumnWidthAdjustment);
-            reportSheet.AddColumnDefinition(new ReportColumn(columnIndex, widthPoint, column.IsHidden, column.OutlineLevel, column.Width));
+            reportSheet.AddColumnDefinition(new ReportColumn
+            {
+                Index = columnIndex,
+                WidthPoint = widthPoint,
+                IsHidden = column.IsHidden,
+                OutlineLevel = column.OutlineLevel,
+                OriginalExcelWidth = column.Width
+            });
         }
 
         foreach (var mergedRange in worksheet.MergedRanges)
         {
-            reportSheet.AddMergedRange(new ReportMergedRange(new ReportRange(
-                mergedRange.RangeAddress.FirstAddress.RowNumber,
-                mergedRange.RangeAddress.FirstAddress.ColumnNumber,
-                mergedRange.RangeAddress.LastAddress.RowNumber,
-                mergedRange.RangeAddress.LastAddress.ColumnNumber)));
+            reportSheet.AddMergedRange(new ReportMergedRange
+            {
+                Range = new ReportRange(
+                    mergedRange.RangeAddress.FirstAddress.RowNumber,
+                    mergedRange.RangeAddress.FirstAddress.ColumnNumber,
+                    mergedRange.RangeAddress.LastAddress.RowNumber,
+                    mergedRange.RangeAddress.LastAddress.ColumnNumber)
+            });
         }
 
         for (var rowIndex = range.StartRow; rowIndex <= range.EndRow; rowIndex++)
@@ -97,23 +117,25 @@ internal sealed class ExcelReader
             for (var columnIndex = range.StartColumn; columnIndex <= range.EndColumn; columnIndex++)
             {
                 var cell = worksheet.Cell(rowIndex, columnIndex);
-                reportSheet.AddCell(new ReportCell(
-                    rowIndex,
-                    columnIndex,
-                    ReadCellValue(cell),
-                    cell.GetFormattedString(),
-                    ReadCellStyle(cell)));
+                reportSheet.AddCell(new ReportCell
+                {
+                    Row = rowIndex,
+                    Column = columnIndex,
+                    Value = ReadCellValue(cell),
+                    DisplayText = cell.GetFormattedString(),
+                    Style = ReadCellStyle(cell)
+                });
             }
         }
 
         foreach (var pageBreak in worksheet.PageSetup.RowBreaks)
         {
-            reportSheet.AddHorizontalPageBreak(new ReportPageBreak { Index = pageBreak, IsHorizontal = true });
+            reportSheet.AddHorizontalPageBreak(new ReportPageBreak { Index = pageBreak });
         }
 
         foreach (var pageBreak in worksheet.PageSetup.ColumnBreaks)
         {
-            reportSheet.AddVerticalPageBreak(new ReportPageBreak { Index = pageBreak, IsHorizontal = false });
+            reportSheet.AddVerticalPageBreak(new ReportPageBreak { Index = pageBreak });
         }
 
         foreach (var picture in worksheet.Pictures)
@@ -137,7 +159,6 @@ internal sealed class ExcelReader
                 XLDataType.Number => cell.Value.GetNumber(),
                 XLDataType.DateTime => cell.Value.GetDateTime(),
                 XLDataType.Text => cell.Value.GetText(),
-                XLDataType.Error => cell.Value.ToString(CultureInfo.InvariantCulture),
                 _ => cell.Value.ToString(CultureInfo.InvariantCulture)
             }
         };
@@ -171,7 +192,7 @@ internal sealed class ExcelReader
             Alignment = new ReportAlignment
             {
                 Horizontal = style.Alignment.Horizontal,
-                Vertical = style.Alignment.Vertical,
+                Vertical = style.Alignment.Vertical
             },
             WrapText = style.Alignment.WrapText
         };
@@ -234,7 +255,10 @@ internal sealed class ExcelReader
     private static ReportPrintArea? ReadPrintArea(IXLWorksheet worksheet)
     {
         var printArea = worksheet.PageSetup.PrintAreas.FirstOrDefault();
-        if (printArea is null) return null;
+        if (printArea is null)
+        {
+            return null;
+        }
 
         return new ReportPrintArea
         {
@@ -305,18 +329,20 @@ internal sealed class ExcelReader
         using var memoryStream = new MemoryStream();
         picture.ImageStream.Position = 0;
         picture.ImageStream.CopyTo(memoryStream);
-        return new ReportImage(
-            picture.Name,
-            picture.TopLeftCell.Address.ToStringRelative(false),
-            TryGetBottomRightCellAddress(picture),
-            new ReportOffset
+        return new ReportImage
+        {
+            Name = picture.Name,
+            FromCellAddress = picture.TopLeftCell.Address.ToStringRelative(false),
+            ToCellAddress = TryGetBottomRightCellAddress(picture),
+            Offset = new ReportOffset
             {
                 X = picture.Left * 72d / 96d,
                 Y = picture.Top * 72d / 96d
             },
-            picture.Width * 72d / 96d,
-            picture.Height * 72d / 96d,
-            memoryStream.ToArray());
+            WidthPoint = picture.Width * 72d / 96d,
+            HeightPoint = picture.Height * 72d / 96d,
+            ImageBytes = memoryStream.ToArray()
+        };
     }
 
     private static string? TryGetBottomRightCellAddress(IXLPicture picture)
@@ -404,7 +430,6 @@ internal sealed class ExcelReader
                 cell.Merge = new ReportMergeInfo
                 {
                     OwnerCellAddress = mergedRange.OwnerCellAddress,
-                    IsOwner = string.Equals(cell.Address, mergedRange.OwnerCellAddress, StringComparison.Ordinal),
                     Range = mergedRange.Range
                 };
             }

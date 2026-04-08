@@ -119,8 +119,14 @@ internal sealed class WindowsInstalledFontResolver : IFontResolver
     private static string BuildFaceName(string family, bool bold, bool italic)
     {
         var faceName = family;
-        if (bold) faceName += "#b";
-        if (italic) faceName += "#i";
+        if (bold)
+        {
+            faceName += "#b";
+        }
+        if (italic)
+        {
+            faceName += "#i";
+        }
         return faceName;
     }
 
@@ -140,12 +146,17 @@ internal sealed class WindowsInstalledFontResolver : IFontResolver
     {
         var map = new Dictionary<string, (string, int)>(StringComparer.OrdinalIgnoreCase);
         using var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts");
-        if (key is null) return map;
+        if (key is null)
+        {
+            return map;
+        }
 
         foreach (var valueName in key.GetValueNames())
         {
             if (key.GetValue(valueName) is not string registryValue || string.IsNullOrWhiteSpace(registryValue))
+            {
                 continue;
+            }
 
             var path = Path.IsPathRooted(registryValue)
                 ? registryValue
@@ -167,7 +178,9 @@ internal sealed class WindowsInstalledFontResolver : IFontResolver
             {
                 var name = parts[i].Trim();
                 if (!string.IsNullOrEmpty(name) && !map.ContainsKey(name))
+                {
                     map[name] = (path, i);
+                }
             }
         }
 
@@ -185,8 +198,15 @@ internal sealed class WindowsInstalledFontResolver : IFontResolver
         faceIndex = 0;
         foreach (var candidate in GetCandidateNames(family, bold, italic))
         {
-            if (!fontNameToPathAndFace.TryGetValue(candidate, out var info)) continue;
-            if (!File.Exists(info.Path)) continue;
+            if (!fontNameToPathAndFace.TryGetValue(candidate, out var info))
+            {
+                continue;
+            }
+            if (!File.Exists(info.Path))
+            {
+                continue;
+            }
+
             path = info.Path;
             faceIndex = info.FaceIndex;
             return true;
@@ -196,13 +216,19 @@ internal sealed class WindowsInstalledFontResolver : IFontResolver
 
     private static IEnumerable<string> GetCandidateNames(string family, bool bold, bool italic)
     {
-        if (bold && italic) yield return family + " Bold Italic";
+        if (bold && italic)
+        {
+            yield return family + " Bold Italic";
+        }
         if (bold)
         {
             yield return family + " Bold";
             yield return family + " SemiBold";
         }
-        if (italic) yield return family + " Italic";
+        if (italic)
+        {
+            yield return family + " Italic";
+        }
         yield return family;
     }
 }

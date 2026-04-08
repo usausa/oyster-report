@@ -19,8 +19,10 @@ internal sealed record ReportMeasurementProfile
 {
     public double MaxDigitWidth { get; init; } = 7d;
 
+    // TODO: Reuse the workbook default font metadata when expanding font-dependent measurement diagnostics.
     public string DefaultFontName { get; init; } = "Arial";
 
+    // TODO: Reuse the workbook default font metadata when expanding font-dependent measurement diagnostics.
     public double DefaultFontSize { get; init; } = 11d;
 
     public double ColumnWidthAdjustment { get; init; } = 1d;
@@ -32,6 +34,7 @@ internal sealed record ReportCellValue
 {
     public XLDataType Kind { get; init; } = XLDataType.Blank;
 
+    // TODO: Use the typed source value when adding value-aware formatting or placeholder features.
     public object? RawValue { get; init; }
 }
 
@@ -45,8 +48,10 @@ internal sealed record ReportFont
 
     public bool Italic { get; init; }
 
+    // TODO: Honor Excel underline when PDF text decoration support is added.
     public bool Underline { get; init; }
 
+    // TODO: Honor Excel strikeout when PDF text decoration support is added.
     public bool Strikeout { get; init; }
 
     public string ColorHex { get; init; } = "#FF000000";
@@ -101,8 +106,6 @@ internal sealed record ReportMergeInfo
 {
     public string OwnerCellAddress { get; init; } = string.Empty;
 
-    public bool IsOwner { get; init; }
-
     public ReportRange Range { get; init; }
 }
 
@@ -111,8 +114,6 @@ internal sealed record ReportMergeInfo
 internal sealed record ReportPageBreak
 {
     public int Index { get; init; }
-
-    public bool IsHorizontal { get; init; }
 }
 
 internal sealed record ReportPrintArea
@@ -122,12 +123,14 @@ internal sealed record ReportPrintArea
 
 internal sealed record ReportHeaderFooter
 {
+    // TODO: Apply Excel's header/footer margin alignment rules during PDF rendering.
     public bool AlignWithMargins { get; init; } = true;
 
     public bool DifferentFirst { get; init; }
 
     public bool DifferentOddEven { get; init; }
 
+    // TODO: Apply Excel's header/footer scaling rule during PDF rendering.
     public bool ScaleWithDocument { get; init; } = true;
 
     public string? OddHeader { get; init; }
@@ -155,10 +158,13 @@ internal sealed record ReportPageSetup
 
     public double FooterMarginPoint { get; init; } = 18d;
 
+    // TODO: Apply Excel print scaling when multi-page fit/scaling support is implemented.
     public int ScalePercent { get; init; } = 100;
 
+    // TODO: Apply Excel fit-to-page width scaling when multi-page fit/scaling support is implemented.
     public int? FitToPagesWide { get; init; }
 
+    // TODO: Apply Excel fit-to-page height scaling when multi-page fit/scaling support is implemented.
     public int? FitToPagesTall { get; init; }
 
     public bool CenterHorizontally { get; init; }
@@ -170,125 +176,69 @@ internal sealed record ReportPageSetup
 
 internal sealed class ReportRow
 {
-    public ReportRow(int index, double heightPoint, bool isHidden = false, int outlineLevel = 0)
-    {
-        Index = index;
-        HeightPoint = heightPoint;
-        IsHidden = isHidden;
-        OutlineLevel = outlineLevel;
-    }
+    public int Index { get; init; }
 
-    public int Index { get; }
-
-    public double HeightPoint { get; }
+    public double HeightPoint { get; init; }
 
     public double TopPoint { get; set; }
 
-    public bool IsHidden { get; }
+    public bool IsHidden { get; init; }
 
-    public int OutlineLevel { get; }
+    public int OutlineLevel { get; init; }
 }
 
 internal sealed class ReportColumn
 {
-    public ReportColumn(int index, double widthPoint, bool isHidden = false, int outlineLevel = 0, double originalExcelWidth = 0)
-    {
-        Index = index;
-        WidthPoint = widthPoint;
-        IsHidden = isHidden;
-        OutlineLevel = outlineLevel;
-        OriginalExcelWidth = originalExcelWidth;
-    }
+    public int Index { get; init; }
 
-    public int Index { get; }
-
-    public double WidthPoint { get; }
+    public double WidthPoint { get; init; }
 
     public double LeftPoint { get; set; }
 
-    public bool IsHidden { get; }
+    public bool IsHidden { get; init; }
 
-    public int OutlineLevel { get; }
+    public int OutlineLevel { get; init; }
 
-    public double OriginalExcelWidth { get; }
+    public double OriginalExcelWidth { get; init; }
 }
 
 internal sealed class ReportMergedRange
 {
-    public ReportMergedRange(ReportRange range)
-    {
-        Range = range;
-        OwnerCellAddress = AddressHelper.ToAddress(range.StartRow, range.StartColumn);
-    }
+    public ReportRange Range { get; init; }
 
-    public ReportRange Range { get; }
-
-    public string OwnerCellAddress { get; }
+    public string OwnerCellAddress => AddressHelper.ToAddress(Range.StartRow, Range.StartColumn);
 }
 
 internal sealed class ReportImage
 {
-    public ReportImage(
-        string name,
-        string fromCellAddress,
-        string? toCellAddress,
-        ReportOffset offset,
-        double widthPoint,
-        double heightPoint,
-        ReadOnlyMemory<byte> imageBytes)
-    {
-        Name = name;
-        FromCellAddress = fromCellAddress;
-        ToCellAddress = toCellAddress;
-        Offset = offset;
-        WidthPoint = widthPoint;
-        HeightPoint = heightPoint;
-        ImageBytes = imageBytes;
-    }
+    public string Name { get; init; } = string.Empty;
 
-    public string Name { get; }
+    public string FromCellAddress { get; init; } = string.Empty;
 
-    public string FromCellAddress { get; }
+    public string? ToCellAddress { get; init; }
 
-    public string? ToCellAddress { get; }
+    public ReportOffset Offset { get; init; }
 
-    public ReportOffset Offset { get; }
+    public double WidthPoint { get; init; }
 
-    public double WidthPoint { get; }
+    public double HeightPoint { get; init; }
 
-    public double HeightPoint { get; }
-
-    public ReadOnlyMemory<byte> ImageBytes { get; }
+    public ReadOnlyMemory<byte> ImageBytes { get; init; }
 }
 
 internal sealed class ReportCell
 {
-    public ReportCell(
-        int row,
-        int column,
-        ReportCellValue value,
-        string displayText,
-        ReportCellStyle style)
-    {
-        Row = row;
-        Column = column;
-        Address = AddressHelper.ToAddress(row, column);
-        Value = value;
-        DisplayText = displayText;
-        Style = style;
-    }
+    public int Row { get; init; }
 
-    public int Row { get; }
+    public int Column { get; init; }
 
-    public int Column { get; }
+    public string Address => AddressHelper.ToAddress(Row, Column);
 
-    public string Address { get; }
+    public ReportCellValue Value { get; init; } = new();
 
-    public ReportCellValue Value { get; }
+    public string DisplayText { get; init; } = string.Empty;
 
-    public string DisplayText { get; }
-
-    public ReportCellStyle Style { get; set; }
+    public ReportCellStyle Style { get; set; } = new();
 
     public ReportMergeInfo? Merge { get; set; }
 }
@@ -303,15 +253,9 @@ internal sealed class ReportSheet
     private readonly List<ReportPageBreak> horizontalPageBreaks = [];
     private readonly List<ReportPageBreak> verticalPageBreaks = [];
 
-    public ReportSheet(string name)
-    {
-        Name = name;
-        UsedRange = new ReportRange(1, 1, 1, 1);
-    }
+    public string Name { get; init; } = string.Empty;
 
-    public string Name { get; }
-
-    public ReportRange UsedRange { get; set; }
+    public ReportRange UsedRange { get; set; } = new(1, 1, 1, 1);
 
     public IReadOnlyList<ReportRow> Rows => rows;
 
@@ -371,17 +315,11 @@ internal sealed class ReportWorkbook
 {
     private readonly List<ReportSheet> sheets = [];
 
-    public ReportWorkbook(ReportMetadata? metadata = null, ReportMeasurementProfile? measurementProfile = null)
-    {
-        Metadata = metadata ?? new ReportMetadata();
-        MeasurementProfile = measurementProfile ?? new ReportMeasurementProfile();
-    }
-
     public IReadOnlyList<ReportSheet> Sheets => sheets;
 
-    public ReportMetadata Metadata { get; }
+    public ReportMetadata Metadata { get; init; } = new();
 
-    public ReportMeasurementProfile MeasurementProfile { get; }
+    public ReportMeasurementProfile MeasurementProfile { get; init; } = new();
 
     public void AddSheet(ReportSheet sheet) => sheets.Add(sheet);
 }
