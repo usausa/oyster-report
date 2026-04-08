@@ -63,10 +63,8 @@ internal static class PdfGenerator
         document.Save(output, closeStream: false);
     }
 
-    //
     // Windows 環境で PDFSharp のフォントリゾルバーが未設定の場合に
     // WindowsInstalledFontResolver を登録する (初回のみ実行)。
-    ///
     private static void EnsurePdfSharpFontConfiguration()
     {
         if (Interlocked.Exchange(ref fontPlatformConfigured, 1) == 1)
@@ -100,10 +98,8 @@ internal static class PdfGenerator
         graphics.DrawRectangle(XBrushes.White, pageBounds.X, pageBounds.Y, pageBounds.Width, pageBounds.Height);
     }
 
-    //
     // セルの背景色とテキストを描画する。
     // 背景は同色のセルをまとめて描画し、テキストは折り返し・中央揃え等に応じて配置する。
-    ///
     private static void DrawCells(
         XGraphics graphics,
         ReportSheet sourceSheet,
@@ -213,9 +209,7 @@ internal static class PdfGenerator
         }
     }
 
-    //
     // セルの罫線を描画する。重複する辺は優先度の高い罫線スタイルを採用し一度だけ描画する。
-    ///
     private static void DrawBorders(XGraphics graphics, ReportSheet sourceSheet, IEnumerable<PdfCellRenderInfo> cells)
     {
         var sourceCellsByAddress = sourceSheet.Cells.ToDictionary(cell => cell.Address, StringComparer.Ordinal);
