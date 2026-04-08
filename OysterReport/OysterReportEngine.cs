@@ -4,16 +4,16 @@ using OysterReport.Internal;
 
 public sealed class OysterReportEngine
 {
-    /// <summary>PDF レンダリング時のフォント解決に使用する。</summary>
+    // PDF レンダリング時のフォント解決に使用する。
     public IReportFontResolver? FontResolver { get; set; }
 
-    /// <summary>PDF ドキュメントへメタデータを埋め込むかどうか。</summary>
+    // PDF ドキュメントへメタデータを埋め込むかどうか。
     public bool EmbedDocumentMetadata { get; set; } = true;
 
-    /// <summary>PDF のコンテンツストリームを圧縮するかどうか。</summary>
+    // PDF のコンテンツストリームを圧縮するかどうか。
     public bool CompressContentStreams { get; set; } = true;
 
-    /// <summary>ワークブック全体から PDF を生成する。</summary>
+    // ワークブック全体から PDF を生成する。
     public void GeneratePdf(TemplateWorkbook template, Stream output)
     {
         ArgumentNullException.ThrowIfNull(template);
@@ -23,7 +23,7 @@ public sealed class OysterReportEngine
         PdfGenerator.WritePdf(context, output);
     }
 
-    /// <summary>単一シートから PDF を生成する。</summary>
+    // 単一シートから PDF を生成する。
     public void GeneratePdf(TemplateSheet sheet, Stream output)
     {
         ArgumentNullException.ThrowIfNull(sheet);

@@ -4,8 +4,6 @@
 
 namespace OysterReport.Tests;
 
-using ClosedXML.Excel;
-
 using OysterReport.Internal;
 
 using Xunit;

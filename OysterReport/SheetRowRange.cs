@@ -2,9 +2,7 @@ namespace OysterReport;
 
 using ClosedXML.Excel;
 
-/// <summary>
-/// シート上の連続行範囲を表すハンドル。1 明細が複数行にまたがるテンプレートで使用する。
-/// </summary>
+// シート上の連続行範囲を表すハンドル。1 明細が複数行にまたがるテンプレートで使用する。
 public sealed class SheetRowRange
 {
     private readonly IXLWorksheet worksheet;
@@ -16,28 +14,24 @@ public sealed class SheetRowRange
         EndRow = endRow;
     }
 
-    /// <summary>開始行番号 (1-based)。</summary>
+    // 開始行番号 (1-based)。
     public int StartRow { get; }
 
-    /// <summary>終了行番号 (1-based, inclusive)。</summary>
+    // 終了行番号 (1-based, inclusive)。
     public int EndRow { get; }
 
-    /// <summary>行数。</summary>
+    // 行数。
     public int RowCount => EndRow - StartRow + 1;
 
-    /// <summary>
-    /// この行範囲のコピーを直下に挿入し、挿入された新しい行範囲を返す。
-    /// フロー B で使用する。
-    /// </summary>
+    // この行範囲のコピーを直下に挿入し、挿入された新しい行範囲を返す。
+    // フロー B で使用する。
     public SheetRowRange InsertCopyBelow()
     {
         return InsertCopyAfter(this);
     }
 
-    /// <summary>
-    /// この行範囲の内容をコピーし、afterRange の直下に挿入する。挿入された新しい行範囲を返す。
-    /// コピー元は this、挿入位置は afterRange の直下。フロー A で使用する。
-    /// </summary>
+    // この行範囲の内容をコピーし、afterRange の直下に挿入する。挿入された新しい行範囲を返す。
+    // コピー元は this、挿入位置は afterRange の直下。フロー A で使用する。
     public SheetRowRange InsertCopyAfter(SheetRowRange afterRange)
     {
         ArgumentNullException.ThrowIfNull(afterRange);
@@ -67,7 +61,7 @@ public sealed class SheetRowRange
         return new SheetRowRange(worksheet, newStartRow, newStartRow + RowCount - 1);
     }
 
-    /// <summary>この行範囲内のプレースホルダを置換する。</summary>
+    // この行範囲内のプレースホルダを置換する。
     public int ReplacePlaceholder(string markerName, string value)
     {
         ArgumentNullException.ThrowIfNull(markerName);
@@ -93,7 +87,7 @@ public sealed class SheetRowRange
         return count;
     }
 
-    /// <summary>この行範囲内のプレースホルダを辞書で一括置換する。</summary>
+    // この行範囲内のプレースホルダを辞書で一括置換する。
     public int ReplacePlaceholders(IReadOnlyDictionary<string, string?> values)
     {
         ArgumentNullException.ThrowIfNull(values);
@@ -105,7 +99,7 @@ public sealed class SheetRowRange
         return count;
     }
 
-    /// <summary>この行範囲を削除する。後続行は自動的に上にシフトされる。</summary>
+    // この行範囲を削除する。後続行は自動的に上にシフトされる。
     public void Delete()
     {
         worksheet.Rows(StartRow, EndRow).Delete();

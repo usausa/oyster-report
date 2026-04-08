@@ -2,9 +2,7 @@ namespace OysterReport;
 
 using ClosedXML.Excel;
 
-/// <summary>
-/// 1 シートに対するプレースホルダ置換・行操作を提供する。
-/// </summary>
+// 1 シートに対するプレースホルダ置換・行操作を提供する。
 public sealed class TemplateSheet
 {
 #pragma warning disable IDE0032
@@ -16,15 +14,15 @@ public sealed class TemplateSheet
         worksheet = ws;
     }
 
-    /// <summary>シート名。</summary>
+    // シート名。
     public string Name => worksheet.Name;
 
-    /// <summary>内部の ClosedXML ワークシート。</summary>
+    // 内部の ClosedXML ワークシート。
 #pragma warning disable IDE0032
     internal IXLWorksheet UnderlyingWorksheet => worksheet;
 #pragma warning restore IDE0032
 
-    /// <summary>マーカー名を指定してプレースホルダを置換する。</summary>
+    // マーカー名を指定してプレースホルダを置換する。
     public int ReplacePlaceholder(string markerName, string value)
     {
         ArgumentNullException.ThrowIfNull(markerName);
@@ -45,7 +43,7 @@ public sealed class TemplateSheet
         return count;
     }
 
-    /// <summary>辞書で一括置換する。</summary>
+    // 辞書で一括置換する。
     public int ReplacePlaceholders(IReadOnlyDictionary<string, string?> values)
     {
         ArgumentNullException.ThrowIfNull(values);
@@ -57,13 +55,13 @@ public sealed class TemplateSheet
         return count;
     }
 
-    /// <summary>行番号で単一行を取得する (1-based)。</summary>
+    // 行番号で単一行を取得する (1-based)。
     public SheetRow GetRow(int row) => new(worksheet, row);
 
-    /// <summary>行番号で行範囲を取得する (1-based, inclusive)。</summary>
+    // 行番号で行範囲を取得する (1-based, inclusive)。
     public SheetRowRange GetRows(int startRow, int endRow) => new(worksheet, startRow, endRow);
 
-    /// <summary>マーカー名で行を検索して取得する。</summary>
+    // マーカー名で行を検索して取得する。
     public SheetRow FindRow(string markerName)
     {
         ArgumentNullException.ThrowIfNull(markerName);
@@ -78,7 +76,7 @@ public sealed class TemplateSheet
         throw new InvalidOperationException($"Marker '{markerName}' not found in sheet '{Name}'.");
     }
 
-    /// <summary>マーカー名で行範囲を検索して取得する。プレースホルダを含む連続行範囲を自動検出する。</summary>
+    // マーカー名で行範囲を検索して取得する。プレースホルダを含む連続行範囲を自動検出する。
     public SheetRowRange FindRows(string markerName)
     {
         ArgumentNullException.ThrowIfNull(markerName);
@@ -115,7 +113,7 @@ public sealed class TemplateSheet
         return new SheetRowRange(worksheet, startRow, endRow);
     }
 
-    /// <summary>指定範囲の行を削除する (1-based, inclusive)。</summary>
+    // 指定範囲の行を削除する (1-based, inclusive)。
     public void DeleteRows(int startRow, int endRow)
     {
         worksheet.Rows(startRow, endRow).Delete();

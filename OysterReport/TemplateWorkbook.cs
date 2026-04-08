@@ -2,15 +2,13 @@ namespace OysterReport;
 
 using ClosedXML.Excel;
 
-/// <summary>
-/// Excel ファイルを保持し、ワークブック全体のテンプレート操作を提供する。
-/// </summary>
+// Excel ファイルを保持し、ワークブック全体のテンプレート操作を提供する。
 public sealed class TemplateWorkbook : IDisposable
 {
     private readonly XLWorkbook workbook;
     private readonly List<TemplateSheet> sheets;
 
-    /// <summary>ファイルパスから Excel ファイルを読み込む。</summary>
+    // ファイルパスから Excel ファイルを読み込む。
     public TemplateWorkbook(string filePath)
     {
         ArgumentNullException.ThrowIfNull(filePath);
@@ -19,7 +17,7 @@ public sealed class TemplateWorkbook : IDisposable
         sheets = workbook.Worksheets.Select(ws => new TemplateSheet(ws)).ToList();
     }
 
-    /// <summary>ストリームから Excel ファイルを読み込む。</summary>
+    // ストリームから Excel ファイルを読み込む。
     public TemplateWorkbook(Stream stream)
     {
         ArgumentNullException.ThrowIfNull(stream);
@@ -28,13 +26,13 @@ public sealed class TemplateWorkbook : IDisposable
         sheets = workbook.Worksheets.Select(ws => new TemplateSheet(ws)).ToList();
     }
 
-    /// <summary>内部の ClosedXML ワークブック。</summary>
+    // 内部の ClosedXML ワークブック。
     internal IXLWorkbook UnderlyingWorkbook => workbook;
 
-    /// <summary>シート一覧。</summary>
+    // シート一覧。
     public IReadOnlyList<TemplateSheet> Sheets => sheets;
 
-    /// <summary>名前でシートを取得する。</summary>
+    // 名前でシートを取得する。
     public TemplateSheet GetSheet(string name)
     {
         ArgumentNullException.ThrowIfNull(name);
@@ -42,10 +40,10 @@ public sealed class TemplateWorkbook : IDisposable
             ?? throw new InvalidOperationException($"Sheet '{name}' not found.");
     }
 
-    /// <summary>インデックスでシートを取得する (0-based)。</summary>
+    // インデックスでシートを取得する (0-based)。
     public TemplateSheet GetSheet(int index) => sheets[index];
 
-    /// <summary>テンプレートシートをコピーして新しいシートを作成する。</summary>
+    // テンプレートシートをコピーして新しいシートを作成する。
     public TemplateSheet CopySheet(string sourceSheetName, string newSheetName)
     {
         ArgumentNullException.ThrowIfNull(sourceSheetName);
@@ -57,7 +55,7 @@ public sealed class TemplateWorkbook : IDisposable
         return newSheet;
     }
 
-    /// <summary>シートを削除する。</summary>
+    // シートを削除する。
     public void RemoveSheet(string name)
     {
         ArgumentNullException.ThrowIfNull(name);
@@ -66,7 +64,7 @@ public sealed class TemplateWorkbook : IDisposable
         sheets.Remove(sheet);
     }
 
-    /// <summary>全シートのプレースホルダを一括置換する。</summary>
+    // 全シートのプレースホルダを一括置換する。
     public int ReplacePlaceholder(string markerName, string value)
     {
         var count = 0;
@@ -77,7 +75,7 @@ public sealed class TemplateWorkbook : IDisposable
         return count;
     }
 
-    /// <summary>全シートのプレースホルダを辞書で一括置換する。</summary>
+    // 全シートのプレースホルダを辞書で一括置換する。
     public int ReplacePlaceholders(IReadOnlyDictionary<string, string?> values)
     {
         var count = 0;
@@ -88,6 +86,5 @@ public sealed class TemplateWorkbook : IDisposable
         return count;
     }
 
-    /// <inheritdoc />
     public void Dispose() => workbook.Dispose();
 }

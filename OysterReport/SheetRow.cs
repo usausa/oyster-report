@@ -2,9 +2,7 @@ namespace OysterReport;
 
 using ClosedXML.Excel;
 
-/// <summary>
-/// シート上の 1 行を表す軽量ハンドル。コピー挿入・プレースホルダ置換・削除を提供する。
-/// </summary>
+// シート上の 1 行を表す軽量ハンドル。コピー挿入・プレースホルダ置換・削除を提供する。
 public sealed class SheetRow
 {
     private readonly IXLWorksheet worksheet;
@@ -15,22 +13,18 @@ public sealed class SheetRow
         RowNumber = rowNumber;
     }
 
-    /// <summary>この行の行番号 (1-based)。</summary>
+    // この行の行番号 (1-based)。
     public int RowNumber { get; }
 
-    /// <summary>
-    /// この行のコピーを直下に挿入し、挿入された新しい行を返す。
-    /// フロー B（行番号を進めながら処理する方式）で使用する。
-    /// </summary>
+    // この行のコピーを直下に挿入し、挿入された新しい行を返す。
+    // フロー B（行番号を進めながら処理する方式）で使用する。
     public SheetRow InsertCopyBelow()
     {
         return InsertCopyAfter(this);
     }
 
-    /// <summary>
-    /// この行の内容をコピーし、afterRow の直下に挿入する。挿入された新しい行を返す。
-    /// コピー元は this、挿入位置は afterRow の直下。フロー A（テンプレートのコピーを追加していく方式）で使用する。
-    /// </summary>
+    // この行の内容をコピーし、afterRow の直下に挿入する。挿入された新しい行を返す。
+    // コピー元は this、挿入位置は afterRow の直下。フロー A（テンプレートのコピーを追加していく方式）で使用する。
     public SheetRow InsertCopyAfter(SheetRow afterRow)
     {
         ArgumentNullException.ThrowIfNull(afterRow);
@@ -56,7 +50,7 @@ public sealed class SheetRow
         return new SheetRow(worksheet, newRowNumber);
     }
 
-    /// <summary>この行内のプレースホルダを置換する。</summary>
+    // この行内のプレースホルダを置換する。
     public int ReplacePlaceholder(string markerName, string value)
     {
         ArgumentNullException.ThrowIfNull(markerName);
@@ -79,7 +73,7 @@ public sealed class SheetRow
         return count;
     }
 
-    /// <summary>この行内のプレースホルダを辞書で一括置換する。</summary>
+    // この行内のプレースホルダを辞書で一括置換する。
     public int ReplacePlaceholders(IReadOnlyDictionary<string, string?> values)
     {
         ArgumentNullException.ThrowIfNull(values);
@@ -91,7 +85,7 @@ public sealed class SheetRow
         return count;
     }
 
-    /// <summary>この行を削除する。後続行は自動的に上にシフトされる。</summary>
+    // この行を削除する。後続行は自動的に上にシフトされる。
     public void Delete()
     {
         worksheet.Row(RowNumber).Delete();
