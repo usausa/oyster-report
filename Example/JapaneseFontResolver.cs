@@ -2,37 +2,37 @@ namespace Example;
 
 using OysterReport;
 
-// Windows にインストールされた TTC フォントは PDFsharp 6.x では
-// collectionNumber が未実装 (face 0 のみ対応) のため、
-// TTC の face 0 に対応するフォント名 (レジストリキーの先頭名) へマッピングする。
+// WindowsInstalledFontResolver は Windows フォントレジストリから TTC の
+// フェイスインデックスを正しく解決し、各フェイスの TTF バイト列を抽出する。
+// このマップでは Excel セルのフォント名 (全角名・混在名) を
+// Windows レジストリで検索可能な ASCII 名へ変換する。
 //
-// 各 TTC の face 0:
-//   msgothic.ttc  → MS Gothic     (レジストリキー先頭: "MS Gothic & ...")
-//   msmincho.ttc  → MS Mincho     (レジストリキー先頭: "MS Mincho & ...")
-//   meiryo.ttc    → Meiryo        (レジストリキー先頭: "Meiryo & ...")
-//   HGRME.TTC     → HG明朝E      (レジストリキー先頭: "HG明朝E & ...")
+// レジストリの TTC 対応:
+//   msgothic.ttc  → face 0: MS Gothic (等幅)
+//                   face 1: MS UI Gothic (プロポーショナル・UI 用)
+//                   face 2: MS PGothic  (プロポーショナル)
+//   msmincho.ttc  → face 0: MS Mincho  (等幅)
+//                   face 1: MS PMincho  (プロポーショナル)
+//   meiryo.ttc    → face 0: Meiryo
+//                   face 1: Meiryo Italic
+//                   face 2: Meiryo UI
+//                   face 3: Meiryo UI Italic
 internal sealed class JapaneseFontResolver : IReportFontResolver
 {
     private static readonly Dictionary<string, string> FontMap =
         new(StringComparer.OrdinalIgnoreCase)
         {
-            // MS Gothic 系 (msgothic.ttc: face 0 = MS Gothic)
-            ["ＭＳ Ｐゴシック"] = "MS Gothic",
-            ["MS PGothic"] = "MS Gothic",
-            ["MS Pゴシック"] = "MS Gothic",
-            ["ＭＳ ゴシック"] = "MS Gothic",
-            ["MS UI Gothic"] = "MS Gothic",
+            // MS Gothic 系 (msgothic.ttc) — 全角名・混在名 → ASCII レジストリキー名
+            ["ＭＳ Ｐゴシック"] = "MS PGothic",   // face 2 (プロポーショナル)
+            ["MS Pゴシック"] = "MS PGothic",        // face 2 (プロポーショナル)
+            ["ＭＳ ゴシック"] = "MS Gothic",       // face 0 (等幅)
 
-            // MS Mincho 系 (msmincho.ttc: face 0 = MS Mincho)
-            ["ＭＳ Ｐ明朝"] = "MS Mincho",
-            ["MS PMincho"] = "MS Mincho",
-            ["MS P明朝"] = "MS Mincho",
-            ["ＭＳ 明朝"] = "MS Mincho",
+            // MS Mincho 系 (msmincho.ttc)
+            ["ＭＳ Ｐ明朝"] = "MS PMincho",        // face 1 (プロポーショナル)
+            ["MS P明朝"] = "MS PMincho",            // face 1 (プロポーショナル)
+            ["ＭＳ 明朝"] = "MS Mincho",           // face 0 (等幅)
 
-            // Meiryo 系 (meiryo.ttc: face 0 = Meiryo)
-            ["Meiryo UI"] = "Meiryo",
-
-            // HG Mincho E 系 (HGRME.TTC: face 0 = HGMinchoE; レジストリキー: "HG明朝E & ...")
+            // HG Mincho E 系
             ["HGP明朝E"] = "HG明朝E",
             ["HGPMinchoE"] = "HG明朝E",
             ["HGS明朝E"] = "HG明朝E",

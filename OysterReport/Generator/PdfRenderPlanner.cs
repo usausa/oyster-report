@@ -259,6 +259,12 @@ internal static class PdfRenderPlanner
         while (columnOffsets.TryGetValue(nextCol, out var nextColLeft) &&
                columnByIndex.TryGetValue(nextCol, out var nextColInfo))
         {
+            // マージセルはテキストのはみ出しをブロックする (Excel の挙動と一致)
+            if (mergedRangeByCell.ContainsKey((cell.Row, nextCol)))
+            {
+                break;
+            }
+
             if (cellsByRowCol.TryGetValue((cell.Row, nextCol), out var adjacentCell))
             {
                 if (!string.IsNullOrEmpty(adjacentCell.DisplayText))
@@ -273,15 +279,7 @@ internal static class PdfRenderPlanner
             }
 
             overflowRight = nextColLeft + nextColInfo.WidthPoint;
-
-            if (mergedRangeByCell.TryGetValue((cell.Row, nextCol), out var adjMerged))
-            {
-                nextCol = adjMerged.Range.EndColumn + 1;
-            }
-            else
-            {
-                nextCol++;
-            }
+            nextCol++;
         }
 
         return contentBounds with
