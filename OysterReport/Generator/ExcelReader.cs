@@ -189,14 +189,7 @@ internal sealed class ExcelReader
         {
             Style = styleValue,
             ColorHex = resolvedColorHex,
-            Width = styleValue switch
-            {
-                XLBorderStyleValues.Thick => 2.25d,
-                XLBorderStyleValues.Medium => 1.5d,
-                XLBorderStyleValues.Double => 0.75d,
-                XLBorderStyleValues.Hair => 0.25d,
-                _ => 0.75d
-            }
+            Width = PdfRenderingConstants.ResolveBorderWidth(styleValue)
         };
     }
 

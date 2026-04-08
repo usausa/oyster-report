@@ -325,7 +325,7 @@ internal sealed class PdfGenerator
     {
         var headerSections = ResolveHeaderFooterSections(headerFooter.HeaderText, pageNumber, totalPages);
         var footerSections = ResolveHeaderFooterSections(headerFooter.FooterText, pageNumber, totalPages);
-        var font = CreateFallbackFont(9d);
+        var font = CreateFallbackFont(PdfRenderingConstants.HeaderFooterFontSizePoints);
 
         DrawHeaderFooterSections(graphics, headerSections, headerFooter.HeaderBounds, font);
         DrawHeaderFooterSections(graphics, footerSections, headerFooter.FooterBounds, font);
@@ -397,7 +397,7 @@ internal sealed class PdfGenerator
 
     private static XFont ResolveFont(ReportFont font, PdfGeneratorOption option)
     {
-        var fontSize = font.Size <= 0 ? 11d : font.Size;
+        var fontSize = font.Size <= 0 ? PdfRenderingConstants.DefaultCellFontSizePoints : font.Size;
         var style = XFontStyleEx.Regular;
         if (font.Bold) style |= XFontStyleEx.Bold;
         if (font.Italic) style |= XFontStyleEx.Italic;
@@ -485,14 +485,7 @@ internal sealed class PdfGenerator
         ColorHelper.NormalizeHex(colorHex).StartsWith("#00", StringComparison.Ordinal);
 
     private static double ResolveBorderWidth(XLBorderStyleValues style) =>
-        style switch
-        {
-            XLBorderStyleValues.Thick => 2.25d,
-            XLBorderStyleValues.Medium => 1.5d,
-            XLBorderStyleValues.Double => 0.75d,
-            XLBorderStyleValues.Hair => 0.25d,
-            _ => 0.75d
-        };
+        PdfRenderingConstants.ResolveBorderWidth(style);
 
     private static void ApplyBorderStyle(XPen pen, XLBorderStyleValues style)
     {
@@ -507,8 +500,8 @@ internal sealed class PdfGenerator
 
     private static void DrawDoubleBorder(XGraphics graphics, XColor color, double width, ReportLine line)
     {
-        var gap = Math.Max(1.5d, width * 1.5d);
-        if (Math.Abs(line.Y1 - line.Y2) < 0.01d)
+        var gap = Math.Max(PdfRenderingConstants.MinimumDoubleBorderGapPoints, width * PdfRenderingConstants.DoubleBorderGapWidthMultiplier);
+        if (Math.Abs(line.Y1 - line.Y2) < PdfRenderingConstants.StraightLineTolerancePoints)
         {
             DrawSolidBorder(graphics, color, width, line with { Y1 = line.Y1 - (gap / 2d), Y2 = line.Y2 - (gap / 2d) });
             DrawSolidBorder(graphics, color, width, line with { Y1 = line.Y1 + (gap / 2d), Y2 = line.Y2 + (gap / 2d) });
@@ -567,7 +560,7 @@ internal sealed class PdfGenerator
     private static void DrawSolidBorder(XGraphics graphics, XColor color, double width, ReportLine line)
     {
         var brush = new XSolidBrush(color);
-        if (Math.Abs(line.Y1 - line.Y2) < 0.01d)
+        if (Math.Abs(line.Y1 - line.Y2) < PdfRenderingConstants.StraightLineTolerancePoints)
         {
             var left = Math.Min(line.X1, line.X2);
             var top = line.Y1 - (width / 2d);

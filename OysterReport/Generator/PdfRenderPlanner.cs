@@ -138,7 +138,11 @@ internal static class PdfRenderPlanner
                 outerBounds = BuildMergedBounds(mergedRange, visibleRows, visibleColumns, rowOffsets, columnOffsets);
             }
 
-            var contentBounds = outerBounds.Deflate(new ReportThickness { Left = 2d, Right = 2d });
+            var contentBounds = outerBounds.Deflate(new ReportThickness
+            {
+                Left = PdfRenderingConstants.HorizontalCellTextPaddingPoints,
+                Right = PdfRenderingConstants.HorizontalCellTextPaddingPoints
+            });
             pageCells.Add(new PdfCellRenderInfo
             {
                 CellAddress = cell.Address,
