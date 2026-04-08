@@ -33,6 +33,27 @@ public sealed class PdfGeneratorTests
     }
 
     [Fact]
+    public void BuildRenderPlanShouldPreserveCellHeightForTextLayout()
+    {
+        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        {
+            var sheet = workbook.AddWorksheet("Report");
+            sheet.Row(1).Height = 9.95d;
+            var cell = sheet.Cell("A1");
+            cell.Value = "担当：";
+            cell.Style.Font.FontName = "ＭＳ Ｐゴシック";
+            cell.Style.Font.FontSize = 10d;
+            cell.Style.Alignment.Vertical = ClosedXML.Excel.XLAlignmentVerticalValues.Center;
+        });
+
+        var workbook = new ExcelReader().Read(stream);
+        var renderPlan = PdfGenerator.BuildRenderPlan(workbook);
+        var cell = renderPlan[0].Pages[0].Cells.Single(info => info.CellAddress == "A1");
+
+        Assert.Equal(cell.OuterBounds.Height, cell.ContentBounds.Height, 3);
+    }
+
+    [Fact]
     public void DebugDumperShouldWriteWorkbookAndPdfPreparation()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
