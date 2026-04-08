@@ -27,7 +27,6 @@ public sealed class ReportSheetTests
                 stream.CopyTo(file);
             }
 
-            var engine = new OysterReportEngine();
             using var workbook = new TemplateWorkbook(new XLWorkbook(tempFile));
             var sheet = Assert.Single(workbook.Sheets);
 

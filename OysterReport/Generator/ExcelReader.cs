@@ -22,19 +22,6 @@ internal static class ExcelReader
         return Read(workbook);
     }
 
-    public static ReportWorkbook Read(string filePath)
-    {
-        using var workbook = new XLWorkbook(filePath);
-        var measurementProfile = CreateMeasurementProfile(workbook);
-        var metadata = new ReportMetadata
-        {
-            TemplateName = Path.GetFileNameWithoutExtension(filePath),
-            SourceFilePath = filePath,
-            SourceLastWriteTime = File.Exists(filePath) ? File.GetLastWriteTimeUtc(filePath) : null
-        };
-        return ReadInternal(workbook, measurementProfile, metadata);
-    }
-
     private static ReportWorkbook ReadInternal(IXLWorkbook workbook, ReportMeasurementProfile measurementProfile, ReportMetadata metadata)
     {
         var reportWorkbook = new ReportWorkbook
@@ -287,7 +274,10 @@ internal static class ExcelReader
 
         IncludeRange(contentRange);
         IncludeRange(formattedRange);
-        if (printArea is not null) IncludeReportRange(printArea.Range);
+        if (printArea is not null)
+        {
+            IncludeReportRange(printArea.Range);
+        }
 
         foreach (var mergedRange in worksheet.MergedRanges)
         {
@@ -308,7 +298,11 @@ internal static class ExcelReader
 
         void IncludeRange(IXLRange? r)
         {
-            if (r is null) return;
+            if (r is null)
+            {
+                return;
+            }
+
             startRow = Math.Min(startRow, r.RangeAddress.FirstAddress.RowNumber);
             startColumn = Math.Min(startColumn, r.RangeAddress.FirstAddress.ColumnNumber);
             endRow = Math.Max(endRow, r.RangeAddress.LastAddress.RowNumber);
@@ -347,7 +341,10 @@ internal static class ExcelReader
 
     private static string? TryGetBottomRightCellAddress(IXLPicture picture)
     {
-        if (picture.Placement != XLPicturePlacement.MoveAndSize) return null;
+        if (picture.Placement != XLPicturePlacement.MoveAndSize)
+        {
+            return null;
+        }
 
         try
         {
@@ -361,10 +358,16 @@ internal static class ExcelReader
 
     private static string ResolveFillColorHex(IXLFill fill, IXLWorkbook workbook)
     {
-        if (fill.PatternType == XLFillPatternValues.None) return "#00000000";
+        if (fill.PatternType == XLFillPatternValues.None)
+        {
+            return "#00000000";
+        }
 
         var background = ColorHelper.ResolveHex(fill.BackgroundColor, workbook, "#00000000");
-        if (!background.StartsWith("#00", StringComparison.Ordinal)) return background;
+        if (!background.StartsWith("#00", StringComparison.Ordinal))
+        {
+            return background;
+        }
 
         return ColorHelper.ResolveHex(fill.PatternColor, workbook, "#00000000");
     }

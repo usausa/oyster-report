@@ -120,7 +120,11 @@ public sealed class TemplateSheet
 
     private bool RowContainsAnyPlaceholder(int rowNum)
     {
-        if (rowNum < 1) return false;
+        if (rowNum < 1)
+        {
+            return false;
+        }
+
         var lastCol = worksheet.LastColumnUsed()?.ColumnNumber() ?? 1;
         for (var col = 1; col <= lastCol; col++)
         {

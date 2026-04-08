@@ -321,20 +321,17 @@ internal static class PdfGenerator
     {
         if (!string.IsNullOrWhiteSpace(sections.Left))
         {
-            graphics.DrawString(sections.Left, font, XBrushes.Black,
-                new XRect(bounds.X, bounds.Y, bounds.Width, bounds.Height), XStringFormats.TopLeft);
+            graphics.DrawString(sections.Left, font, XBrushes.Black, new XRect(bounds.X, bounds.Y, bounds.Width, bounds.Height), XStringFormats.TopLeft);
         }
 
         if (!string.IsNullOrWhiteSpace(sections.Center))
         {
-            graphics.DrawString(sections.Center, font, XBrushes.Black,
-                new XRect(bounds.X, bounds.Y, bounds.Width, bounds.Height), XStringFormats.TopCenter);
+            graphics.DrawString(sections.Center, font, XBrushes.Black, new XRect(bounds.X, bounds.Y, bounds.Width, bounds.Height), XStringFormats.TopCenter);
         }
 
         if (!string.IsNullOrWhiteSpace(sections.Right))
         {
-            graphics.DrawString(sections.Right, font, XBrushes.Black,
-                new XRect(bounds.X, bounds.Y, bounds.Width, bounds.Height), XStringFormats.TopRight);
+            graphics.DrawString(sections.Right, font, XBrushes.Black, new XRect(bounds.X, bounds.Y, bounds.Width, bounds.Height), XStringFormats.TopRight);
         }
     }
 
@@ -381,8 +378,14 @@ internal static class PdfGenerator
     {
         var fontSize = font.Size <= 0 ? PdfRenderingConstants.DefaultCellFontSizePoints : font.Size;
         var style = XFontStyleEx.Regular;
-        if (font.Bold) style |= XFontStyleEx.Bold;
-        if (font.Italic) style |= XFontStyleEx.Italic;
+        if (font.Bold)
+        {
+            style |= XFontStyleEx.Bold;
+        }
+        if (font.Italic)
+        {
+            style |= XFontStyleEx.Italic;
+        }
 
         foreach (var fontName in EnumerateCandidateFontNames(font, context))
         {
@@ -440,9 +443,15 @@ internal static class PdfGenerator
             font = new XFont(fontName, size, style, new XPdfFontOptions(PdfFontEncoding.Unicode, PdfFontEmbedding.TryComputeSubset));
             return true;
         }
-        catch (InvalidOperationException) { }
-        catch (ArgumentException) { }
-        catch (NullReferenceException) { }
+        catch (InvalidOperationException)
+        {
+        }
+        catch (ArgumentException)
+        {
+        }
+        catch (NullReferenceException)
+        {
+        }
 
         font = null!;
         return false;

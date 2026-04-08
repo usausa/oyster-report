@@ -20,9 +20,6 @@ internal readonly record struct ReportThickness
     public double Right { get; init; }
 
     public double Bottom { get; init; }
-
-    public static ReportThickness Uniform(double value) =>
-        new() { Left = value, Top = value, Right = value, Bottom = value };
 }
 
 internal readonly record struct ReportLine

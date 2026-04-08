@@ -171,7 +171,10 @@ internal sealed class WindowsInstalledFontResolver : IFontResolver
 
             var namesPart = valueName;
             var parenIdx = namesPart.LastIndexOf('(');
-            if (parenIdx > 0) namesPart = namesPart[..parenIdx].TrimEnd(';', ' ');
+            if (parenIdx > 0)
+            {
+                namesPart = namesPart[..parenIdx].TrimEnd(';', ' ');
+            }
 
             var parts = namesPart.Split(CompoundNameSeparator, StringSplitOptions.RemoveEmptyEntries);
             for (var i = 0; i < parts.Length; i++)
