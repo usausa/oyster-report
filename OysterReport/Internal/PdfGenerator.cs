@@ -1,12 +1,10 @@
-namespace OysterReport.Generator;
+namespace OysterReport.Internal;
 
 using System.Globalization;
 using System.Reflection;
 using System.Text;
 
 using ClosedXML.Excel;
-
-using OysterReport.Helpers;
 
 using PdfSharp.Drawing;
 using PdfSharp.Drawing.Layout;

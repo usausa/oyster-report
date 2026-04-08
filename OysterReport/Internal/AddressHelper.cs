@@ -1,4 +1,4 @@
-namespace OysterReport.Helpers;
+namespace OysterReport.Internal;
 
 using System.Globalization;
 

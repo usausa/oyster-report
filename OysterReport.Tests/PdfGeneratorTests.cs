@@ -6,7 +6,7 @@ namespace OysterReport.Tests;
 
 using ClosedXML.Excel;
 
-using OysterReport.Generator;
+using OysterReport.Internal;
 
 using Xunit;
 

@@ -9,7 +9,7 @@ using System.Linq;
 using ClosedXML.Excel;
 using ClosedXML.Excel.Drawings;
 
-using OysterReport.Generator;
+using OysterReport.Internal;
 
 using Xunit;
 

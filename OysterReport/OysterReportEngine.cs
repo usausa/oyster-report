@@ -1,6 +1,6 @@
 namespace OysterReport;
 
-using OysterReport.Generator;
+using OysterReport.Internal;
 
 public sealed class OysterReportEngine
 {

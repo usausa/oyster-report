@@ -1,4 +1,4 @@
-namespace OysterReport.Generator;
+namespace OysterReport.Internal;
 
 using ClosedXML.Excel;
 

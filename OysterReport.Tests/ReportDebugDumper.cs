@@ -3,7 +3,7 @@ namespace OysterReport.Tests;
 using System.Text;
 using System.Text.Json;
 
-using OysterReport.Generator;
+using OysterReport.Internal;
 
 internal enum ReportDumpFormat
 {

@@ -1,12 +1,10 @@
-namespace OysterReport.Generator;
+namespace OysterReport.Internal;
 
 using System.Globalization;
 using System.Text;
 
 using ClosedXML.Excel;
 using ClosedXML.Excel.Drawings;
-
-using OysterReport.Helpers;
 
 internal static class ExcelReader
 {

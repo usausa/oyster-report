@@ -1,8 +1,6 @@
-namespace OysterReport.Generator;
+namespace OysterReport.Internal;
 
 using System.Globalization;
-
-using OysterReport.Helpers;
 
 internal readonly record struct ReportOffset
 {

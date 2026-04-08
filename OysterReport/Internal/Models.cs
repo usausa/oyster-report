@@ -1,8 +1,6 @@
-namespace OysterReport.Generator;
+namespace OysterReport.Internal;
 
 using ClosedXML.Excel;
-
-using OysterReport.Helpers;
 
 // ---- Workbook metadata ----
 

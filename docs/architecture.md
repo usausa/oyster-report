@@ -62,7 +62,7 @@ OysterReportEngine.GeneratePdf(template, output)
 | `IReportFontResolver` | `interface` | PDF 生成時のフォント解決戦略。実装を差し替えることで任意フォントを使用できる。 |
 | `ReportFontRequest` / `ReportFontResolveResult` | `record` | フォントリゾルバーの入出力 DTO。 |
 
-### ジェネレーター (`OysterReport.Generator`)
+### ジェネレーター (`OysterReport.Internal`)
 
 | クラス / ファイル | 種別 | 役割 |
 |---|---|---|
