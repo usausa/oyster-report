@@ -4,7 +4,7 @@ using ClosedXML.Excel;
 
 using OysterReport.Helpers;
 
-// ---- Render plan types (used only within the PDF generation pipeline) ----
+// ---- PDF レンダリングプラン型 (内部パイプライン専用) ----
 
 internal sealed record PdfRenderSheetPlan
 {
@@ -61,15 +61,17 @@ internal sealed record PdfHeaderFooterRenderInfo
     public ReportRect FooterBounds { get; init; }
 }
 
-// ---- Planner ----
+// ---- プランナー ----
 
 internal static class PdfRenderPlanner
 {
+    /// <summary>ワークブック内の全シートに対する PDF プラン一覧を構築する。</summary>
     public static IReadOnlyList<PdfRenderSheetPlan> BuildPlan(ReportWorkbook workbook)
     {
         return workbook.Sheets.Select((sheet, index) => BuildSheetPlan(sheet, index + 1)).ToList();
     }
 
+    /// <summary>単一シートのページ境界・印刷可能領域・セル一覧を計算し PdfRenderSheetPlan を構築する。</summary>
     private static PdfRenderSheetPlan BuildSheetPlan(ReportSheet sheet, int sheetNumber)
     {
         var pageBounds = ResolvePageBounds(sheet.PageSetup);
@@ -180,14 +182,16 @@ internal static class PdfRenderPlanner
         };
     }
 
+    /// <summary>用紙サイズと向きからページ境界領域 (pt) を決定する。</summary>
     private static ReportRect ResolvePageBounds(ReportPageSetup pageSetup)
     {
-        var (width, height) = PageSizeResolver.GetPageSize(pageSetup.PaperSize);
+        var (width, height) = GetPageSizePoints(pageSetup.PaperSize);
         return pageSetup.Orientation == XLPageOrientation.Landscape
             ? new ReportRect { X = 0, Y = 0, Width = height, Height = width }
             : new ReportRect { X = 0, Y = 0, Width = width, Height = height };
     }
 
+    /// <summary>マージセルの外偈領域を行・列のオフセットから計算する。</summary>
     private static ReportRect BuildMergedBounds(
         ReportMergedRange mergedRange,
         IEnumerable<ReportRow> visibleRows,
@@ -211,6 +215,7 @@ internal static class PdfRenderPlanner
         };
     }
 
+    /// <summary>セル座標キーでマージ範囲を引き引きできるディクショナリを構築する。</summary>
     private static Dictionary<(int Row, int Column), ReportMergedRange> BuildMergedRangeByCell(
         IEnumerable<ReportMergedRange> mergedRanges)
     {
@@ -229,6 +234,10 @@ internal static class PdfRenderPlanner
         return map;
     }
 
+    /// <summary>
+    /// テキストの滪れ出しを考慮した描画対象領域を計算する。
+    /// 改行・中央・右寄せ・下隔線などがあればセル内に収まる。
+    /// </summary>
     private static ReportRect ComputeTextOverflowBounds(
         ReportCell cell,
         ReportRect contentBounds,
@@ -292,6 +301,7 @@ internal static class PdfRenderPlanner
         };
     }
 
+    /// <summary>ページ番号に応じたヘッダー・フッターのテキストと描画領域を決定する。</summary>
     private static PdfHeaderFooterRenderInfo BuildHeaderFooter(ReportSheet sheet, ReportRect pageBounds, ReportRect printableBounds, int pageNumber)
     {
         var headerText = sheet.HeaderFooter.DifferentFirst && pageNumber == 1
@@ -326,6 +336,7 @@ internal static class PdfRenderPlanner
         };
     }
 
+    /// <summary>シート内の画像をセル座標からポイント座標に変換し PdfImageRenderInfo 一覧を構築する。</summary>
     private static List<PdfImageRenderInfo> BuildImageInfos(
         ReportSheet sheet,
         Dictionary<int, double> rowOffsets,
@@ -357,6 +368,7 @@ internal static class PdfRenderPlanner
         return results;
     }
 
+    /// <summary>印刷可能高さに収まる行の合計高を計算する（鎉直中央揃え用）。</summary>
     private static double ComputeFittingHeight(IEnumerable<ReportRow> rows, double maxHeight)
     {
         var height = 0d;
@@ -372,4 +384,16 @@ internal static class PdfRenderPlanner
 
         return height;
     }
+
+    /// <summary>
+    /// 用紙サイズ種別からページ幅と高さ (pt) を返す。
+    /// Letter・Legal 以外は A4 として扱う。
+    /// </summary>
+    private static (double Width, double Height) GetPageSizePoints(XLPaperSize paperSize) =>
+        paperSize switch
+        {
+            XLPaperSize.LetterPaper => (612d, 792d),
+            XLPaperSize.LegalPaper => (612d, 1008d),
+            _ => (595.28d, 841.89d)
+        };
 }

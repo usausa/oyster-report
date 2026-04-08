@@ -59,14 +59,6 @@ internal readonly record struct ReportRect
 
 internal readonly record struct ReportRange
 {
-    public ReportRange(int startRow, int startColumn, int endRow, int endColumn)
-    {
-        StartRow = startRow;
-        StartColumn = startColumn;
-        EndRow = endRow;
-        EndColumn = endColumn;
-    }
-
     public int StartRow { get; init; }
 
     public int StartColumn { get; init; }

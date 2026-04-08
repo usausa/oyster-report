@@ -251,7 +251,7 @@ internal sealed class ReportSheet
 
     public string Name { get; init; } = string.Empty;
 
-    public ReportRange UsedRange { get; set; } = new(1, 1, 1, 1);
+    public ReportRange UsedRange { get; set; } = new() { StartRow = 1, StartColumn = 1, EndRow = 1, EndColumn = 1 };
 
     public IReadOnlyList<ReportRow> Rows => rows;
 
