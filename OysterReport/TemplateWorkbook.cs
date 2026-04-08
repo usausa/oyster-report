@@ -3,29 +3,36 @@ namespace OysterReport;
 using ClosedXML.Excel;
 
 /// <summary>
-/// XLWorkbook を保持し、ワークブック全体のテンプレート操作を提供する。
+/// Excel ファイルを保持し、ワークブック全体のテンプレート操作を提供する。
 /// </summary>
 public sealed class TemplateWorkbook : IDisposable
 {
-    private readonly IXLWorkbook workbook;
+    private readonly XLWorkbook workbook;
     private readonly List<TemplateSheet> sheets;
 
-    /// <summary>ClosedXML のワークブックをテンプレートとしてラップする。</summary>
-    [CLSCompliant(false)]
-    public TemplateWorkbook(IXLWorkbook workbook)
+    /// <summary>ファイルパスから Excel ファイルを読み込む。</summary>
+    public TemplateWorkbook(string filePath)
     {
-        ArgumentNullException.ThrowIfNull(workbook);
+        ArgumentNullException.ThrowIfNull(filePath);
 
-        this.workbook = workbook;
+        workbook = new XLWorkbook(filePath);
         sheets = workbook.Worksheets.Select(ws => new TemplateSheet(ws)).ToList();
     }
 
+    /// <summary>ストリームから Excel ファイルを読み込む。</summary>
+    public TemplateWorkbook(Stream stream)
+    {
+        ArgumentNullException.ThrowIfNull(stream);
+
+        workbook = new XLWorkbook(stream);
+        sheets = workbook.Worksheets.Select(ws => new TemplateSheet(ws)).ToList();
+    }
+
+    /// <summary>内部の ClosedXML ワークブック。</summary>
+    internal IXLWorkbook UnderlyingWorkbook => workbook;
+
     /// <summary>シート一覧。</summary>
     public IReadOnlyList<TemplateSheet> Sheets => sheets;
-
-    /// <summary>内部の ClosedXML ワークブック（上級者向け）。</summary>
-    [CLSCompliant(false)]
-    public IXLWorkbook UnderlyingWorkbook => workbook;
 
     /// <summary>名前でシートを取得する。</summary>
     public TemplateSheet GetSheet(string name)

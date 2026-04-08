@@ -41,6 +41,22 @@ internal static class ExcelReader
         return Read(workbook);
     }
 
+    /// <summary>単一ワークシートから 1 シートのみ含む ReportWorkbook を生成する。</summary>
+    public static ReportWorkbook Read(IXLWorksheet worksheet)
+    {
+        ArgumentNullException.ThrowIfNull(worksheet);
+
+        var measurementProfile = CreateMeasurementProfile(worksheet.Workbook);
+        var metadata = new ReportMetadata { TemplateName = worksheet.Name };
+        var reportWorkbook = new ReportWorkbook
+        {
+            Metadata = metadata,
+            MeasurementProfile = measurementProfile
+        };
+        reportWorkbook.AddSheet(ReadSheet(worksheet, measurementProfile));
+        return reportWorkbook;
+    }
+
     /// <summary>ワークブック全体を読み込み、シートを列挙して ReportWorkbook を構築する。</summary>
     private static ReportWorkbook ReadInternal(IXLWorkbook workbook, ReportMeasurementProfile measurementProfile, ReportMetadata metadata)
     {

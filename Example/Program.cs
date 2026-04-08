@@ -2,8 +2,6 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-using ClosedXML.Excel;
-
 using Example;
 
 using OysterReport;
@@ -16,7 +14,7 @@ var engine = new OysterReportEngine
     FontResolver = new JapaneseFontResolver()
 };
 
-using var workbook = new TemplateWorkbook(new XLWorkbook(inputPath));
+using var workbook = new TemplateWorkbook(inputPath);
 
 using var output = File.Create(outputPath);
 engine.GeneratePdf(workbook, output);

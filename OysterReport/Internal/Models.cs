@@ -2,6 +2,29 @@ namespace OysterReport.Internal;
 
 using ClosedXML.Excel;
 
+// ---- 中間モデル階層 ----
+//
+// ReportWorkbook
+// ├── ReportMetadata          (テンプレート名)
+// ├── ReportMeasurementProfile (列幅計算用フォントメトリクス)
+// └── ReportSheet[]
+//     ├── ReportRow[]          (行高・表示/非表示・アウトラインレベル)
+//     ├── ReportColumn[]       (列幅・表示/非表示)
+//     ├── ReportCell[]
+//     │   ├── ReportCellValue  (型別の値)
+//     │   ├── ReportCellStyle
+//     │   │   ├── ReportFont
+//     │   │   ├── ReportFill
+//     │   │   ├── ReportBorders (Left/Top/Right/Bottom: ReportBorder)
+//     │   │   └── ReportAlignment
+//     │   └── ReportMergeInfo? (マージ先情報)
+//     ├── ReportMergedRange[]  (マージセル範囲)
+//     ├── ReportImage[]        (埋め込み画像)
+//     ├── ReportPageSetup      (用紙・余白・中央揃え)
+//     ├── ReportHeaderFooter   (ヘッダー/フッターテキスト)
+//     ├── ReportPrintArea?     (印刷範囲)
+//     └── ReportPageBreak[]    (水平/垂直改ページ)
+
 // ---- Workbook metadata ----
 
 internal sealed record ReportMetadata

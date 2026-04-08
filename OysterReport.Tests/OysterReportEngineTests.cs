@@ -4,8 +4,6 @@
 
 namespace OysterReport.Tests;
 
-using ClosedXML.Excel;
-
 using Xunit;
 
 public sealed class OysterReportEngineTests
@@ -28,7 +26,7 @@ public sealed class OysterReportEngineTests
             }
 
             var engine = new OysterReportEngine();
-            using var workbook = new TemplateWorkbook(new XLWorkbook(tempFile));
+            using var workbook = new TemplateWorkbook(tempFile);
             var sheet = Assert.Single(workbook.Sheets);
             sheet.ReplacePlaceholder("Name", "Bob");
 

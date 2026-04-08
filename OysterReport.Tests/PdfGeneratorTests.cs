@@ -71,7 +71,7 @@ public sealed class PdfGeneratorTests
             sheet.Cell("A1").Value = "Hello";
         });
 
-        using var template = new TemplateWorkbook(new XLWorkbook(stream));
+        using var template = new TemplateWorkbook(stream);
         var engine = new OysterReportEngine();
         var context = engine.CreateRenderContext(template);
         var dumper = new ReportDebugDumper();

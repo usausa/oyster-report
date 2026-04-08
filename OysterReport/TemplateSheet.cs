@@ -7,7 +7,9 @@ using ClosedXML.Excel;
 /// </summary>
 public sealed class TemplateSheet
 {
+#pragma warning disable IDE0032
     private readonly IXLWorksheet worksheet;
+#pragma warning restore IDE0032
 
     internal TemplateSheet(IXLWorksheet ws)
     {
@@ -17,9 +19,10 @@ public sealed class TemplateSheet
     /// <summary>シート名。</summary>
     public string Name => worksheet.Name;
 
-    /// <summary>内部の ClosedXML ワークシート（上級者向け）。</summary>
-    [CLSCompliant(false)]
-    public IXLWorksheet UnderlyingWorksheet => worksheet;
+    /// <summary>内部の ClosedXML ワークシート。</summary>
+#pragma warning disable IDE0032
+    internal IXLWorksheet UnderlyingWorksheet => worksheet;
+#pragma warning restore IDE0032
 
     /// <summary>マーカー名を指定してプレースホルダを置換する。</summary>
     public int ReplacePlaceholder(string markerName, string value)
