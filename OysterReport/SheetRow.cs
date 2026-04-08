@@ -7,11 +7,11 @@ using ClosedXML.Excel;
 /// </summary>
 public sealed class SheetRow
 {
-    private readonly IXLWorksheet _worksheet;
+    private readonly IXLWorksheet worksheet;
 
-    internal SheetRow(IXLWorksheet worksheet, int rowNumber)
+    internal SheetRow(IXLWorksheet ws, int rowNumber)
     {
-        _worksheet = worksheet;
+        worksheet = ws;
         RowNumber = rowNumber;
     }
 
@@ -36,24 +36,24 @@ public sealed class SheetRow
         ArgumentNullException.ThrowIfNull(afterRow);
         var newRowNumber = afterRow.RowNumber + 1;
 
-        _worksheet.Row(newRowNumber).InsertRowsAbove(1);
-        var insertedRow = _worksheet.Row(newRowNumber);
+        worksheet.Row(newRowNumber).InsertRowsAbove(1);
+        var insertedRow = worksheet.Row(newRowNumber);
 
         // this (コピー元) の行番号を再計算: 挿入位置が this より上なら +1 シフト
         var sourceRowNum = (newRowNumber <= RowNumber) ? RowNumber + 1 : RowNumber;
 
-        var lastColumn = _worksheet.LastColumnUsed()?.ColumnNumber() ?? 1;
+        var lastColumn = worksheet.LastColumnUsed()?.ColumnNumber() ?? 1;
         for (var col = 1; col <= lastColumn; col++)
         {
-            var srcCell = _worksheet.Cell(sourceRowNum, col);
-            var dstCell = _worksheet.Cell(newRowNumber, col);
+            var srcCell = worksheet.Cell(sourceRowNum, col);
+            var dstCell = worksheet.Cell(newRowNumber, col);
             dstCell.Value = srcCell.Value;
             dstCell.Style = srcCell.Style;
         }
 
-        insertedRow.Height = _worksheet.Row(sourceRowNum).Height;
+        insertedRow.Height = worksheet.Row(sourceRowNum).Height;
 
-        return new SheetRow(_worksheet, newRowNumber);
+        return new SheetRow(worksheet, newRowNumber);
     }
 
     /// <summary>この行内のプレースホルダを置換する。</summary>
@@ -63,11 +63,11 @@ public sealed class SheetRow
         ArgumentNullException.ThrowIfNull(value);
         var placeholder = "{{" + markerName + "}}";
         var count = 0;
-        var lastColumn = _worksheet.LastColumnUsed()?.ColumnNumber() ?? 1;
+        var lastColumn = worksheet.LastColumnUsed()?.ColumnNumber() ?? 1;
 
         for (var col = 1; col <= lastColumn; col++)
         {
-            var cell = _worksheet.Cell(RowNumber, col);
+            var cell = worksheet.Cell(RowNumber, col);
             var text = cell.GetString();
             if (text.Contains(placeholder, StringComparison.Ordinal))
             {
@@ -94,6 +94,6 @@ public sealed class SheetRow
     /// <summary>この行を削除する。後続行は自動的に上にシフトされる。</summary>
     public void Delete()
     {
-        _worksheet.Row(RowNumber).Delete();
+        worksheet.Row(RowNumber).Delete();
     }
 }

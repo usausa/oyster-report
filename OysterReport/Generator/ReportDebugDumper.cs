@@ -3,7 +3,11 @@ namespace OysterReport.Generator;
 using System.Text;
 using System.Text.Json;
 
-using OysterReport.Generator.Models;
+internal enum ReportDumpFormat
+{
+    Json,
+    Markdown
+}
 
 internal sealed class ReportDebugDumper
 {
@@ -20,8 +24,8 @@ internal sealed class ReportDebugDumper
         Stream output,
         ReportDumpFormat format = ReportDumpFormat.Json)
     {
-        var renderPlan = PdfRenderPlanner.BuildPlan(workbook);
-        var payload = DumpPayloadFactory.CreatePdfPreparationPayload(workbook, renderPlan);
+        var sheetPlans = PdfRenderPlanner.BuildPlan(workbook);
+        var payload = DumpPayloadFactory.CreatePdfPreparationPayload(workbook, sheetPlans);
         WritePayload(output, payload, format, "PdfPreparation");
     }
 

@@ -6,7 +6,6 @@ using System.Text;
 
 using ClosedXML.Excel;
 
-using OysterReport.Generator.Models;
 using OysterReport.Helpers;
 
 using PdfSharp.Drawing;
@@ -42,14 +41,14 @@ internal sealed class PdfGenerator
         WritePdf(workbook, renderPlan, output, effectiveOptions);
     }
 
-    internal static PdfRenderPlan BuildRenderPlan(ReportWorkbook workbook)
+    internal static IReadOnlyList<PdfRenderSheetPlan> BuildRenderPlan(ReportWorkbook workbook)
     {
         return PdfRenderPlanner.BuildPlan(workbook);
     }
 
     internal static void WritePdf(
         ReportWorkbook workbook,
-        PdfRenderPlan renderPlan,
+        IReadOnlyList<PdfRenderSheetPlan> sheetPlans,
         Stream output,
         PdfGeneratorOption option)
     {
@@ -61,9 +60,9 @@ internal sealed class PdfGenerator
             document.Info.Title = workbook.Metadata.TemplateName;
         }
 
-        for (var sheetIndex = 0; sheetIndex < renderPlan.Sheets.Count; sheetIndex++)
+        for (var sheetIndex = 0; sheetIndex < sheetPlans.Count; sheetIndex++)
         {
-            var sheetPlan = renderPlan.Sheets[sheetIndex];
+            var sheetPlan = sheetPlans[sheetIndex];
             var sourceSheet = workbook.Sheets[sheetIndex];
             foreach (var pagePlan in sheetPlan.Pages)
             {

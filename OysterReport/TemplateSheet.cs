@@ -7,19 +7,19 @@ using ClosedXML.Excel;
 /// </summary>
 public sealed class TemplateSheet
 {
-    private readonly IXLWorksheet _worksheet;
+    private readonly IXLWorksheet worksheet;
 
-    internal TemplateSheet(IXLWorksheet worksheet)
+    internal TemplateSheet(IXLWorksheet ws)
     {
-        _worksheet = worksheet;
+        worksheet = ws;
     }
 
     /// <summary>シート名。</summary>
-    public string Name => _worksheet.Name;
+    public string Name => worksheet.Name;
 
     /// <summary>内部の ClosedXML ワークシート（上級者向け）。</summary>
     [CLSCompliant(false)]
-    public IXLWorksheet UnderlyingWorksheet => _worksheet;
+    public IXLWorksheet UnderlyingWorksheet => worksheet;
 
     /// <summary>マーカー名を指定してプレースホルダを置換する。</summary>
     public int ReplacePlaceholder(string markerName, string value)
@@ -29,7 +29,7 @@ public sealed class TemplateSheet
         var placeholder = "{{" + markerName + "}}";
         var count = 0;
 
-        foreach (var cell in _worksheet.CellsUsed())
+        foreach (var cell in worksheet.CellsUsed())
         {
             var text = cell.GetString();
             if (text.Contains(placeholder, StringComparison.Ordinal))
@@ -55,21 +55,21 @@ public sealed class TemplateSheet
     }
 
     /// <summary>行番号で単一行を取得する (1-based)。</summary>
-    public SheetRow GetRow(int row) => new(_worksheet, row);
+    public SheetRow GetRow(int row) => new(worksheet, row);
 
     /// <summary>行番号で行範囲を取得する (1-based, inclusive)。</summary>
-    public SheetRowRange GetRows(int startRow, int endRow) => new(_worksheet, startRow, endRow);
+    public SheetRowRange GetRows(int startRow, int endRow) => new(worksheet, startRow, endRow);
 
     /// <summary>マーカー名で行を検索して取得する。</summary>
     public SheetRow FindRow(string markerName)
     {
         ArgumentNullException.ThrowIfNull(markerName);
         var placeholder = "{{" + markerName + "}}";
-        foreach (var cell in _worksheet.CellsUsed())
+        foreach (var cell in worksheet.CellsUsed())
         {
             if (cell.GetString().Contains(placeholder, StringComparison.Ordinal))
             {
-                return new SheetRow(_worksheet, cell.Address.RowNumber);
+                return new SheetRow(worksheet, cell.Address.RowNumber);
             }
         }
         throw new InvalidOperationException($"Marker '{markerName}' not found in sheet '{Name}'.");
@@ -82,7 +82,7 @@ public sealed class TemplateSheet
         var placeholder = "{{" + markerName + "}}";
         var markerRow = -1;
 
-        foreach (var cell in _worksheet.CellsUsed())
+        foreach (var cell in worksheet.CellsUsed())
         {
             if (cell.GetString().Contains(placeholder, StringComparison.Ordinal))
             {
@@ -109,22 +109,22 @@ public sealed class TemplateSheet
             startRow--;
         }
 
-        return new SheetRowRange(_worksheet, startRow, endRow);
+        return new SheetRowRange(worksheet, startRow, endRow);
     }
 
     /// <summary>指定範囲の行を削除する (1-based, inclusive)。</summary>
     public void DeleteRows(int startRow, int endRow)
     {
-        _worksheet.Rows(startRow, endRow).Delete();
+        worksheet.Rows(startRow, endRow).Delete();
     }
 
     private bool RowContainsAnyPlaceholder(int rowNum)
     {
         if (rowNum < 1) return false;
-        var lastCol = _worksheet.LastColumnUsed()?.ColumnNumber() ?? 1;
+        var lastCol = worksheet.LastColumnUsed()?.ColumnNumber() ?? 1;
         for (var col = 1; col <= lastCol; col++)
         {
-            var text = _worksheet.Cell(rowNum, col).GetString();
+            var text = worksheet.Cell(rowNum, col).GetString();
             if (text.Contains("{{", StringComparison.Ordinal) && text.Contains("}}", StringComparison.Ordinal))
             {
                 return true;

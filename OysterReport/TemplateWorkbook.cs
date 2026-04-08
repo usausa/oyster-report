@@ -7,42 +7,42 @@ using ClosedXML.Excel;
 /// </summary>
 public sealed class TemplateWorkbook : IDisposable
 {
-    private readonly XLWorkbook _workbook;
-    private readonly List<TemplateSheet> _sheets;
+    private readonly XLWorkbook workbook;
+    private readonly List<TemplateSheet> sheets;
 
-    internal TemplateWorkbook(XLWorkbook workbook)
+    internal TemplateWorkbook(XLWorkbook xlWorkbook)
     {
-        _workbook = workbook;
-        _sheets = workbook.Worksheets.Select(ws => new TemplateSheet(ws)).ToList();
+        workbook = xlWorkbook;
+        sheets = xlWorkbook.Worksheets.Select(ws => new TemplateSheet(ws)).ToList();
     }
 
     /// <summary>シート一覧。</summary>
-    public IReadOnlyList<TemplateSheet> Sheets => _sheets;
+    public IReadOnlyList<TemplateSheet> Sheets => sheets;
 
     /// <summary>内部の ClosedXML ワークブック（上級者向け）。</summary>
     [CLSCompliant(false)]
-    public IXLWorkbook UnderlyingWorkbook => _workbook;
+    public IXLWorkbook UnderlyingWorkbook => workbook;
 
     /// <summary>名前でシートを取得する。</summary>
     public TemplateSheet GetSheet(string name)
     {
         ArgumentNullException.ThrowIfNull(name);
-        return _sheets.FirstOrDefault(s => string.Equals(s.Name, name, StringComparison.Ordinal))
+        return sheets.FirstOrDefault(s => string.Equals(s.Name, name, StringComparison.Ordinal))
             ?? throw new InvalidOperationException($"Sheet '{name}' not found.");
     }
 
     /// <summary>インデックスでシートを取得する (0-based)。</summary>
-    public TemplateSheet GetSheet(int index) => _sheets[index];
+    public TemplateSheet GetSheet(int index) => sheets[index];
 
     /// <summary>テンプレートシートをコピーして新しいシートを作成する。</summary>
     public TemplateSheet CopySheet(string sourceSheetName, string newSheetName)
     {
         ArgumentNullException.ThrowIfNull(sourceSheetName);
         ArgumentNullException.ThrowIfNull(newSheetName);
-        var sourceWorksheet = _workbook.Worksheet(sourceSheetName);
+        var sourceWorksheet = workbook.Worksheet(sourceSheetName);
         var newWorksheet = sourceWorksheet.CopyTo(newSheetName);
         var newSheet = new TemplateSheet(newWorksheet);
-        _sheets.Add(newSheet);
+        sheets.Add(newSheet);
         return newSheet;
     }
 
@@ -51,15 +51,15 @@ public sealed class TemplateWorkbook : IDisposable
     {
         ArgumentNullException.ThrowIfNull(name);
         var sheet = GetSheet(name);
-        _workbook.Worksheet(name).Delete();
-        _sheets.Remove(sheet);
+        workbook.Worksheet(name).Delete();
+        sheets.Remove(sheet);
     }
 
     /// <summary>全シートのプレースホルダを一括置換する。</summary>
     public int ReplacePlaceholder(string markerName, string value)
     {
         var count = 0;
-        foreach (var sheet in _sheets)
+        foreach (var sheet in sheets)
         {
             count += sheet.ReplacePlaceholder(markerName, value);
         }
@@ -78,5 +78,5 @@ public sealed class TemplateWorkbook : IDisposable
     }
 
     /// <inheritdoc />
-    public void Dispose() => _workbook.Dispose();
+    public void Dispose() => workbook.Dispose();
 }

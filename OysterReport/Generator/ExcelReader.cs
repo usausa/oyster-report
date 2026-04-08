@@ -5,7 +5,6 @@ using System.Globalization;
 using ClosedXML.Excel;
 using ClosedXML.Excel.Drawings;
 
-using OysterReport.Generator.Models;
 using OysterReport.Helpers;
 
 internal sealed class ExcelReader
@@ -65,11 +64,11 @@ internal sealed class ExcelReader
             return reportSheet;
         }
 
-        reportSheet.SetUsedRange(range);
-        reportSheet.SetPageSetup(ReadPageSetup(worksheet));
-        reportSheet.SetHeaderFooter(ReadHeaderFooter(worksheet));
-        reportSheet.SetPrintArea(printArea);
-        reportSheet.SetShowGridLines(worksheet.PageSetup.ShowGridlines);
+        reportSheet.UsedRange = range;
+        reportSheet.PageSetup = ReadPageSetup(worksheet);
+        reportSheet.HeaderFooter = ReadHeaderFooter(worksheet);
+        reportSheet.PrintArea = printArea;
+        reportSheet.ShowGridLines = worksheet.PageSetup.ShowGridlines;
 
         for (var rowIndex = range.StartRow; rowIndex <= range.EndRow; rowIndex++)
         {
@@ -379,19 +378,25 @@ internal sealed class ExcelReader
 
             for (var rowIndex = firstDataRow; rowIndex <= lastDataRow; rowIndex++)
             {
-                if (((rowIndex - firstDataRow) % 2) != 0) continue;
+                if (((rowIndex - firstDataRow) % 2) != 0)
+                {
+                    continue;
+                }
 
                 foreach (var cell in reportSheet.Cells.Where(cell =>
                              cell.Row == rowIndex &&
                              cell.Column >= tableRange.StartColumn &&
                              cell.Column <= tableRange.EndColumn))
                 {
-                    if (!IsTransparentFill(cell.Style.Fill.BackgroundColorHex)) continue;
+                    if (!IsTransparentFill(cell.Style.Fill.BackgroundColorHex))
+                    {
+                        continue;
+                    }
 
-                    cell.SetStyle(cell.Style with
+                    cell.Style = cell.Style with
                     {
                         Fill = new ReportFill { BackgroundColorHex = stripeFillHex }
-                    });
+                    };
                 }
             }
         }
@@ -403,12 +408,12 @@ internal sealed class ExcelReader
         {
             foreach (var cell in reportSheet.Cells.Where(cell => mergedRange.Range.Contains(cell.Row, cell.Column)))
             {
-                cell.SetMerge(new ReportMergeInfo
+                cell.Merge = new ReportMergeInfo
                 {
                     OwnerCellAddress = mergedRange.OwnerCellAddress,
                     IsOwner = string.Equals(cell.Address, mergedRange.OwnerCellAddress, StringComparison.Ordinal),
                     Range = mergedRange.Range
-                });
+                };
             }
         }
     }

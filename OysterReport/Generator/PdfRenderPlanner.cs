@@ -2,18 +2,72 @@ namespace OysterReport.Generator;
 
 using ClosedXML.Excel;
 
-using OysterReport.Generator.Models;
 using OysterReport.Helpers;
+
+// ---- Render plan types (used only within the PDF generation pipeline) ----
+
+internal sealed record PdfRenderSheetPlan
+{
+    public string SheetName { get; init; } = string.Empty;
+
+    public IReadOnlyList<PdfRenderPagePlan> Pages { get; init; } = [];
+
+    public IReadOnlyList<PdfImageRenderInfo> Images { get; init; } = [];
+}
+
+internal sealed record PdfRenderPagePlan
+{
+    public int PageNumber { get; init; }
+
+    public ReportRect PageBounds { get; init; }
+
+    public ReportRect PrintableBounds { get; init; }
+
+    public PdfHeaderFooterRenderInfo HeaderFooter { get; init; } = new();
+
+    public IReadOnlyList<PdfCellRenderInfo> Cells { get; init; } = [];
+}
+
+internal sealed record PdfCellRenderInfo
+{
+    public string CellAddress { get; init; } = string.Empty;
+
+    public ReportRect OuterBounds { get; init; }
+
+    public ReportRect ContentBounds { get; init; }
+
+    public ReportRect TextBounds { get; init; }
+
+    public bool IsMergedOwner { get; init; }
+}
+
+internal sealed record PdfImageRenderInfo
+{
+    public string Name { get; init; } = string.Empty;
+
+    public ReportRect Bounds { get; init; }
+
+    public ReadOnlyMemory<byte> ImageBytes { get; init; }
+}
+
+internal sealed record PdfHeaderFooterRenderInfo
+{
+    public string? HeaderText { get; init; }
+
+    public string? FooterText { get; init; }
+
+    public ReportRect HeaderBounds { get; init; }
+
+    public ReportRect FooterBounds { get; init; }
+}
+
+// ---- Planner ----
 
 internal static class PdfRenderPlanner
 {
-    public static PdfRenderPlan BuildPlan(ReportWorkbook workbook)
+    public static IReadOnlyList<PdfRenderSheetPlan> BuildPlan(ReportWorkbook workbook)
     {
-        var sheets = workbook.Sheets.Select((sheet, index) => BuildSheetPlan(sheet, index + 1)).ToList();
-        return new PdfRenderPlan
-        {
-            Sheets = sheets
-        };
+        return workbook.Sheets.Select((sheet, index) => BuildSheetPlan(sheet, index + 1)).ToList();
     }
 
     private static PdfRenderSheetPlan BuildSheetPlan(ReportSheet sheet, int sheetNumber)

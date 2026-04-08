@@ -7,11 +7,11 @@ using ClosedXML.Excel;
 /// </summary>
 public sealed class SheetRowRange
 {
-    private readonly IXLWorksheet _worksheet;
+    private readonly IXLWorksheet worksheet;
 
-    internal SheetRowRange(IXLWorksheet worksheet, int startRow, int endRow)
+    internal SheetRowRange(IXLWorksheet ws, int startRow, int endRow)
     {
-        _worksheet = worksheet;
+        worksheet = ws;
         StartRow = startRow;
         EndRow = endRow;
     }
@@ -42,9 +42,9 @@ public sealed class SheetRowRange
     {
         ArgumentNullException.ThrowIfNull(afterRange);
         var newStartRow = afterRange.EndRow + 1;
-        var lastColumn = _worksheet.LastColumnUsed()?.ColumnNumber() ?? 1;
+        var lastColumn = worksheet.LastColumnUsed()?.ColumnNumber() ?? 1;
 
-        _worksheet.Row(newStartRow).InsertRowsAbove(RowCount);
+        worksheet.Row(newStartRow).InsertRowsAbove(RowCount);
 
         // this (コピー元) の行番号を再計算: 挿入位置が this より上なら RowCount 分シフト
         var sourceStartRow = (newStartRow <= StartRow) ? StartRow + RowCount : StartRow;
@@ -53,18 +53,18 @@ public sealed class SheetRowRange
         {
             var srcRowNum = sourceStartRow + offset;
             var dstRowNum = newStartRow + offset;
-            _worksheet.Row(dstRowNum).Height = _worksheet.Row(srcRowNum).Height;
+            worksheet.Row(dstRowNum).Height = worksheet.Row(srcRowNum).Height;
 
             for (var col = 1; col <= lastColumn; col++)
             {
-                var srcCell = _worksheet.Cell(srcRowNum, col);
-                var dstCell = _worksheet.Cell(dstRowNum, col);
+                var srcCell = worksheet.Cell(srcRowNum, col);
+                var dstCell = worksheet.Cell(dstRowNum, col);
                 dstCell.Value = srcCell.Value;
                 dstCell.Style = srcCell.Style;
             }
         }
 
-        return new SheetRowRange(_worksheet, newStartRow, newStartRow + RowCount - 1);
+        return new SheetRowRange(worksheet, newStartRow, newStartRow + RowCount - 1);
     }
 
     /// <summary>この行範囲内のプレースホルダを置換する。</summary>
@@ -74,13 +74,13 @@ public sealed class SheetRowRange
         ArgumentNullException.ThrowIfNull(value);
         var placeholder = "{{" + markerName + "}}";
         var count = 0;
-        var lastColumn = _worksheet.LastColumnUsed()?.ColumnNumber() ?? 1;
+        var lastColumn = worksheet.LastColumnUsed()?.ColumnNumber() ?? 1;
 
         for (var row = StartRow; row <= EndRow; row++)
         {
             for (var col = 1; col <= lastColumn; col++)
             {
-                var cell = _worksheet.Cell(row, col);
+                var cell = worksheet.Cell(row, col);
                 var text = cell.GetString();
                 if (text.Contains(placeholder, StringComparison.Ordinal))
                 {
@@ -108,6 +108,6 @@ public sealed class SheetRowRange
     /// <summary>この行範囲を削除する。後続行は自動的に上にシフトされる。</summary>
     public void Delete()
     {
-        _worksheet.Rows(StartRow, EndRow).Delete();
+        worksheet.Rows(StartRow, EndRow).Delete();
     }
 }
