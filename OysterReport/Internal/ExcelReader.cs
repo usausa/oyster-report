@@ -18,28 +18,28 @@ internal static class ExcelReader
     private const double ScreenDpi = 96d;
 
     // ClosedXML ワークブックオブジェクトから ReportWorkbook を生成する。
-    public static ReportWorkbook Read(IXLWorkbook workbook, IReportFontResolver? fontResolver = null, ReportRenderingOptions? renderingOptions = null)
+    public static ReportWorkbook Read(IXLWorkbook workbook, ReportRenderingOptions? renderingOptions = null)
     {
         var effectiveOptions = renderingOptions ?? new ReportRenderingOptions();
-        var measurementProfile = CreateMeasurementProfile(workbook, fontResolver, effectiveOptions);
+        var measurementProfile = CreateMeasurementProfile(workbook, effectiveOptions);
         var metadata = new ReportMetadata { TemplateName = workbook.Properties.Title ?? "Workbook" };
         return ReadInternal(workbook, measurementProfile, metadata);
     }
 
     // ストリームから Excel を読み込み ReportWorkbook を生成する。
-    public static ReportWorkbook Read(Stream stream, IReportFontResolver? fontResolver = null, ReportRenderingOptions? renderingOptions = null)
+    public static ReportWorkbook Read(Stream stream, ReportRenderingOptions? renderingOptions = null)
     {
         using var workbook = new XLWorkbook(stream);
-        return Read(workbook, fontResolver, renderingOptions);
+        return Read(workbook, renderingOptions);
     }
 
     // 単一ワークシートから 1 シートのみ含む ReportWorkbook を生成する。
-    public static ReportWorkbook Read(IXLWorksheet worksheet, IReportFontResolver? fontResolver = null, ReportRenderingOptions? renderingOptions = null)
+    public static ReportWorkbook Read(IXLWorksheet worksheet, ReportRenderingOptions? renderingOptions = null)
     {
         ArgumentNullException.ThrowIfNull(worksheet);
 
         var effectiveOptions = renderingOptions ?? new ReportRenderingOptions();
-        var measurementProfile = CreateMeasurementProfile(worksheet.Workbook, fontResolver, effectiveOptions);
+        var measurementProfile = CreateMeasurementProfile(worksheet.Workbook, effectiveOptions);
         var metadata = new ReportMetadata { TemplateName = worksheet.Name };
         var reportWorkbook = new ReportWorkbook
         {
@@ -70,13 +70,12 @@ internal static class ExcelReader
     // ワークブックの既定フォント情報から列幅計算用プロファイルを作成する。
     private static ReportMeasurementProfile CreateMeasurementProfile(
         IXLWorkbook workbook,
-        IReportFontResolver? fontResolver,
         ReportRenderingOptions renderingOptions) =>
         new()
         {
             DefaultFontName = workbook.Style.Font.FontName,
             DefaultFontSize = workbook.Style.Font.FontSize,
-            MaxDigitWidth = ResolveMaxDigitWidth(workbook.Style.Font.FontName, workbook.Style.Font.FontSize, fontResolver, renderingOptions),
+            MaxDigitWidth = ResolveMaxDigitWidth(workbook.Style.Font.FontName, workbook.Style.Font.FontSize, renderingOptions),
             ColumnWidthAdjustment = renderingOptions.ColumnWidthAdjustment
         };
 
@@ -518,14 +517,11 @@ internal static class ExcelReader
     }
 
     // ブック既定フォントの最大桁幅を解決する。
-    // 優先順: (1) リゾルバーが返すフォントバイト列を SkiaSharp で計測
-    //          → (2) 解決後フォント名を SkiaSharp で計測
-    //          → (3) 元のフォント名を SkiaSharp で計測
-    //          → (4) FallbackMaxDigitWidth
+    // 列幅は Excel ブック自体の既定フォントに対して定義されるため、
+    // 出力用のフォント置換とは独立に元のフォント名だけで計測する。
     private static double ResolveMaxDigitWidth(
         string? fontName,
         double fontSize,
-        IReportFontResolver? fontResolver,
         ReportRenderingOptions renderingOptions)
     {
         if (string.IsNullOrWhiteSpace(fontName) || fontSize <= 0d)
@@ -533,42 +529,12 @@ internal static class ExcelReader
             return renderingOptions.FallbackMaxDigitWidth;
         }
 
-        string? resolvedFontName = null;
-
-        // (1) リゾルバーがフォントバイト列を返す場合は SkiaSharp で実測する
-        if (fontResolver is not null)
-        {
-            var request = new ReportFontRequest { FontName = fontName };
-            var resolution = fontResolver.ResolveFont(request);
-            resolvedFontName = string.IsNullOrWhiteSpace(resolution?.FontName) ? null : resolution.FontName;
-            if (resolution?.FontData is { } fontData)
-            {
-                var measured = FontMetricsHelper.MeasureMaxDigitWidth(fontData, fontSize);
-                if (measured is > 0d)
-                {
-                    return Math.Max(renderingOptions.FallbackMaxDigitWidth, measured.Value);
-                }
-            }
-        }
-
-        // (2) 解決後フォント名を実測する
-        if (!string.IsNullOrWhiteSpace(resolvedFontName))
-        {
-            var measured = FontMetricsHelper.MeasureMaxDigitWidth(resolvedFontName, fontSize);
-            if (measured is > 0d)
-            {
-                return Math.Max(renderingOptions.FallbackMaxDigitWidth, measured.Value);
-            }
-        }
-
-        // (3) 元のフォント名を実測する
         var directMeasured = FontMetricsHelper.MeasureMaxDigitWidth(fontName, fontSize);
         if (directMeasured is > 0d)
         {
             return Math.Max(renderingOptions.FallbackMaxDigitWidth, directMeasured.Value);
         }
 
-        // (4) フォント情報が得られない場合はフォールバック値
         return renderingOptions.FallbackMaxDigitWidth;
     }
 

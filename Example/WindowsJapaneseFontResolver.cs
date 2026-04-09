@@ -27,16 +27,8 @@ internal sealed class WindowsJapaneseFontResolver : IReportFontResolver
             ["HGSMinchoE"] = "HG明朝E"
         };
 
-    public ReportFontResolveResult? ResolveFont(ReportFontRequest request)
+    public string? ResolveFaceName(ReportFontRequest request)
     {
-        if (FontMap.TryGetValue(request.FontName, out var installedName))
-        {
-            // FontData = null → PDFSharp が WindowsInstalledFontResolver 経由でレジストリ検索する
-            return new ReportFontResolveResult { FontName = installedName };
-        }
-
-        return null;
+        return FontMap.GetValueOrDefault(request.FontName);
     }
-
-    // ResolveMaxDigitWidth は実装しない → ライブラリ内蔵の推定テーブルを使用する
 }

@@ -42,6 +42,41 @@ public sealed class PdfGeneratorTests
     }
 
     [Fact]
+    public void CreateRenderContextShouldKeepLayoutIndependentFromFontResolver()
+    {
+        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        {
+            workbook.Style.Font.FontName = "Arial";
+            workbook.Style.Font.FontSize = 10d;
+
+            var sheet = workbook.AddWorksheet("Report");
+            sheet.Cell("A1").Value = "Hello";
+            sheet.Column(1).Width = 12d;
+            sheet.PageSetup.CenterHorizontally = true;
+        });
+
+        using var template1 = new TemplateWorkbook(stream);
+        var baselineEngine = new OysterReportEngine();
+        var baselineContext = baselineEngine.CreateRenderContext(template1);
+
+        stream.Position = 0;
+        using var template2 = new TemplateWorkbook(stream);
+        var resolvedEngine = new OysterReportEngine
+        {
+            FontResolver = new EmbeddedFontResolver(GetEmbeddedFontBytes())
+        };
+        var resolvedContext = resolvedEngine.CreateRenderContext(template2);
+
+        var baselinePage = Assert.Single(baselineContext.SheetPlans[0].Pages);
+        var resolvedPage = Assert.Single(resolvedContext.SheetPlans[0].Pages);
+
+        Assert.Equal(baselinePage.PrintableBounds.X, resolvedPage.PrintableBounds.X, 3);
+        Assert.Equal(baselinePage.PrintableBounds.Width, resolvedPage.PrintableBounds.Width, 3);
+        Assert.Equal(baselinePage.Cells[0].OuterBounds.X, resolvedPage.Cells[0].OuterBounds.X, 3);
+        Assert.Equal(baselinePage.Cells[0].OuterBounds.Width, resolvedPage.Cells[0].OuterBounds.Width, 3);
+    }
+
+    [Fact]
     public void BuildRenderPlanShouldUseConfiguredPageSizeResolver()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
@@ -153,18 +188,14 @@ public sealed class PdfGeneratorTests
             this.fontData = fontData;
         }
 
-        public ReportFontResolveResult? ResolveFont(ReportFontRequest request)
-        {
-            if (!string.Equals(request.FontName, "CustomEmbeddedFont", StringComparison.Ordinal))
-            {
-                return null;
-            }
+        public string? ResolveFaceName(ReportFontRequest request) =>
+            string.Equals(request.FontName, "CustomEmbeddedFont", StringComparison.Ordinal)
+                ? "IPAexGothic"
+                : null;
 
-            return new ReportFontResolveResult
-            {
-                FontName = "IPAexGothic",
-                FontData = fontData
-            };
-        }
+        public ReadOnlyMemory<byte>? GetFontData(string faceName) =>
+            string.Equals(faceName, "IPAexGothic", StringComparison.Ordinal)
+                ? fontData
+                : null;
     }
 }

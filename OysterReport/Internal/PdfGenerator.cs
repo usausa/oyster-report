@@ -14,15 +14,12 @@ internal static class PdfGenerator
 {
     private static int fontPlatformConfigured;
     private const double BoldSimulationOffsetPoints = 0.35d;
-    private const double ItalicSimulationShearFactor = 0.21256d;
 
     private sealed record ResolvedFontRenderInfo
     {
         public XFont Font { get; init; } = null!;
 
         public bool SimulateBold { get; init; }
-
-        public bool SimulateItalic { get; init; }
     }
 
     // レンダリングコンテキストをもとに PDF ドキュメントを生成し、出力ストリームへ書き込む。
@@ -377,7 +374,6 @@ internal static class PdfGenerator
         var fontSize = font.Size <= 0 ? context.RenderingOptions.DefaultCellFontSizePoints : font.Size;
         var nameToUse = font.Name;
         var simulateBold = false;
-        var simulateItalic = false;
 
         if (context.FontResolver is not null)
         {
@@ -386,43 +382,46 @@ internal static class PdfGenerator
                 FontName = font.Name
             };
 
-            var resolution = context.FontResolver.ResolveFont(request);
-            if (resolution is not null)
+            var resolvedName = context.FontResolver.ResolveFaceName(request);
+            if (!string.IsNullOrWhiteSpace(resolvedName))
             {
-                var resolvedName = string.IsNullOrWhiteSpace(resolution.FontName) ? font.Name : resolution.FontName;
+                var embeddedFontData = context.FontResolver.GetFontData(resolvedName);
 
-                if (resolution.FontData is { } fontData)
+                if (embeddedFontData is { } fontData)
                 {
                     // 埋め込みフォントをアダプタに事前登録する。
                     // 同じバイト列を複数回登録してもべき等であるため問題ない。
                     ReportFontResolverAdapter.RegisterEmbeddedFont(resolvedName, fontData);
 
-                    // 単一の埋め込みフォント資源を返した場合、Bold/Italic は
-                    // フォント資源の属性ではなく描画要求として扱い、描画時にシミュレーションする。
+                    // 単一の埋め込みフォント資源を返した場合、Bold は描画時にシミュレーションする。
+                    // Italic は ReportFontResolverAdapter が PDFsharp の公式シミュレーションへ委譲する。
                     simulateBold = font.Bold;
-                    simulateItalic = font.Italic;
                 }
 
                 nameToUse = resolvedName;
             }
         }
 
-        var style = BuildActualFontStyle(font, simulateBold, simulateItalic);
+        if (!simulateBold && font.Bold && ReportFontResolverAdapter.NeedsBoldSimulationForInstalledFont(nameToUse, font.Italic))
+        {
+            simulateBold = true;
+        }
+
+        var style = BuildActualFontStyle(font, simulateBold);
 
         if (!string.IsNullOrWhiteSpace(nameToUse) && TryCreateFont(nameToUse, fontSize, style, out var resolvedFont))
         {
             return new ResolvedFontRenderInfo
             {
                 Font = resolvedFont,
-                SimulateBold = simulateBold,
-                SimulateItalic = simulateItalic
+                SimulateBold = simulateBold
             };
         }
 
         // リゾルバーが返した名前で失敗した場合は元の Excel フォント名にフォールバックする。
         if (!string.Equals(nameToUse, font.Name, StringComparison.OrdinalIgnoreCase) &&
             !string.IsNullOrWhiteSpace(font.Name) &&
-            TryCreateFont(font.Name, fontSize, BuildActualFontStyle(font, simulateBold: false, simulateItalic: false), out var fallbackFont))
+            TryCreateFont(font.Name, fontSize, BuildActualFontStyle(font, simulateBold: false), out var fallbackFont))
         {
             return new ResolvedFontRenderInfo
             {
@@ -433,7 +432,7 @@ internal static class PdfGenerator
         throw new InvalidOperationException($"No appropriate font found for family name '{font.Name}'.");
     }
 
-    private static XFontStyleEx BuildActualFontStyle(ReportFont font, bool simulateBold, bool simulateItalic)
+    private static XFontStyleEx BuildActualFontStyle(ReportFont font, bool simulateBold)
     {
         var style = XFontStyleEx.Regular;
         if (font.Bold && !simulateBold)
@@ -441,7 +440,7 @@ internal static class PdfGenerator
             style |= XFontStyleEx.Bold;
         }
 
-        if (font.Italic && !simulateItalic)
+        if (font.Italic)
         {
             style |= XFontStyleEx.Italic;
         }
@@ -467,11 +466,6 @@ internal static class PdfGenerator
             var state = graphics.Save();
             try
             {
-                if (resolvedFont.SimulateItalic)
-                {
-                    graphics.MultiplyTransform(new XMatrix(1, 0, ItalicSimulationShearFactor, 1, -ItalicSimulationShearFactor * passRect.Y, 0));
-                }
-
                 if (sourceCell.Style.WrapText || text.Contains('\n', StringComparison.Ordinal))
                 {
                     var formatter = new XTextFormatter(graphics)

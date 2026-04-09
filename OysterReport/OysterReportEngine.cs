@@ -40,7 +40,7 @@ public sealed class OysterReportEngine
     {
         ArgumentNullException.ThrowIfNull(template);
 
-        var workbook = ExcelReader.Read(template.UnderlyingWorkbook, FontResolver, RenderingOptions);
+        var workbook = ExcelReader.Read(template.UnderlyingWorkbook, RenderingOptions);
         var sheetPlans = PdfRenderPlanner.BuildPlan(workbook, RenderingOptions);
 
         return new ReportRenderContext
@@ -58,7 +58,7 @@ public sealed class OysterReportEngine
     {
         ArgumentNullException.ThrowIfNull(sheet);
 
-        var workbook = ExcelReader.Read(sheet.UnderlyingWorksheet, FontResolver, RenderingOptions);
+        var workbook = ExcelReader.Read(sheet.UnderlyingWorksheet, RenderingOptions);
         var sheetPlans = PdfRenderPlanner.BuildPlan(workbook, RenderingOptions);
 
         return new ReportRenderContext

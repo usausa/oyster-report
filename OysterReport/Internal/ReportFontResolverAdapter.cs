@@ -26,6 +26,11 @@ internal sealed class ReportFontResolverAdapter : IFontResolver
         EmbeddedFontCache[fontName] = fontData.ToArray();
     }
 
+    public static bool NeedsBoldSimulationForInstalledFont(string faceName, bool isItalic)
+    {
+        return WindowsFallback.Value is not null && WindowsFallback.Value.NeedsBoldSimulation(faceName, isItalic);
+    }
+
     public byte[] GetFont(string faceName)
     {
         if (EmbeddedFontCache.TryGetValue(faceName, out var fontBytes))
@@ -57,7 +62,10 @@ internal sealed class ReportFontResolverAdapter : IFontResolver
         // GetFont でベース名へのフォールバックを行うため、bold/italic の face 名でも登録不要。
         if (EmbeddedFontCache.ContainsKey(familyName))
         {
-            return new FontResolverInfo(BuildFaceName(familyName, isBold, isItalic));
+            return new FontResolverInfo(
+                BuildFaceName(familyName, false, false),
+                mustSimulateBold: false,
+                mustSimulateItalic: isItalic);
         }
 
         if (WindowsFallback.Value is not null)

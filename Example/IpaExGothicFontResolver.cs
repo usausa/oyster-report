@@ -10,19 +10,19 @@ internal sealed class IpaExGothicFontResolver : IReportFontResolver
 {
     private const string EmbeddedFontName = "IPAexGothic";
 
-    private static readonly HashSet<string> GothicFontNames =
-        new(StringComparer.OrdinalIgnoreCase)
-        {
-            "ＭＳ Ｐゴシック",
-            "MS Pゴシック",
-            "ＭＳ ゴシック",
-            "メイリオ",
-            "Meiryo",
-            "游ゴシック",
-            "Yu Gothic",
-            "游ゴシック Medium",
-            "Yu Gothic Medium"
-        };
+    //private static readonly HashSet<string> GothicFontNames =
+    //    new(StringComparer.OrdinalIgnoreCase)
+    //    {
+    //        "ＭＳ Ｐゴシック",
+    //        "MS Pゴシック",
+    //        "ＭＳ ゴシック",
+    //        "メイリオ",
+    //        "Meiryo",
+    //        "游ゴシック",
+    //        "Yu Gothic",
+    //        "游ゴシック Medium",
+    //        "Yu Gothic Medium"
+    //    };
 
     private readonly ReadOnlyMemory<byte> fontData;
 
@@ -32,18 +32,17 @@ internal sealed class IpaExGothicFontResolver : IReportFontResolver
         fontData = File.ReadAllBytes(fontFilePath);
     }
 
-    public ReportFontResolveResult? ResolveFont(ReportFontRequest request)
+    public string ResolveFaceName(ReportFontRequest request)
     {
-        if (!GothicFontNames.Contains(request.FontName))
-        {
-            return null;
-        }
+        //if (!GothicFontNames.Contains(request.FontName))
+        //{
+        //    return null;
+        //}
 
-        // 単一の通常書体しか同梱していないため、Bold/Italic は描画側のシミュレーションに委ねる。
-        return new ReportFontResolveResult
-        {
-            FontName = EmbeddedFontName,
-            FontData = fontData
-        };
+        return EmbeddedFontName;
     }
+
+    public ReadOnlyMemory<byte>? GetFontData(string faceName) =>
+        fontData;
+        //string.Equals(faceName, EmbeddedFontName, StringComparison.Ordinal) ? fontData : null;
 }

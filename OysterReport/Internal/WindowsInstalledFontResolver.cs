@@ -49,7 +49,17 @@ internal sealed class WindowsInstalledFontResolver : IFontResolver
 
     public FontResolverInfo ResolveTypeface(string familyName, bool isBold, bool isItalic)
     {
-        return new FontResolverInfo(BuildFaceName(familyName, isBold, isItalic));
+        ResolveFontMatch(familyName, isBold, isItalic, out var resolvedFamilyName, out var hasBoldFace, out var hasItalicFace);
+        return new FontResolverInfo(
+            BuildFaceName(resolvedFamilyName, false, false),
+            mustSimulateBold: false,
+            mustSimulateItalic: isItalic && !hasItalicFace);
+    }
+
+    internal bool NeedsBoldSimulation(string familyName, bool isItalic)
+    {
+        ResolveFontMatch(familyName, bold: true, isItalic, out _, out var hasBoldFace, out _);
+        return !hasBoldFace;
     }
 
     private static byte[] ExtractTtfFaceFromTtc(byte[] ttc, int faceIndex)
@@ -217,7 +227,69 @@ internal sealed class WindowsInstalledFontResolver : IFontResolver
         return false;
     }
 
-    private static IEnumerable<string> GetCandidateNames(string family, bool bold, bool italic)
+    private void ResolveFontMatch(
+        string family,
+        bool bold,
+        bool italic,
+        out string resolvedFamilyName,
+        out bool hasBoldFace,
+        out bool hasItalicFace)
+    {
+        resolvedFamilyName = family;
+        hasBoldFace = false;
+        hasItalicFace = false;
+
+        if (TryFindFontName(GetCandidateNames(family, bold, italic, includeFallbackFamily: false), out var exactMatch))
+        {
+            resolvedFamilyName = exactMatch;
+            hasBoldFace = bold;
+            hasItalicFace = italic;
+            return;
+        }
+
+        if (bold && TryFindFontName(GetCandidateNames(family, bold: true, italic: false, includeFallbackFamily: false), out var boldMatch))
+        {
+            resolvedFamilyName = boldMatch;
+            hasBoldFace = true;
+            return;
+        }
+
+        if (italic && TryFindFontName(GetCandidateNames(family, bold: false, italic: true, includeFallbackFamily: false), out var italicMatch))
+        {
+            resolvedFamilyName = italicMatch;
+            hasItalicFace = true;
+            return;
+        }
+
+        if (TryFindFontName(GetCandidateNames(family, bold: false, italic: false, includeFallbackFamily: true), out var regularMatch))
+        {
+            resolvedFamilyName = regularMatch;
+        }
+    }
+
+    private bool TryFindFontName(IEnumerable<string> candidateNames, [NotNullWhen(true)] out string? matchedName)
+    {
+        matchedName = null;
+        foreach (var candidate in candidateNames)
+        {
+            if (!fontNameToPathAndFace.TryGetValue(candidate, out var info))
+            {
+                continue;
+            }
+
+            if (!File.Exists(info.Path))
+            {
+                continue;
+            }
+
+            matchedName = candidate;
+            return true;
+        }
+
+        return false;
+    }
+
+    private static IEnumerable<string> GetCandidateNames(string family, bool bold, bool italic, bool includeFallbackFamily = true)
     {
         if (bold && italic)
         {
@@ -232,6 +304,10 @@ internal sealed class WindowsInstalledFontResolver : IFontResolver
         {
             yield return family + " Italic";
         }
-        yield return family;
+
+        if (includeFallbackFamily)
+        {
+            yield return family;
+        }
     }
 }
