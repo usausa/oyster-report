@@ -35,7 +35,7 @@ internal sealed class ReportFontResolverAdapter : IFontResolver
 
         // bold/italic バリアント ("familyName#b" 等) が個別登録されていない場合は
         // ベース名にフォールバックする。
-        ParseFaceName(faceName, out var family, out _, out _);
+        var family = ExtractFamilyName(faceName);
         if (!string.Equals(family, faceName, StringComparison.OrdinalIgnoreCase) &&
             EmbeddedFontCache.TryGetValue(family, out fontBytes))
         {
@@ -68,15 +68,11 @@ internal sealed class ReportFontResolverAdapter : IFontResolver
         return new FontResolverInfo(BuildFaceName(familyName, isBold, isItalic));
     }
 
-    private static void ParseFaceName(string faceName, out string family, out bool bold, out bool italic)
-    {
-        bold = faceName.Contains("#b", StringComparison.OrdinalIgnoreCase);
-        italic = faceName.Contains("#i", StringComparison.OrdinalIgnoreCase);
-        family = faceName
+    private static string ExtractFamilyName(string faceName) =>
+        faceName
             .Replace("#b", string.Empty, StringComparison.OrdinalIgnoreCase)
             .Replace("#i", string.Empty, StringComparison.OrdinalIgnoreCase)
             .Trim();
-    }
 
     private static string BuildFaceName(string familyName, bool bold, bool italic)
     {

@@ -12,7 +12,4 @@ public sealed record ReportFontResolveResult
     /// 指定した場合はこのバイト列を直接使用し、システムフォント検索を行わない。
     /// </summary>
     public ReadOnlyMemory<byte>? FontData { get; init; }
-
-    /// <summary>診断メッセージ。</summary>
-    public string? Message { get; init; }
 }

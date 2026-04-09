@@ -13,6 +13,17 @@ using PdfSharp.Pdf;
 internal static class PdfGenerator
 {
     private static int fontPlatformConfigured;
+    private const double BoldSimulationOffsetPoints = 0.35d;
+    private const double ItalicSimulationShearFactor = 0.21256d;
+
+    private sealed record ResolvedFontRenderInfo
+    {
+        public XFont Font { get; init; } = null!;
+
+        public bool SimulateBold { get; init; }
+
+        public bool SimulateItalic { get; init; }
+    }
 
     // レンダリングコンテキストをもとに PDF ドキュメントを生成し、出力ストリームへ書き込む。
     // PDFSharp のフォント設定を初期化し、全シート・全ページを順に描画する。
@@ -146,7 +157,7 @@ internal static class PdfGenerator
                 continue;
             }
 
-            var font = ResolveFont(sourceCell.Style.Font, context);
+            var resolvedFont = ResolveFont(sourceCell.Style.Font, context);
             var textBrush = new XSolidBrush(ToColor(sourceCell.Style.Font.ColorHex));
             var textRect = new XRect(
                 renderCell.ContentBounds.X,
@@ -165,28 +176,13 @@ internal static class PdfGenerator
             {
                 graphics.IntersectClip(clipRect);
 
-                if (sourceCell.Style.WrapText || sourceCell.DisplayText.Contains('\n', StringComparison.Ordinal))
-                {
-                    var formatter = new XTextFormatter(graphics)
-                    {
-                        Alignment = ResolveParagraphAlignment(sourceCell)
-                    };
-
-                    formatter.DrawString(
-                        sourceCell.DisplayText,
-                        font,
-                        textBrush,
-                        textRect,
-                        ResolveStringFormat(sourceCell));
-                    continue;
-                }
-
-                graphics.DrawString(
+                DrawCellText(
+                    graphics,
                     sourceCell.DisplayText,
-                    font,
+                    resolvedFont,
                     textBrush,
                     textRect,
-                    ResolveStringFormat(sourceCell));
+                    sourceCell);
             }
             finally
             {
@@ -376,29 +372,18 @@ internal static class PdfGenerator
     // ReportFont 属性とフォントリゾルバーから PDFSharp 用 XFont を生成する。
     // リゾルバーが返した名前を XFont に渡すことで PDFSharp のフォントキャッシュを
     // リゾルバーごとに分離し、埋め込みフォントが確実に使われるようにする。
-    private static XFont ResolveFont(ReportFont font, ReportRenderContext context)
+    private static ResolvedFontRenderInfo ResolveFont(ReportFont font, ReportRenderContext context)
     {
         var fontSize = font.Size <= 0 ? context.RenderingOptions.DefaultCellFontSizePoints : font.Size;
-        var style = XFontStyleEx.Regular;
-        if (font.Bold)
-        {
-            style |= XFontStyleEx.Bold;
-        }
-
-        if (font.Italic)
-        {
-            style |= XFontStyleEx.Italic;
-        }
-
         var nameToUse = font.Name;
+        var simulateBold = false;
+        var simulateItalic = false;
 
         if (context.FontResolver is not null)
         {
             var request = new ReportFontRequest
             {
-                FontName = font.Name,
-                Bold = font.Bold,
-                Italic = font.Italic
+                FontName = font.Name
             };
 
             var resolution = context.FontResolver.ResolveFont(request);
@@ -411,26 +396,110 @@ internal static class PdfGenerator
                     // 埋め込みフォントをアダプタに事前登録する。
                     // 同じバイト列を複数回登録してもべき等であるため問題ない。
                     ReportFontResolverAdapter.RegisterEmbeddedFont(resolvedName, fontData);
+
+                    // 単一の埋め込みフォント資源を返した場合、Bold/Italic は
+                    // フォント資源の属性ではなく描画要求として扱い、描画時にシミュレーションする。
+                    simulateBold = font.Bold;
+                    simulateItalic = font.Italic;
                 }
 
                 nameToUse = resolvedName;
             }
         }
 
+        var style = BuildActualFontStyle(font, simulateBold, simulateItalic);
+
         if (!string.IsNullOrWhiteSpace(nameToUse) && TryCreateFont(nameToUse, fontSize, style, out var resolvedFont))
         {
-            return resolvedFont;
+            return new ResolvedFontRenderInfo
+            {
+                Font = resolvedFont,
+                SimulateBold = simulateBold,
+                SimulateItalic = simulateItalic
+            };
         }
 
         // リゾルバーが返した名前で失敗した場合は元の Excel フォント名にフォールバックする。
         if (!string.Equals(nameToUse, font.Name, StringComparison.OrdinalIgnoreCase) &&
             !string.IsNullOrWhiteSpace(font.Name) &&
-            TryCreateFont(font.Name, fontSize, style, out var fallbackFont))
+            TryCreateFont(font.Name, fontSize, BuildActualFontStyle(font, simulateBold: false, simulateItalic: false), out var fallbackFont))
         {
-            return fallbackFont;
+            return new ResolvedFontRenderInfo
+            {
+                Font = fallbackFont
+            };
         }
 
         throw new InvalidOperationException($"No appropriate font found for family name '{font.Name}'.");
+    }
+
+    private static XFontStyleEx BuildActualFontStyle(ReportFont font, bool simulateBold, bool simulateItalic)
+    {
+        var style = XFontStyleEx.Regular;
+        if (font.Bold && !simulateBold)
+        {
+            style |= XFontStyleEx.Bold;
+        }
+
+        if (font.Italic && !simulateItalic)
+        {
+            style |= XFontStyleEx.Italic;
+        }
+
+        return style;
+    }
+
+    private static void DrawCellText(
+        XGraphics graphics,
+        string text,
+        ResolvedFontRenderInfo resolvedFont,
+        XBrush brush,
+        XRect textRect,
+        ReportCell sourceCell)
+    {
+        var drawCount = resolvedFont.SimulateBold ? 2 : 1;
+        for (var pass = 0; pass < drawCount; pass++)
+        {
+            var passRect = pass == 0
+                ? textRect
+                : new XRect(textRect.X + BoldSimulationOffsetPoints, textRect.Y, textRect.Width, textRect.Height);
+
+            var state = graphics.Save();
+            try
+            {
+                if (resolvedFont.SimulateItalic)
+                {
+                    graphics.MultiplyTransform(new XMatrix(1, 0, ItalicSimulationShearFactor, 1, -ItalicSimulationShearFactor * passRect.Y, 0));
+                }
+
+                if (sourceCell.Style.WrapText || text.Contains('\n', StringComparison.Ordinal))
+                {
+                    var formatter = new XTextFormatter(graphics)
+                    {
+                        Alignment = ResolveParagraphAlignment(sourceCell)
+                    };
+
+                    formatter.DrawString(
+                        text,
+                        resolvedFont.Font,
+                        brush,
+                        passRect,
+                        ResolveStringFormat(sourceCell));
+                    continue;
+                }
+
+                graphics.DrawString(
+                    text,
+                    resolvedFont.Font,
+                    brush,
+                    passRect,
+                    ResolveStringFormat(sourceCell));
+            }
+            finally
+            {
+                graphics.Restore(state);
+            }
+        }
     }
 
     // ヘッダー/フッター用のフォールバックフォントを候補一覧から作成する。

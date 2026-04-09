@@ -17,9 +17,6 @@ internal static class ExcelReader
     private const double PointsPerInch = 72d;
     private const double ScreenDpi = 96d;
 
-    // フォント計測に使用する定数
-    private const double ReferenceFontSizePoints = 10d;
-
     // ClosedXML ワークブックオブジェクトから ReportWorkbook を生成する。
     public static ReportWorkbook Read(IXLWorkbook workbook, IReportFontResolver? fontResolver = null, ReportRenderingOptions? renderingOptions = null)
     {
@@ -521,8 +518,10 @@ internal static class ExcelReader
     }
 
     // ブック既定フォントの最大桁幅を解決する。
-    // 優先順: (1) リゾルバーが直接返す値 → (2) リゾルバーが返すフォントバイト列を SkiaSharp で計測
-    //          → (3) FallbackMaxDigitWidth
+    // 優先順: (1) リゾルバーが返すフォントバイト列を SkiaSharp で計測
+    //          → (2) 解決後フォント名を SkiaSharp で計測
+    //          → (3) 元のフォント名を SkiaSharp で計測
+    //          → (4) FallbackMaxDigitWidth
     private static double ResolveMaxDigitWidth(
         string? fontName,
         double fontSize,
@@ -534,30 +533,42 @@ internal static class ExcelReader
             return renderingOptions.FallbackMaxDigitWidth;
         }
 
-        // (1) リゾルバーが直接値を返す場合
-        var resolved = fontResolver?.ResolveMaxDigitWidth(fontName, fontSize);
-        if (resolved is > 0d)
-        {
-            return resolved.Value;
-        }
+        string? resolvedFontName = null;
 
-        // (2) リゾルバーがフォントバイト列を返す場合は SkiaSharp で実測する
+        // (1) リゾルバーがフォントバイト列を返す場合は SkiaSharp で実測する
         if (fontResolver is not null)
         {
             var request = new ReportFontRequest { FontName = fontName };
             var resolution = fontResolver.ResolveFont(request);
+            resolvedFontName = string.IsNullOrWhiteSpace(resolution?.FontName) ? null : resolution.FontName;
             if (resolution?.FontData is { } fontData)
             {
-                // SkiaSharp で 10pt 基準の幅を求め、指定サイズに比例補正する
-                var measured = FontMetricsHelper.MeasureMaxDigitWidth(fontData, ReferenceFontSizePoints);
+                var measured = FontMetricsHelper.MeasureMaxDigitWidth(fontData, fontSize);
                 if (measured is > 0d)
                 {
-                    return Math.Max(renderingOptions.FallbackMaxDigitWidth, measured.Value * (fontSize / ReferenceFontSizePoints));
+                    return Math.Max(renderingOptions.FallbackMaxDigitWidth, measured.Value);
                 }
             }
         }
 
-        // (3) フォント情報が得られない場合はフォールバック値
+        // (2) 解決後フォント名を実測する
+        if (!string.IsNullOrWhiteSpace(resolvedFontName))
+        {
+            var measured = FontMetricsHelper.MeasureMaxDigitWidth(resolvedFontName, fontSize);
+            if (measured is > 0d)
+            {
+                return Math.Max(renderingOptions.FallbackMaxDigitWidth, measured.Value);
+            }
+        }
+
+        // (3) 元のフォント名を実測する
+        var directMeasured = FontMetricsHelper.MeasureMaxDigitWidth(fontName, fontSize);
+        if (directMeasured is > 0d)
+        {
+            return Math.Max(renderingOptions.FallbackMaxDigitWidth, directMeasured.Value);
+        }
+
+        // (4) フォント情報が得られない場合はフォールバック値
         return renderingOptions.FallbackMaxDigitWidth;
     }
 

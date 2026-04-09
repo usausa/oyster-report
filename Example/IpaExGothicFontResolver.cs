@@ -10,9 +10,6 @@ internal sealed class IpaExGothicFontResolver : IReportFontResolver
 {
     private const string EmbeddedFontName = "IPAexGothic";
 
-    // IPAex ゴシックの 96 DPI 参照ピクセルでの最大桁幅 (10pt 基準の実測値)
-    private const double MaxDigitWidthAt10Pt = 8d;
-
     private static readonly HashSet<string> GothicFontNames =
         new(StringComparer.OrdinalIgnoreCase)
         {
@@ -42,21 +39,11 @@ internal sealed class IpaExGothicFontResolver : IReportFontResolver
             return null;
         }
 
-        // FontData を返すことで PDFSharp はバイト列を直接使用し、システム検索しない
+        // 単一の通常書体しか同梱していないため、Bold/Italic は描画側のシミュレーションに委ねる。
         return new ReportFontResolveResult
         {
             FontName = EmbeddedFontName,
             FontData = fontData
         };
-    }
-
-    public double? ResolveMaxDigitWidth(string fontName, double fontSizePoints)
-    {
-        if (!GothicFontNames.Contains(fontName))
-        {
-            return null;
-        }
-
-        return MaxDigitWidthAt10Pt * (fontSizePoints / 10d);
     }
 }

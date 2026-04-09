@@ -158,7 +158,7 @@ public sealed class ExcelReaderTests
     }
 
     [Fact]
-    public void ReadShouldUseResolverProvidedMaxDigitWidth()
+    public void ReadShouldMeasureMaxDigitWidthFromResolverProvidedFontData()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -169,22 +169,29 @@ public sealed class ExcelReaderTests
             sheet.Cell("A1").Value = "Width";
         });
 
-        var workbook = ExcelReader.Read(stream, new FixedDigitWidthFontResolver(42d));
+        var workbook = ExcelReader.Read(stream, new EmbeddedFontResolver(GetEmbeddedFontBytes()));
 
-        Assert.Equal(42d, workbook.MeasurementProfile.MaxDigitWidth);
+        Assert.True(workbook.MeasurementProfile.MaxDigitWidth > 7d);
     }
 
-    private sealed class FixedDigitWidthFontResolver : IReportFontResolver
+    private static byte[] GetEmbeddedFontBytes()
     {
-        private readonly double maxDigitWidth;
+        var fontPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Example", "ipaexg.ttf"));
+        return File.ReadAllBytes(fontPath);
+    }
 
-        public FixedDigitWidthFontResolver(double maxDigitWidth)
+    private sealed class EmbeddedFontResolver : IReportFontResolver
+    {
+        private readonly ReadOnlyMemory<byte> fontData;
+
+        public EmbeddedFontResolver(ReadOnlyMemory<byte> fontData)
         {
-            this.maxDigitWidth = maxDigitWidth;
+            this.fontData = fontData;
         }
 
-        public ReportFontResolveResult? ResolveFont(ReportFontRequest request) => null;
-
-        public double? ResolveMaxDigitWidth(string fontName, double fontSizePoints) => maxDigitWidth;
+        public ReportFontResolveResult? ResolveFont(ReportFontRequest request) =>
+            string.Equals(request.FontName, "CustomDigits", StringComparison.Ordinal)
+                ? new ReportFontResolveResult { FontName = "IPAexGothic", FontData = fontData }
+                : null;
     }
 }

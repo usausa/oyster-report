@@ -4,6 +4,8 @@
 
 namespace OysterReport.Tests;
 
+using ClosedXML.Excel;
+
 using OysterReport.Internal;
 
 using Xunit;
@@ -37,6 +39,29 @@ public sealed class PdfGeneratorTests
         var header = reader.ReadLine();
         Assert.NotNull(header);
         Assert.StartsWith("%PDF", header, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BuildRenderPlanShouldUseConfiguredPageSizeResolver()
+    {
+        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        {
+            var sheet = workbook.AddWorksheet("Report");
+            sheet.Cell("A1").Value = "Hello";
+            sheet.PageSetup.PaperSize = XLPaperSize.A4Paper;
+        });
+
+        var workbook = ExcelReader.Read(stream);
+        var options = new ReportRenderingOptions
+        {
+            PageSizeResolver = static paperSize => paperSize == XLPaperSize.A4Paper ? (700d, 900d) : (595.28d, 841.89d)
+        };
+
+        var renderPlan = PdfRenderPlanner.BuildPlan(workbook, options);
+        var page = Assert.Single(renderPlan[0].Pages);
+
+        Assert.Equal(700d, page.PageBounds.Width, 3);
+        Assert.Equal(900d, page.PageBounds.Height, 3);
     }
 
     [Fact]

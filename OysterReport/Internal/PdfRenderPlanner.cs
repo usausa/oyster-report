@@ -73,7 +73,7 @@ internal static class PdfRenderPlanner
     // 単一シートのページ境界・印刷可能領域・セル一覧を計算し PdfRenderSheetPlan を構築する。
     private static PdfRenderSheetPlan BuildSheetPlan(ReportSheet sheet, int sheetNumber, ReportRenderingOptions renderingOptions)
     {
-        var pageBounds = ResolvePageBounds(sheet.PageSetup);
+        var pageBounds = ResolvePageBounds(sheet.PageSetup, renderingOptions);
         var printableBounds = new ReportRect
         {
             X = sheet.PageSetup.Margins.Left,
@@ -182,9 +182,9 @@ internal static class PdfRenderPlanner
     }
 
     // 用紙サイズと向きからページ境界領域 (pt) を決定する。
-    private static ReportRect ResolvePageBounds(ReportPageSetup pageSetup)
+    private static ReportRect ResolvePageBounds(ReportPageSetup pageSetup, ReportRenderingOptions renderingOptions)
     {
-        var (width, height) = GetPageSizePoints(pageSetup.PaperSize);
+        var (width, height) = renderingOptions.PageSizeResolver(pageSetup.PaperSize);
         return pageSetup.Orientation == XLPageOrientation.Landscape
             ? new ReportRect { X = 0, Y = 0, Width = height, Height = width }
             : new ReportRect { X = 0, Y = 0, Width = width, Height = height };
@@ -381,14 +381,4 @@ internal static class PdfRenderPlanner
 
         return height;
     }
-
-    // 用紙サイズ種別からページ幅と高さ (pt) を返す。
-    // Letter・Legal 以外は A4 として扱う。
-    private static (double Width, double Height) GetPageSizePoints(XLPaperSize paperSize) =>
-        paperSize switch
-        {
-            XLPaperSize.LetterPaper => (612d, 792d),
-            XLPaperSize.LegalPaper => (612d, 1008d),
-            _ => (595.28d, 841.89d)
-        };
 }

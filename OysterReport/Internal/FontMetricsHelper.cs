@@ -50,4 +50,44 @@ internal static class FontMetricsHelper
             return null;
         }
     }
+
+    /// <summary>
+    /// インストール済みフォント名から、指定サイズでの最大桁幅を計算する。
+    /// 単位: 96 DPI 参照ピクセル。
+    /// </summary>
+    public static double? MeasureMaxDigitWidth(string fontFamilyName, double fontSizePoints)
+    {
+        if (string.IsNullOrWhiteSpace(fontFamilyName) || fontSizePoints <= 0d)
+        {
+            return null;
+        }
+
+        try
+        {
+            using var typeface = SKTypeface.FromFamilyName(fontFamilyName);
+            if (typeface is null)
+            {
+                return null;
+            }
+
+            var pixelSize = (float)(fontSizePoints * ReferenceScreenDpi / PointsPerInch);
+            using var font = new SKFont(typeface, pixelSize);
+
+            var maxWidth = 0f;
+            for (var ch = '0'; ch <= '9'; ch++)
+            {
+                var width = font.MeasureText(ch.ToString());
+                if (width > maxWidth)
+                {
+                    maxWidth = width;
+                }
+            }
+
+            return maxWidth > 0f ? maxWidth : null;
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or NotSupportedException)
+        {
+            return null;
+        }
+    }
 }
