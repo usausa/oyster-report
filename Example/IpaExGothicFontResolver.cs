@@ -32,14 +32,14 @@ internal sealed class IpaExGothicFontResolver : IReportFontResolver
         fontData = File.ReadAllBytes(fontFilePath);
     }
 
-    public FontInfo? ResolveTypeface(string familyName, bool bold, bool italic)
+    public FontResolveInfo? ResolveTypeface(string familyName, bool bold, bool italic)
     {
         if (!GothicFontNames.Contains(familyName))
         {
             return null;
         }
 
-        return new FontInfo(BuildFaceName(bold, italic))
+        return new FontResolveInfo(BuildFaceName(bold, italic))
         {
             MustSimulateBold = bold,
             MustSimulateItalic = italic

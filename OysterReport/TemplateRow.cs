@@ -3,11 +3,11 @@ namespace OysterReport;
 using ClosedXML.Excel;
 
 // シート上の 1 行を表す軽量ハンドル。コピー挿入・プレースホルダ置換・削除を提供する。
-public sealed class SheetRow
+public sealed class TemplateRow
 {
     private readonly IXLWorksheet worksheet;
 
-    internal SheetRow(IXLWorksheet ws, int rowNumber)
+    internal TemplateRow(IXLWorksheet ws, int rowNumber)
     {
         worksheet = ws;
         RowNumber = rowNumber;
@@ -18,14 +18,14 @@ public sealed class SheetRow
 
     // この行のコピーを直下に挿入し、挿入された新しい行を返す。
     // フロー B（行番号を進めながら処理する方式）で使用する。
-    public SheetRow InsertCopyBelow()
+    public TemplateRow InsertCopyBelow()
     {
         return InsertCopyAfter(this);
     }
 
     // この行の内容をコピーし、afterRow の直下に挿入する。挿入された新しい行を返す。
     // コピー元は this、挿入位置は afterRow の直下。フロー A（テンプレートのコピーを追加していく方式）で使用する。
-    public SheetRow InsertCopyAfter(SheetRow afterRow)
+    public TemplateRow InsertCopyAfter(TemplateRow afterRow)
     {
         ArgumentNullException.ThrowIfNull(afterRow);
         var newRowNumber = afterRow.RowNumber + 1;
@@ -47,7 +47,7 @@ public sealed class SheetRow
 
         insertedRow.Height = worksheet.Row(sourceRowNum).Height;
 
-        return new SheetRow(worksheet, newRowNumber);
+        return new TemplateRow(worksheet, newRowNumber);
     }
 
     // この行内のプレースホルダを置換する。

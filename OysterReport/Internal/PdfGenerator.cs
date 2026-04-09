@@ -100,7 +100,7 @@ internal static class PdfGenerator
         IReadOnlyList<PdfCellRenderInfo> cells,
         ReportRenderContext context)
     {
-        var sourceCellsByAddress = sourceSheet.Cells.ToDictionary(cell => cell.Address, StringComparer.Ordinal);
+        var sourceCellsByAddress = sourceSheet.Cells.ToDictionary(static x => x.Address, StringComparer.Ordinal);
 
         var backgroundGroups = new Dictionary<string, List<ReportRect>>(StringComparer.Ordinal);
         foreach (var renderCell in cells)
@@ -189,9 +189,9 @@ internal static class PdfGenerator
     }
 
     // セルの罫線を描画する。重複する辺は優先度の高い罫線スタイルを採用し一度だけ描画する。
-    private static void DrawBorders(XGraphics graphics, ReportSheet sourceSheet, IEnumerable<PdfCellRenderInfo> cells, ReportRenderingOptions renderingOptions)
+    private static void DrawBorders(XGraphics graphics, ReportSheet sourceSheet, IEnumerable<PdfCellRenderInfo> cells, ReportRenderOption renderOption)
     {
-        var sourceCellsByAddress = sourceSheet.Cells.ToDictionary(cell => cell.Address, StringComparer.Ordinal);
+        var sourceCellsByAddress = sourceSheet.Cells.ToDictionary(static x => x.Address, StringComparer.Ordinal);
         var collectedLines = new Dictionary<string, (ReportLine Line, ReportBorder Border)>(StringComparer.Ordinal);
 
         foreach (var renderCell in cells)
@@ -216,9 +216,9 @@ internal static class PdfGenerator
             CollectBorderSide(borders.Left, new ReportLine { X1 = cellBounds.X, Y1 = cellBounds.Bottom, X2 = cellBounds.X, Y2 = cellBounds.Y }, collectedLines);
         }
 
-        foreach (var (line, border) in collectedLines.Values.OrderBy(entry => GetBorderPriority(entry.Border.Style)))
+        foreach (var (line, border) in collectedLines.Values.OrderBy(static x => GetBorderPriority(x.Border.Style)))
         {
-            DrawBorderLine(graphics, border, line, renderingOptions);
+            DrawBorderLine(graphics, border, line, renderOption);
         }
     }
 
@@ -244,10 +244,10 @@ internal static class PdfGenerator
     }
 
     // 罫線スタイルに応じて実線・破線・二重線を描画する。
-    private static void DrawBorderLine(XGraphics graphics, ReportBorder border, ReportLine line, ReportRenderingOptions renderingOptions)
+    private static void DrawBorderLine(XGraphics graphics, ReportBorder border, ReportLine line, ReportRenderOption renderOption)
     {
         var borderColor = ToColor(border.ColorHex);
-        var borderWidth = ResolveBorderWidth(border.Style, renderingOptions);
+        var borderWidth = ResolveBorderWidth(border.Style, renderOption);
         var pen = new XPen(borderColor, borderWidth);
         ApplyBorderStyle(pen, border.Style);
         if (border.Style == XLBorderStyleValues.Double)
@@ -293,11 +293,11 @@ internal static class PdfGenerator
         PdfHeaderFooterRenderInfo headerFooter,
         int pageNumber,
         int totalPages,
-        ReportRenderingOptions renderingOptions)
+        ReportRenderOption renderOption)
     {
         var headerSections = ResolveHeaderFooterSections(headerFooter.HeaderText, pageNumber, totalPages);
         var footerSections = ResolveHeaderFooterSections(headerFooter.FooterText, pageNumber, totalPages);
-        var font = CreateFallbackFont(renderingOptions.HeaderFooterFontSizePoints, renderingOptions.HeaderFooterFallbackFontNames);
+        var font = CreateFallbackFont(renderOption.HeaderFooterFontSizePoints, renderOption.HeaderFooterFallbackFontNames);
 
         DrawHeaderFooterSections(graphics, headerSections, headerFooter.HeaderBounds, font);
         DrawHeaderFooterSections(graphics, footerSections, headerFooter.FooterBounds, font);
@@ -349,7 +349,7 @@ internal static class PdfGenerator
             }
 
             index++;
-            switch (char.ToUpperInvariant(text[index]))
+            switch (Char.ToUpperInvariant(text[index]))
             {
                 case 'L': current = left; break;
                 case 'C': current = center; break;
@@ -545,14 +545,14 @@ internal static class PdfGenerator
         ColorHelper.NormalizeHex(colorHex).StartsWith("#00", StringComparison.Ordinal);
 
     // 罫線スタイルから描画幅 (pt) を決定する。
-    private static double ResolveBorderWidth(XLBorderStyleValues style, ReportRenderingOptions renderingOptions) =>
+    private static double ResolveBorderWidth(XLBorderStyleValues style, ReportRenderOption renderOption) =>
         style switch
         {
-            XLBorderStyleValues.Thick => renderingOptions.ThickBorderWidthPoints,
-            XLBorderStyleValues.Medium => renderingOptions.MediumBorderWidthPoints,
-            XLBorderStyleValues.Double => renderingOptions.NormalBorderWidthPoints,
-            XLBorderStyleValues.Hair => renderingOptions.HairBorderWidthPoints,
-            _ => renderingOptions.NormalBorderWidthPoints
+            XLBorderStyleValues.Thick => renderOption.ThickBorderWidthPoints,
+            XLBorderStyleValues.Medium => renderOption.MediumBorderWidthPoints,
+            XLBorderStyleValues.Double => renderOption.NormalBorderWidthPoints,
+            XLBorderStyleValues.Hair => renderOption.HairBorderWidthPoints,
+            _ => renderOption.NormalBorderWidthPoints
         };
 
     // 罫線スタイルに応じた破線パターンを XPen に適用する。

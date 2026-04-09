@@ -4,7 +4,7 @@ using ClosedXML.Excel;
 
 // PDF 描画時の調整値をまとめたオプション。
 // 既定値は Excel に近い見た目になるように調整されている。
-public sealed record ReportRenderingOptions
+public sealed record ReportRenderOption
 {
     // 用紙サイズからページ幅・高さ (pt) を解決する関数。
     [CLSCompliant(false)]

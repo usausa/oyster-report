@@ -64,16 +64,16 @@ internal sealed record PdfHeaderFooterRenderInfo
 internal static class PdfRenderPlanner
 {
     // ワークブック内の全シートに対する PDF プラン一覧を構築する。
-    public static IReadOnlyList<PdfRenderSheetPlan> BuildPlan(ReportWorkbook workbook, ReportRenderingOptions? renderingOptions = null)
+    public static IReadOnlyList<PdfRenderSheetPlan> BuildPlan(ReportWorkbook workbook, ReportRenderOption? renderOption = null)
     {
-        var effectiveOptions = renderingOptions ?? new ReportRenderingOptions();
-        return workbook.Sheets.Select((sheet, index) => BuildSheetPlan(sheet, index + 1, effectiveOptions)).ToList();
+        var effectiveOptions = renderOption ?? new ReportRenderOption();
+        return workbook.Sheets.Select((x, i) => BuildSheetPlan(x, i + 1, effectiveOptions)).ToList();
     }
 
     // 単一シートのページ境界・印刷可能領域・セル一覧を計算し PdfRenderSheetPlan を構築する。
-    private static PdfRenderSheetPlan BuildSheetPlan(ReportSheet sheet, int sheetNumber, ReportRenderingOptions renderingOptions)
+    private static PdfRenderSheetPlan BuildSheetPlan(ReportSheet sheet, int sheetNumber, ReportRenderOption renderOption)
     {
-        var pageBounds = ResolvePageBounds(sheet.PageSetup, renderingOptions);
+        var pageBounds = ResolvePageBounds(sheet.PageSetup, renderOption);
         var printableBounds = new ReportRect
         {
             X = sheet.PageSetup.Margins.Left,
@@ -85,15 +85,15 @@ internal static class PdfRenderPlanner
         var renderRange = sheet.PrintArea?.Range ?? sheet.UsedRange;
 
         var visibleRows = sheet.Rows
-            .Where(row => !row.IsHidden && row.Index >= renderRange.StartRow && row.Index <= renderRange.EndRow)
-            .OrderBy(row => row.Index)
+            .Where(x => !x.IsHidden && x.Index >= renderRange.StartRow && x.Index <= renderRange.EndRow)
+            .OrderBy(static x => x.Index)
             .ToList();
         var visibleColumns = sheet.Columns
-            .Where(column => !column.IsHidden && column.Index >= renderRange.StartColumn && column.Index <= renderRange.EndColumn)
-            .OrderBy(column => column.Index)
+            .Where(x => !x.IsHidden && x.Index >= renderRange.StartColumn && x.Index <= renderRange.EndColumn)
+            .OrderBy(static x => x.Index)
             .ToList();
 
-        var contentWidth = visibleColumns.Sum(column => column.WidthPoint);
+        var contentWidth = visibleColumns.Sum(static x => x.WidthPoint);
         var contentOffsetX = sheet.PageSetup.CenterHorizontally
             ? Math.Max(0d, (printableBounds.Width - contentWidth) / 2d)
             : 0d;
@@ -123,14 +123,14 @@ internal static class PdfRenderPlanner
         var columnByIndex = visibleColumns.ToDictionary(c => c.Index);
         var mergedRangeByCell = BuildMergedRangeByCell(sheet.MergedRanges);
         var pageCells = new List<PdfCellRenderInfo>();
-        foreach (var cell in sheet.Cells.Where(cell => rowOffsets.ContainsKey(cell.Row) && columnOffsets.ContainsKey(cell.Column)))
+        foreach (var cell in sheet.Cells.Where(x => rowOffsets.ContainsKey(x.Row) && columnOffsets.ContainsKey(x.Column)))
         {
             var outerBounds = new ReportRect
             {
                 X = columnOffsets[cell.Column],
                 Y = rowOffsets[cell.Row],
-                Width = visibleColumns.First(column => column.Index == cell.Column).WidthPoint,
-                Height = visibleRows.First(row => row.Index == cell.Row).HeightPoint
+                Width = visibleColumns.First(x => x.Index == cell.Column).WidthPoint,
+                Height = visibleRows.First(x => x.Index == cell.Row).HeightPoint
             };
 
             var isMergedOwner = mergedRanges.TryGetValue(cell.Address, out var mergedRange);
@@ -141,8 +141,8 @@ internal static class PdfRenderPlanner
 
             var contentBounds = outerBounds.Deflate(new ReportThickness
             {
-                Left = renderingOptions.HorizontalCellTextPaddingPoints,
-                Right = renderingOptions.HorizontalCellTextPaddingPoints
+                Left = renderOption.HorizontalCellTextPaddingPoints,
+                Right = renderOption.HorizontalCellTextPaddingPoints
             });
             pageCells.Add(new PdfCellRenderInfo
             {
@@ -182,9 +182,9 @@ internal static class PdfRenderPlanner
     }
 
     // 用紙サイズと向きからページ境界領域 (pt) を決定する。
-    private static ReportRect ResolvePageBounds(ReportPageSetup pageSetup, ReportRenderingOptions renderingOptions)
+    private static ReportRect ResolvePageBounds(ReportPageSetup pageSetup, ReportRenderOption renderOption)
     {
-        var (width, height) = renderingOptions.PageSizeResolver(pageSetup.PaperSize);
+        var (width, height) = renderOption.PageSizeResolver(pageSetup.PaperSize);
         return pageSetup.Orientation == XLPageOrientation.Landscape
             ? new ReportRect { X = 0, Y = 0, Width = height, Height = width }
             : new ReportRect { X = 0, Y = 0, Width = width, Height = height };
@@ -198,8 +198,8 @@ internal static class PdfRenderPlanner
         Dictionary<int, double> rowOffsets,
         Dictionary<int, double> columnOffsets)
     {
-        var targetRows = visibleRows.Where(row => row.Index >= mergedRange.Range.StartRow && row.Index <= mergedRange.Range.EndRow).ToList();
-        var targetColumns = visibleColumns.Where(column => column.Index >= mergedRange.Range.StartColumn && column.Index <= mergedRange.Range.EndColumn).ToList();
+        var targetRows = visibleRows.Where(x => x.Index >= mergedRange.Range.StartRow && x.Index <= mergedRange.Range.EndRow).ToList();
+        var targetColumns = visibleColumns.Where(x => x.Index >= mergedRange.Range.StartColumn && x.Index <= mergedRange.Range.EndColumn).ToList();
         if (targetRows.Count == 0 || targetColumns.Count == 0)
         {
             return default;
@@ -209,8 +209,8 @@ internal static class PdfRenderPlanner
         {
             X = columnOffsets[targetColumns[0].Index],
             Y = rowOffsets[targetRows[0].Index],
-            Width = targetColumns.Sum(column => column.WidthPoint),
-            Height = targetRows.Sum(row => row.HeightPoint)
+            Width = targetColumns.Sum(static x => x.WidthPoint),
+            Height = targetRows.Sum(static x => x.HeightPoint)
         };
     }
 

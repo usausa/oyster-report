@@ -25,11 +25,11 @@ internal static class AddressHelper
 
         foreach (var character in address.Trim().ToUpperInvariant())
         {
-            if (char.IsLetter(character))
+            if (Char.IsLetter(character))
             {
                 letters += character;
             }
-            else if (char.IsDigit(character))
+            else if (Char.IsDigit(character))
             {
                 digits += character;
             }

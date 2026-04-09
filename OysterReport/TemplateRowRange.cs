@@ -3,11 +3,11 @@ namespace OysterReport;
 using ClosedXML.Excel;
 
 // シート上の連続行範囲を表すハンドル。1 明細が複数行にまたがるテンプレートで使用する。
-public sealed class SheetRowRange
+public sealed class TemplateRowRange
 {
     private readonly IXLWorksheet worksheet;
 
-    internal SheetRowRange(IXLWorksheet ws, int startRow, int endRow)
+    internal TemplateRowRange(IXLWorksheet ws, int startRow, int endRow)
     {
         worksheet = ws;
         StartRow = startRow;
@@ -25,14 +25,14 @@ public sealed class SheetRowRange
 
     // この行範囲のコピーを直下に挿入し、挿入された新しい行範囲を返す。
     // フロー B で使用する。
-    public SheetRowRange InsertCopyBelow()
+    public TemplateRowRange InsertCopyBelow()
     {
         return InsertCopyAfter(this);
     }
 
     // この行範囲の内容をコピーし、afterRange の直下に挿入する。挿入された新しい行範囲を返す。
     // コピー元は this、挿入位置は afterRange の直下。フロー A で使用する。
-    public SheetRowRange InsertCopyAfter(SheetRowRange afterRange)
+    public TemplateRowRange InsertCopyAfter(TemplateRowRange afterRange)
     {
         ArgumentNullException.ThrowIfNull(afterRange);
         var newStartRow = afterRange.EndRow + 1;
@@ -58,7 +58,7 @@ public sealed class SheetRowRange
             }
         }
 
-        return new SheetRowRange(worksheet, newStartRow, newStartRow + RowCount - 1);
+        return new TemplateRowRange(worksheet, newStartRow, newStartRow + RowCount - 1);
     }
 
     // この行範囲内のプレースホルダを置換する。

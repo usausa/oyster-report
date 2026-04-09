@@ -27,6 +27,6 @@ internal sealed class WindowsJapaneseFontResolver : IReportFontResolver
             ["HGSMinchoE"] = "HG明朝E"
         };
 
-    public FontInfo? ResolveTypeface(string familyName, bool bold, bool italic) =>
-        FontMap.TryGetValue(familyName, out var resolvedName) ? new FontInfo(resolvedName) : null;
+    public FontResolveInfo? ResolveTypeface(string familyName, bool bold, bool italic) =>
+        FontMap.TryGetValue(familyName, out var resolvedName) ? new FontResolveInfo(resolvedName) : null;
 }

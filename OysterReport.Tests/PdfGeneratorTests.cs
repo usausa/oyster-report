@@ -116,7 +116,7 @@ public sealed class PdfGeneratorTests
         });
 
         var workbook = ExcelReader.Read(stream);
-        var options = new ReportRenderingOptions
+        var options = new ReportRenderOption
         {
             PageSizeResolver = static paperSize => paperSize == XLPaperSize.A4Paper ? (700d, 900d) : (595.28d, 841.89d)
         };
@@ -217,9 +217,9 @@ public sealed class PdfGeneratorTests
             this.fontData = fontData;
         }
 
-        public FontInfo? ResolveTypeface(string familyName, bool bold, bool italic) =>
+        public FontResolveInfo? ResolveTypeface(string familyName, bool bold, bool italic) =>
             String.Equals(familyName, "CustomEmbeddedFont", StringComparison.Ordinal)
-                ? new FontInfo("IPAexGothic")
+                ? new FontResolveInfo("IPAexGothic")
                 : null;
 
         public ReadOnlyMemory<byte>? GetFont(string faceName) =>
@@ -239,11 +239,11 @@ public sealed class PdfGeneratorTests
 
         public List<(string FamilyName, bool Bold, bool Italic)> Requests { get; } = [];
 
-        public FontInfo? ResolveTypeface(string familyName, bool bold, bool italic)
+        public FontResolveInfo? ResolveTypeface(string familyName, bool bold, bool italic)
         {
             Requests.Add((familyName, bold, italic));
             return String.Equals(familyName, "CustomEmbeddedFont", StringComparison.Ordinal)
-                ? new FontInfo("IPAexGothic")
+                ? new FontResolveInfo("IPAexGothic")
                 : null;
         }
 

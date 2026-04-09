@@ -18,27 +18,27 @@ internal static class ExcelReader
     private const double ScreenDpi = 96d;
 
     // ClosedXML ワークブックオブジェクトから ReportWorkbook を生成する。
-    public static ReportWorkbook Read(IXLWorkbook workbook, ReportRenderingOptions? renderingOptions = null)
+    public static ReportWorkbook Read(IXLWorkbook workbook, ReportRenderOption? renderOption = null)
     {
-        var effectiveOptions = renderingOptions ?? new ReportRenderingOptions();
+        var effectiveOptions = renderOption ?? new ReportRenderOption();
         var measurementProfile = CreateMeasurementProfile(workbook, effectiveOptions);
         var metadata = new ReportMetadata { TemplateName = workbook.Properties.Title ?? "Workbook" };
         return ReadInternal(workbook, measurementProfile, metadata);
     }
 
     // ストリームから Excel を読み込み ReportWorkbook を生成する。
-    public static ReportWorkbook Read(Stream stream, ReportRenderingOptions? renderingOptions = null)
+    public static ReportWorkbook Read(Stream stream, ReportRenderOption? renderOption = null)
     {
         using var workbook = new XLWorkbook(stream);
-        return Read(workbook, renderingOptions);
+        return Read(workbook, renderOption);
     }
 
     // 単一ワークシートから 1 シートのみ含む ReportWorkbook を生成する。
-    public static ReportWorkbook Read(IXLWorksheet worksheet, ReportRenderingOptions? renderingOptions = null)
+    public static ReportWorkbook Read(IXLWorksheet worksheet, ReportRenderOption? renderOption = null)
     {
         ArgumentNullException.ThrowIfNull(worksheet);
 
-        var effectiveOptions = renderingOptions ?? new ReportRenderingOptions();
+        var effectiveOptions = renderOption ?? new ReportRenderOption();
         var measurementProfile = CreateMeasurementProfile(worksheet.Workbook, effectiveOptions);
         var metadata = new ReportMetadata { TemplateName = worksheet.Name };
         var reportWorkbook = new ReportWorkbook
@@ -70,13 +70,13 @@ internal static class ExcelReader
     // ワークブックの既定フォント情報から列幅計算用プロファイルを作成する。
     private static ReportMeasurementProfile CreateMeasurementProfile(
         IXLWorkbook workbook,
-        ReportRenderingOptions renderingOptions) =>
+        ReportRenderOption renderOption) =>
         new()
         {
             DefaultFontName = workbook.Style.Font.FontName,
             DefaultFontSize = workbook.Style.Font.FontSize,
-            MaxDigitWidth = ResolveMaxDigitWidth(workbook.Style.Font.FontName, workbook.Style.Font.FontSize, renderingOptions),
-            ColumnWidthAdjustment = renderingOptions.ColumnWidthAdjustment
+            MaxDigitWidth = ResolveMaxDigitWidth(workbook.Style.Font.FontName, workbook.Style.Font.FontSize, renderOption),
+            ColumnWidthAdjustment = renderOption.ColumnWidthAdjustment
         };
 
     // ワークシートを読み込み、行・列・セル・画像等を ReportSheet に変換する。
@@ -235,7 +235,7 @@ internal static class ExcelReader
         {
             Style = styleValue,
             ColorHex = resolvedColorHex,
-            Width = ResolveBorderWidth(styleValue, new ReportRenderingOptions())
+            Width = ResolveBorderWidth(styleValue, new ReportRenderOption())
         };
     }
 
@@ -455,10 +455,10 @@ internal static class ExcelReader
                     continue;
                 }
 
-                foreach (var cell in reportSheet.Cells.Where(cell =>
-                             cell.Row == rowIndex &&
-                             cell.Column >= tableRange.StartColumn &&
-                             cell.Column <= tableRange.EndColumn))
+                foreach (var cell in reportSheet.Cells.Where(x =>
+                             x.Row == rowIndex &&
+                             x.Column >= tableRange.StartColumn &&
+                             x.Column <= tableRange.EndColumn))
                 {
                     if (!IsTransparentFill(cell.Style.Fill.BackgroundColorHex))
                     {
@@ -479,7 +479,7 @@ internal static class ExcelReader
     {
         foreach (var mergedRange in reportSheet.MergedRanges)
         {
-            foreach (var cell in reportSheet.Cells.Where(cell => mergedRange.Range.Contains(cell.Row, cell.Column)))
+            foreach (var cell in reportSheet.Cells.Where(x => mergedRange.Range.Contains(x.Row, x.Column)))
             {
                 cell.Merge = new ReportMergeInfo
                 {
@@ -522,29 +522,29 @@ internal static class ExcelReader
     private static double ResolveMaxDigitWidth(
         string? fontName,
         double fontSize,
-        ReportRenderingOptions renderingOptions)
+        ReportRenderOption renderOption)
     {
         if (String.IsNullOrWhiteSpace(fontName) || fontSize <= 0d)
         {
-            return renderingOptions.FallbackMaxDigitWidth;
+            return renderOption.FallbackMaxDigitWidth;
         }
 
         var directMeasured = FontMetricsHelper.MeasureMaxDigitWidth(fontName, fontSize);
         if (directMeasured is > 0d)
         {
-            return Math.Max(renderingOptions.FallbackMaxDigitWidth, directMeasured.Value);
+            return Math.Max(renderOption.FallbackMaxDigitWidth, directMeasured.Value);
         }
 
-        return renderingOptions.FallbackMaxDigitWidth;
+        return renderOption.FallbackMaxDigitWidth;
     }
 
-    private static double ResolveBorderWidth(XLBorderStyleValues style, ReportRenderingOptions renderingOptions) =>
+    private static double ResolveBorderWidth(XLBorderStyleValues style, ReportRenderOption renderOption) =>
         style switch
         {
-            XLBorderStyleValues.Thick => renderingOptions.ThickBorderWidthPoints,
-            XLBorderStyleValues.Medium => renderingOptions.MediumBorderWidthPoints,
-            XLBorderStyleValues.Double => renderingOptions.NormalBorderWidthPoints,
-            XLBorderStyleValues.Hair => renderingOptions.HairBorderWidthPoints,
-            _ => renderingOptions.NormalBorderWidthPoints
+            XLBorderStyleValues.Thick => renderOption.ThickBorderWidthPoints,
+            XLBorderStyleValues.Medium => renderOption.MediumBorderWidthPoints,
+            XLBorderStyleValues.Double => renderOption.NormalBorderWidthPoints,
+            XLBorderStyleValues.Hair => renderOption.HairBorderWidthPoints,
+            _ => renderOption.NormalBorderWidthPoints
         };
 }

@@ -2,52 +2,52 @@ namespace OysterReport;
 
 using ClosedXML.Excel;
 
-// Excel ファイルを保持し、ワークブック全体のテンプレート操作を提供する。
 public sealed class TemplateWorkbook : IDisposable
 {
     private readonly XLWorkbook workbook;
+
     private readonly List<TemplateSheet> sheets;
 
-    // ファイルパスから Excel ファイルを読み込む。
-    public TemplateWorkbook(string filePath)
-    {
-        ArgumentNullException.ThrowIfNull(filePath);
-
-        workbook = new XLWorkbook(filePath);
-        sheets = workbook.Worksheets.Select(ws => new TemplateSheet(ws)).ToList();
-    }
-
-    // ストリームから Excel ファイルを読み込む。
-    public TemplateWorkbook(Stream stream)
-    {
-        ArgumentNullException.ThrowIfNull(stream);
-
-        workbook = new XLWorkbook(stream);
-        sheets = workbook.Worksheets.Select(ws => new TemplateSheet(ws)).ToList();
-    }
-
-    // 内部の ClosedXML ワークブック。
     internal IXLWorkbook UnderlyingWorkbook => workbook;
 
-    // シート一覧。
     public IReadOnlyList<TemplateSheet> Sheets => sheets;
 
-    // 名前でシートを取得する。
-    public TemplateSheet GetSheet(string name)
+    //--------------------------------------------------------------------------------
+    // Constructor
+    //--------------------------------------------------------------------------------
+
+    public TemplateWorkbook(string filePath)
     {
-        ArgumentNullException.ThrowIfNull(name);
-        return sheets.FirstOrDefault(s => String.Equals(s.Name, name, StringComparison.Ordinal))
-            ?? throw new InvalidOperationException($"Sheet '{name}' not found.");
+        workbook = new XLWorkbook(filePath);
+        sheets = workbook.Worksheets.Select(static x => new TemplateSheet(x)).ToList();
     }
 
-    // インデックスでシートを取得する (0-based)。
+    public TemplateWorkbook(Stream stream)
+    {
+        workbook = new XLWorkbook(stream);
+        sheets = workbook.Worksheets.Select(static x => new TemplateSheet(x)).ToList();
+    }
+
+    public void Dispose() => workbook.Dispose();
+
+    //--------------------------------------------------------------------------------
+    // Sheet
+    //--------------------------------------------------------------------------------
+
+    public TemplateSheet GetSheet(string name)
+    {
+        return sheets.FirstOrDefault(x => String.Equals(x.Name, name, StringComparison.Ordinal)) ??
+               throw new ArgumentException($"Sheet not found. name=[{name}]", nameof(name));
+    }
+
     public TemplateSheet GetSheet(int index) => sheets[index];
 
-    // テンプレートシートをコピーして新しいシートを作成する。
+    //--------------------------------------------------------------------------------
+    // Edit
+    //--------------------------------------------------------------------------------
+
     public TemplateSheet CopySheet(string sourceSheetName, string newSheetName)
     {
-        ArgumentNullException.ThrowIfNull(sourceSheetName);
-        ArgumentNullException.ThrowIfNull(newSheetName);
         var sourceWorksheet = workbook.Worksheet(sourceSheetName);
         var newWorksheet = sourceWorksheet.CopyTo(newSheetName);
         var newSheet = new TemplateSheet(newWorksheet);
@@ -55,27 +55,23 @@ public sealed class TemplateWorkbook : IDisposable
         return newSheet;
     }
 
-    // シートを削除する。
     public void RemoveSheet(string name)
     {
-        ArgumentNullException.ThrowIfNull(name);
         var sheet = GetSheet(name);
         workbook.Worksheet(name).Delete();
         sheets.Remove(sheet);
     }
 
-    // 全シートのプレースホルダを一括置換する。
-    public int ReplacePlaceholder(string markerName, string value)
+    public int ReplacePlaceholder(string marker, string value)
     {
         var count = 0;
         foreach (var sheet in sheets)
         {
-            count += sheet.ReplacePlaceholder(markerName, value);
+            count += sheet.ReplacePlaceholder(marker, value);
         }
         return count;
     }
 
-    // 全シートのプレースホルダを辞書で一括置換する。
     public int ReplacePlaceholders(IReadOnlyDictionary<string, string?> values)
     {
         var count = 0;
@@ -85,6 +81,4 @@ public sealed class TemplateWorkbook : IDisposable
         }
         return count;
     }
-
-    public void Dispose() => workbook.Dispose();
 }

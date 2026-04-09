@@ -14,7 +14,7 @@ internal sealed class ReportFontResolverAdapter : IFontResolver
     private static readonly ConcurrentDictionary<string, byte[]> EmbeddedFontCache =
         new(StringComparer.OrdinalIgnoreCase);
 
-    private static readonly ConcurrentDictionary<string, FontInfo> ResolvedTypefaceCache =
+    private static readonly ConcurrentDictionary<string, FontResolveInfo> ResolvedTypefaceCache =
         new(StringComparer.OrdinalIgnoreCase);
 
     private static readonly Lazy<WindowsInstalledFontResolver?> WindowsFallback =
@@ -27,7 +27,7 @@ internal sealed class ReportFontResolverAdapter : IFontResolver
         EmbeddedFontCache[fontName] = fontData.ToArray();
     }
 
-    public static void RegisterResolvedTypeface(FontInfo fontResolverInfo)
+    public static void RegisterResolvedTypeface(FontResolveInfo fontResolverInfo)
     {
         ArgumentNullException.ThrowIfNull(fontResolverInfo);
         ResolvedTypefaceCache[fontResolverInfo.FaceName] = fontResolverInfo;
