@@ -2,54 +2,70 @@ namespace Example;
 
 using OysterReport;
 
-// WindowsInstalledFontResolver は Windows フォントレジストリから TTC の
-// フェイスインデックスを正しく解決し、各フェイスの TTF バイト列を抽出する。
-// このマップでは Excel セルのフォント名 (全角名・混在名) を
-// Windows レジストリで検索可能な ASCII 名へ変換する。
-//
-// レジストリの TTC 対応:
-//   msgothic.ttc  → face 0: MS Gothic (等幅)
-//                   face 1: MS UI Gothic (プロポーショナル・UI 用)
-//                   face 2: MS PGothic  (プロポーショナル)
-//   msmincho.ttc  → face 0: MS Mincho  (等幅)
-//                   face 1: MS PMincho  (プロポーショナル)
-//   meiryo.ttc    → face 0: Meiryo
-//                   face 1: Meiryo Italic
-//                   face 2: Meiryo UI
-//                   face 3: Meiryo UI Italic
 internal sealed class JapaneseFontResolver : IReportFontResolver
 {
-    private static readonly Dictionary<string, string> FontMap =
+    private const string EmbeddedFontName = "IPAexGothic";
+    private const double EmbeddedFontMaxDigitWidthAt10Pt = 8d;
+
+    private static readonly Dictionary<string, string> InstalledFontMap =
         new(StringComparer.OrdinalIgnoreCase)
         {
-            // MS Gothic 系 (msgothic.ttc) — 全角名・混在名 → ASCII レジストリキー名
-            ["ＭＳ Ｐゴシック"] = "MS PGothic",   // face 2 (プロポーショナル)
-            ["MS Pゴシック"] = "MS PGothic",        // face 2 (プロポーショナル)
-            ["ＭＳ ゴシック"] = "MS Gothic",       // face 0 (等幅)
-
-            // MS Mincho 系 (msmincho.ttc)
-            ["ＭＳ Ｐ明朝"] = "MS PMincho",        // face 1 (プロポーショナル)
-            ["MS P明朝"] = "MS PMincho",            // face 1 (プロポーショナル)
-            ["ＭＳ 明朝"] = "MS Mincho",           // face 0 (等幅)
-
-            // HG Mincho E 系
+            ["ＭＳ Ｐゴシック"] = "MS PGothic",
+            ["MS Pゴシック"] = "MS PGothic",
+            ["ＭＳ ゴシック"] = "MS Gothic",
+            ["ＭＳ Ｐ明朝"] = "MS PMincho",
+            ["MS P明朝"] = "MS PMincho",
+            ["ＭＳ 明朝"] = "MS Mincho",
             ["HGP明朝E"] = "HG明朝E",
             ["HGPMinchoE"] = "HG明朝E",
             ["HGS明朝E"] = "HG明朝E",
             ["HGSMinchoE"] = "HG明朝E"
         };
 
-    public ReportFontResolveResult Resolve(ReportFontRequest request)
+    private readonly ReadOnlyMemory<byte>? embeddedFontData;
+
+    private JapaneseFontResolver(ReadOnlyMemory<byte>? embeddedFontData)
     {
-        if (FontMap.TryGetValue(request.FontName, out var resolved))
+        this.embeddedFontData = embeddedFontData;
+    }
+
+    public static JapaneseFontResolver CreateInstalledFontResolver() => new(null);
+
+    public static JapaneseFontResolver CreateEmbeddedFontResolver(string fontPath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(fontPath);
+        return new JapaneseFontResolver(File.ReadAllBytes(fontPath));
+    }
+
+    public ReportFontResolveResult? ResolveFont(ReportFontRequest request)
+    {
+        if (!InstalledFontMap.ContainsKey(request.FontName))
+        {
+            return null;
+        }
+
+        if (embeddedFontData is { } fontData)
         {
             return new ReportFontResolveResult
             {
-                IsResolved = true,
-                ResolvedFontName = resolved
+                FontName = EmbeddedFontName,
+                FontData = fontData
             };
         }
 
-        return new ReportFontResolveResult { IsResolved = false };
+        return new ReportFontResolveResult
+        {
+            FontName = InstalledFontMap[request.FontName]
+        };
+    }
+
+    public double? ResolveMaxDigitWidth(string fontName, double fontSizePoints)
+    {
+        if (embeddedFontData is null || !InstalledFontMap.ContainsKey(fontName))
+        {
+            return null;
+        }
+
+        return EmbeddedFontMaxDigitWidthAt10Pt * (fontSizePoints / 10d);
     }
 }

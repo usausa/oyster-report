@@ -27,26 +27,28 @@ internal static class ExcelReader
     private const double ArialDigitWidthAt10Pt = 7.41536d;
 
     // ClosedXML ワークブックオブジェクトから ReportWorkbook を生成する。
-    public static ReportWorkbook Read(IXLWorkbook workbook)
+    public static ReportWorkbook Read(IXLWorkbook workbook, IReportFontResolver? fontResolver = null, ReportRenderingOptions? renderingOptions = null)
     {
-        var measurementProfile = CreateMeasurementProfile(workbook);
+        var effectiveOptions = renderingOptions ?? new ReportRenderingOptions();
+        var measurementProfile = CreateMeasurementProfile(workbook, fontResolver, effectiveOptions);
         var metadata = new ReportMetadata { TemplateName = workbook.Properties.Title ?? "Workbook" };
         return ReadInternal(workbook, measurementProfile, metadata);
     }
 
     // ストリームから Excel を読み込み ReportWorkbook を生成する。
-    public static ReportWorkbook Read(Stream stream)
+    public static ReportWorkbook Read(Stream stream, IReportFontResolver? fontResolver = null, ReportRenderingOptions? renderingOptions = null)
     {
         using var workbook = new XLWorkbook(stream);
-        return Read(workbook);
+        return Read(workbook, fontResolver, renderingOptions);
     }
 
     // 単一ワークシートから 1 シートのみ含む ReportWorkbook を生成する。
-    public static ReportWorkbook Read(IXLWorksheet worksheet)
+    public static ReportWorkbook Read(IXLWorksheet worksheet, IReportFontResolver? fontResolver = null, ReportRenderingOptions? renderingOptions = null)
     {
         ArgumentNullException.ThrowIfNull(worksheet);
 
-        var measurementProfile = CreateMeasurementProfile(worksheet.Workbook);
+        var effectiveOptions = renderingOptions ?? new ReportRenderingOptions();
+        var measurementProfile = CreateMeasurementProfile(worksheet.Workbook, fontResolver, effectiveOptions);
         var metadata = new ReportMetadata { TemplateName = worksheet.Name };
         var reportWorkbook = new ReportWorkbook
         {
@@ -75,12 +77,16 @@ internal static class ExcelReader
     }
 
     // ワークブックの既定フォント情報から列幅計算用プロファイルを作成する。
-    private static ReportMeasurementProfile CreateMeasurementProfile(IXLWorkbook workbook) =>
+    private static ReportMeasurementProfile CreateMeasurementProfile(
+        IXLWorkbook workbook,
+        IReportFontResolver? fontResolver,
+        ReportRenderingOptions renderingOptions) =>
         new()
         {
             DefaultFontName = workbook.Style.Font.FontName,
             DefaultFontSize = workbook.Style.Font.FontSize,
-            MaxDigitWidth = ResolveMaxDigitWidth(workbook.Style.Font.FontName, workbook.Style.Font.FontSize)
+            MaxDigitWidth = ResolveMaxDigitWidth(workbook.Style.Font.FontName, workbook.Style.Font.FontSize, fontResolver, renderingOptions),
+            ColumnWidthAdjustment = renderingOptions.ColumnWidthAdjustment
         };
 
     // ワークシートを読み込み、行・列・セル・画像等を ReportSheet に変換する。
@@ -239,7 +245,7 @@ internal static class ExcelReader
         {
             Style = styleValue,
             ColorHex = resolvedColorHex,
-            Width = PdfRenderingConstants.ResolveBorderWidth(styleValue)
+            Width = ResolveBorderWidth(styleValue, new ReportRenderingOptions())
         };
     }
 
@@ -522,12 +528,21 @@ internal static class ExcelReader
 
     // フォント名とサイズから最大桁幅（ポイント）を推定する。
     // フォントごとの実測値を 10pt 基準で保持し、指定サイズに比例補正して返す。
-    private static double ResolveMaxDigitWidth(string? fontName, double fontSize)
+    private static double ResolveMaxDigitWidth(
+        string? fontName,
+        double fontSize,
+        IReportFontResolver? fontResolver,
+        ReportRenderingOptions renderingOptions)
     {
-        const double fallback = DefaultFallbackDigitWidth;
         if (string.IsNullOrWhiteSpace(fontName) || fontSize <= 0d)
         {
-            return fallback;
+            return renderingOptions.FallbackMaxDigitWidth;
+        }
+
+        var resolved = fontResolver?.ResolveMaxDigitWidth(fontName, fontSize);
+        if (resolved is > 0d)
+        {
+            return resolved.Value;
         }
 
         var normalized = NormalizeFontName(fontName);
@@ -540,11 +555,21 @@ internal static class ExcelReader
             var v when v.Contains("mspgothic", StringComparison.Ordinal) => MsPgothicDigitWidthAt10Pt,
             var v when v.Contains("msgothic", StringComparison.Ordinal) => MsPgothicDigitWidthAt10Pt,
             var v when v.Contains("arial", StringComparison.Ordinal) => ArialDigitWidthAt10Pt,
-            _ => fallback
+            _ => renderingOptions.FallbackMaxDigitWidth
         };
 
-        return Math.Max(fallback, baseWidth * (fontSize / ReferenceFontSizePoints));
+        return Math.Max(renderingOptions.FallbackMaxDigitWidth, baseWidth * (fontSize / ReferenceFontSizePoints));
     }
+
+    private static double ResolveBorderWidth(XLBorderStyleValues style, ReportRenderingOptions renderingOptions) =>
+        style switch
+        {
+            XLBorderStyleValues.Thick => renderingOptions.ThickBorderWidthPoints,
+            XLBorderStyleValues.Medium => renderingOptions.MediumBorderWidthPoints,
+            XLBorderStyleValues.Double => renderingOptions.NormalBorderWidthPoints,
+            XLBorderStyleValues.Hair => renderingOptions.HairBorderWidthPoints,
+            _ => renderingOptions.NormalBorderWidthPoints
+        };
 
     // フォント名を正規化形式に変換し、英数字のみ小文字で返す。
     private static string NormalizeFontName(string fontName)

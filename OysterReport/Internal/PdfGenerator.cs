@@ -14,15 +14,6 @@ internal static class PdfGenerator
 {
     private static int fontPlatformConfigured;
 
-    private static readonly string[] HeaderFooterFallbackFontNames =
-    [
-        "Arial",
-        "Segoe UI",
-        "Helvetica",
-        "Liberation Sans",
-        "DejaVu Sans"
-    ];
-
     // レンダリングコンテキストをもとに PDF ドキュメントを生成し、出力ストリームへ書き込む。
     // PDFSharp のフォント設定を初期化し、全シート・全ページを順に描画する。
     internal static void WritePdf(
@@ -32,47 +23,49 @@ internal static class PdfGenerator
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(output);
 
+        ReportFontResolverAdapter.SetCurrentResolver(context.FontResolver);
         EnsurePdfSharpFontConfiguration();
-
-        using var document = new PdfDocument();
-        document.Options.CompressContentStreams = context.CompressContentStreams;
-
-        if (context.EmbedDocumentMetadata)
+        try
         {
-            document.Info.Title = context.Workbook.Metadata.TemplateName;
-        }
+            using var document = new PdfDocument();
+            document.Options.CompressContentStreams = context.CompressContentStreams;
 
-        for (var sheetIndex = 0; sheetIndex < context.SheetPlans.Count; sheetIndex++)
-        {
-            var sheetPlan = context.SheetPlans[sheetIndex];
-            var sourceSheet = context.Workbook.Sheets[sheetIndex];
-            foreach (var pagePlan in sheetPlan.Pages)
+            if (context.EmbedDocumentMetadata)
             {
-                var page = document.AddPage();
-                page.Width = XUnit.FromPoint(pagePlan.PageBounds.Width);
-                page.Height = XUnit.FromPoint(pagePlan.PageBounds.Height);
-                using var graphics = XGraphics.FromPdfPage(page);
-                DrawPageBackground(graphics, pagePlan.PageBounds);
-                DrawCells(graphics, sourceSheet, pagePlan.Cells, context);
-                DrawBorders(graphics, sourceSheet, pagePlan.Cells);
-                DrawImages(graphics, sheetPlan.Images);
-                DrawHeaderFooter(graphics, pagePlan.HeaderFooter, pagePlan.PageNumber, sheetPlan.Pages.Count);
+                document.Info.Title = context.Workbook.Metadata.TemplateName;
             }
-        }
 
-        document.Save(output, closeStream: false);
+            for (var sheetIndex = 0; sheetIndex < context.SheetPlans.Count; sheetIndex++)
+            {
+                var sheetPlan = context.SheetPlans[sheetIndex];
+                var sourceSheet = context.Workbook.Sheets[sheetIndex];
+                foreach (var pagePlan in sheetPlan.Pages)
+                {
+                    var page = document.AddPage();
+                    page.Width = XUnit.FromPoint(pagePlan.PageBounds.Width);
+                    page.Height = XUnit.FromPoint(pagePlan.PageBounds.Height);
+                    using var graphics = XGraphics.FromPdfPage(page);
+                    DrawPageBackground(graphics, pagePlan.PageBounds);
+                    DrawCells(graphics, sourceSheet, pagePlan.Cells, context);
+                    DrawBorders(graphics, sourceSheet, pagePlan.Cells, context.RenderingOptions);
+                    DrawImages(graphics, sheetPlan.Images);
+                    DrawHeaderFooter(graphics, pagePlan.HeaderFooter, pagePlan.PageNumber, sheetPlan.Pages.Count, context.RenderingOptions);
+                }
+            }
+
+            document.Save(output, closeStream: false);
+        }
+        finally
+        {
+            ReportFontResolverAdapter.SetCurrentResolver(null);
+        }
     }
 
-    // Windows 環境で PDFSharp のフォントリゾルバーが未設定の場合に
-    // WindowsInstalledFontResolver を登録する (初回のみ実行)。
+    // PDFSharp のフォントリゾルバーが未設定の場合に
+    // ReportFontResolverAdapter を登録する (初回のみ実行)。
     private static void EnsurePdfSharpFontConfiguration()
     {
         if (Interlocked.Exchange(ref fontPlatformConfigured, 1) == 1)
-        {
-            return;
-        }
-
-        if (!OperatingSystem.IsWindows())
         {
             return;
         }
@@ -88,7 +81,7 @@ internal static class PdfGenerator
 
         if (fontResolverProperty?.GetValue(null) is null && fallbackFontResolverProperty?.GetValue(null) is null)
         {
-            fontResolverProperty?.SetValue(null, new WindowsInstalledFontResolver());
+            fontResolverProperty?.SetValue(null, new ReportFontResolverAdapter());
         }
     }
 
@@ -210,7 +203,7 @@ internal static class PdfGenerator
     }
 
     // セルの罫線を描画する。重複する辺は優先度の高い罫線スタイルを採用し一度だけ描画する。
-    private static void DrawBorders(XGraphics graphics, ReportSheet sourceSheet, IEnumerable<PdfCellRenderInfo> cells)
+    private static void DrawBorders(XGraphics graphics, ReportSheet sourceSheet, IEnumerable<PdfCellRenderInfo> cells, ReportRenderingOptions renderingOptions)
     {
         var sourceCellsByAddress = sourceSheet.Cells.ToDictionary(cell => cell.Address, StringComparer.Ordinal);
         var collectedLines = new Dictionary<string, (ReportLine Line, ReportBorder Border)>(StringComparer.Ordinal);
@@ -239,7 +232,7 @@ internal static class PdfGenerator
 
         foreach (var (line, border) in collectedLines.Values.OrderBy(entry => GetBorderPriority(entry.Border.Style)))
         {
-            DrawBorderLine(graphics, border, line);
+            DrawBorderLine(graphics, border, line, renderingOptions);
         }
     }
 
@@ -265,10 +258,10 @@ internal static class PdfGenerator
     }
 
     // 罫線スタイルに応じて実線・破線・二重線を描画する。
-    private static void DrawBorderLine(XGraphics graphics, ReportBorder border, ReportLine line)
+    private static void DrawBorderLine(XGraphics graphics, ReportBorder border, ReportLine line, ReportRenderingOptions renderingOptions)
     {
         var borderColor = ToColor(border.ColorHex);
-        var borderWidth = border.Width > 0d ? border.Width : ResolveBorderWidth(border.Style);
+        var borderWidth = ResolveBorderWidth(border.Style, renderingOptions);
         var pen = new XPen(borderColor, borderWidth);
         ApplyBorderStyle(pen, border.Style);
         if (border.Style == XLBorderStyleValues.Double)
@@ -313,11 +306,12 @@ internal static class PdfGenerator
         XGraphics graphics,
         PdfHeaderFooterRenderInfo headerFooter,
         int pageNumber,
-        int totalPages)
+        int totalPages,
+        ReportRenderingOptions renderingOptions)
     {
         var headerSections = ResolveHeaderFooterSections(headerFooter.HeaderText, pageNumber, totalPages);
         var footerSections = ResolveHeaderFooterSections(headerFooter.FooterText, pageNumber, totalPages);
-        var font = CreateFallbackFont(PdfRenderingConstants.HeaderFooterFontSizePoints);
+        var font = CreateFallbackFont(renderingOptions.HeaderFooterFontSizePoints, renderingOptions.HeaderFooterFallbackFontNames);
 
         DrawHeaderFooterSections(graphics, headerSections, headerFooter.HeaderBounds, font);
         DrawHeaderFooterSections(graphics, footerSections, headerFooter.FooterBounds, font);
@@ -389,7 +383,7 @@ internal static class PdfGenerator
     // ReportFont 属性とフォントリゾルバーから PDFSharp 用 XFont を生成する。
     private static XFont ResolveFont(ReportFont font, ReportRenderContext context)
     {
-        var fontSize = font.Size <= 0 ? PdfRenderingConstants.DefaultCellFontSizePoints : font.Size;
+        var fontSize = font.Size <= 0 ? context.RenderingOptions.DefaultCellFontSizePoints : font.Size;
         var style = XFontStyleEx.Regular;
         if (font.Bold)
         {
@@ -400,47 +394,18 @@ internal static class PdfGenerator
             style |= XFontStyleEx.Italic;
         }
 
-        foreach (var fontName in EnumerateCandidateFontNames(font, context))
+        if (!string.IsNullOrWhiteSpace(font.Name) && TryCreateFont(font.Name, fontSize, style, out var resolvedFont))
         {
-            if (TryCreateFont(fontName, fontSize, style, out var resolvedFont))
-            {
-                return resolvedFont;
-            }
+            return resolvedFont;
         }
 
-        throw new InvalidOperationException($"No appropriate font found for family name '{font.Name}' and known fallbacks.");
-    }
-
-    // フォントリゾルバーの解決名、次いでシート指定名を候補フォント名として列挙する。
-    private static IEnumerable<string> EnumerateCandidateFontNames(ReportFont font, ReportRenderContext context)
-    {
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        if (context.FontResolver is not null)
-        {
-            var resolution = context.FontResolver.Resolve(new ReportFontRequest
-            {
-                FontName = font.Name,
-                Bold = font.Bold,
-                Italic = font.Italic
-            });
-
-            if (resolution.IsResolved && !string.IsNullOrWhiteSpace(resolution.ResolvedFontName) && seen.Add(resolution.ResolvedFontName))
-            {
-                yield return resolution.ResolvedFontName;
-            }
-        }
-
-        if (!string.IsNullOrWhiteSpace(font.Name) && seen.Add(font.Name))
-        {
-            yield return font.Name;
-        }
+        throw new InvalidOperationException($"No appropriate font found for family name '{font.Name}'.");
     }
 
     // ヘッダー/フッター用のフォールバックフォントを候補一覧から作成する。
-    private static XFont CreateFallbackFont(double size)
+    private static XFont CreateFallbackFont(double size, IReadOnlyList<string> fontNames)
     {
-        foreach (var fontName in HeaderFooterFallbackFontNames)
+        foreach (var fontName in fontNames)
         {
             if (TryCreateFont(fontName, size, XFontStyleEx.Regular, out var font))
             {
@@ -494,8 +459,15 @@ internal static class PdfGenerator
         ColorHelper.NormalizeHex(colorHex).StartsWith("#00", StringComparison.Ordinal);
 
     // 罫線スタイルから描画幅 (pt) を決定する。
-    private static double ResolveBorderWidth(XLBorderStyleValues style) =>
-        PdfRenderingConstants.ResolveBorderWidth(style);
+    private static double ResolveBorderWidth(XLBorderStyleValues style, ReportRenderingOptions renderingOptions) =>
+        style switch
+        {
+            XLBorderStyleValues.Thick => renderingOptions.ThickBorderWidthPoints,
+            XLBorderStyleValues.Medium => renderingOptions.MediumBorderWidthPoints,
+            XLBorderStyleValues.Double => renderingOptions.NormalBorderWidthPoints,
+            XLBorderStyleValues.Hair => renderingOptions.HairBorderWidthPoints,
+            _ => renderingOptions.NormalBorderWidthPoints
+        };
 
     // 罫線スタイルに応じた破線パターンを XPen に適用する。
     private static void ApplyBorderStyle(XPen pen, XLBorderStyleValues style)

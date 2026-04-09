@@ -64,13 +64,14 @@ internal sealed record PdfHeaderFooterRenderInfo
 internal static class PdfRenderPlanner
 {
     // ワークブック内の全シートに対する PDF プラン一覧を構築する。
-    public static IReadOnlyList<PdfRenderSheetPlan> BuildPlan(ReportWorkbook workbook)
+    public static IReadOnlyList<PdfRenderSheetPlan> BuildPlan(ReportWorkbook workbook, ReportRenderingOptions? renderingOptions = null)
     {
-        return workbook.Sheets.Select((sheet, index) => BuildSheetPlan(sheet, index + 1)).ToList();
+        var effectiveOptions = renderingOptions ?? new ReportRenderingOptions();
+        return workbook.Sheets.Select((sheet, index) => BuildSheetPlan(sheet, index + 1, effectiveOptions)).ToList();
     }
 
     // 単一シートのページ境界・印刷可能領域・セル一覧を計算し PdfRenderSheetPlan を構築する。
-    private static PdfRenderSheetPlan BuildSheetPlan(ReportSheet sheet, int sheetNumber)
+    private static PdfRenderSheetPlan BuildSheetPlan(ReportSheet sheet, int sheetNumber, ReportRenderingOptions renderingOptions)
     {
         var pageBounds = ResolvePageBounds(sheet.PageSetup);
         var printableBounds = new ReportRect
@@ -140,8 +141,8 @@ internal static class PdfRenderPlanner
 
             var contentBounds = outerBounds.Deflate(new ReportThickness
             {
-                Left = PdfRenderingConstants.HorizontalCellTextPaddingPoints,
-                Right = PdfRenderingConstants.HorizontalCellTextPaddingPoints
+                Left = renderingOptions.HorizontalCellTextPaddingPoints,
+                Right = renderingOptions.HorizontalCellTextPaddingPoints
             });
             pageCells.Add(new PdfCellRenderInfo
             {

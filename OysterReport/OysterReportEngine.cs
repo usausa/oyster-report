@@ -13,6 +13,9 @@ public sealed class OysterReportEngine
     // PDF のコンテンツストリームを圧縮するかどうか。
     public bool CompressContentStreams { get; set; } = true;
 
+    // 描画時の調整値。
+    public ReportRenderingOptions RenderingOptions { get; set; } = new();
+
     // ワークブック全体から PDF を生成する。
     public void GeneratePdf(TemplateWorkbook template, Stream output)
     {
@@ -37,14 +40,15 @@ public sealed class OysterReportEngine
     {
         ArgumentNullException.ThrowIfNull(template);
 
-        var workbook = ExcelReader.Read(template.UnderlyingWorkbook);
-        var sheetPlans = PdfRenderPlanner.BuildPlan(workbook);
+        var workbook = ExcelReader.Read(template.UnderlyingWorkbook, FontResolver, RenderingOptions);
+        var sheetPlans = PdfRenderPlanner.BuildPlan(workbook, RenderingOptions);
 
         return new ReportRenderContext
         {
             Workbook = workbook,
             SheetPlans = sheetPlans,
             FontResolver = FontResolver,
+            RenderingOptions = RenderingOptions,
             EmbedDocumentMetadata = EmbedDocumentMetadata,
             CompressContentStreams = CompressContentStreams
         };
@@ -54,14 +58,15 @@ public sealed class OysterReportEngine
     {
         ArgumentNullException.ThrowIfNull(sheet);
 
-        var workbook = ExcelReader.Read(sheet.UnderlyingWorksheet);
-        var sheetPlans = PdfRenderPlanner.BuildPlan(workbook);
+        var workbook = ExcelReader.Read(sheet.UnderlyingWorksheet, FontResolver, RenderingOptions);
+        var sheetPlans = PdfRenderPlanner.BuildPlan(workbook, RenderingOptions);
 
         return new ReportRenderContext
         {
             Workbook = workbook,
             SheetPlans = sheetPlans,
             FontResolver = FontResolver,
+            RenderingOptions = RenderingOptions,
             EmbedDocumentMetadata = EmbedDocumentMetadata,
             CompressContentStreams = CompressContentStreams
         };

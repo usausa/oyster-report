@@ -84,4 +84,62 @@ public sealed class PdfGeneratorTests
         var preparationJson = System.Text.Encoding.UTF8.GetString(pdfPreparationDump.ToArray());
         Assert.Contains("\"RenderPlan\"", preparationJson, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void GenerateShouldSupportEmbeddedFontDataFromResolver()
+    {
+        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        {
+            var sheet = workbook.AddWorksheet("Report");
+            var cell = sheet.Cell("A1");
+            cell.Value = "埋め込みフォント";
+            cell.Style.Font.FontName = "CustomEmbeddedFont";
+            cell.Style.Font.FontSize = 10d;
+        });
+
+        using var template = new TemplateWorkbook(stream);
+        var engine = new OysterReportEngine
+        {
+            FontResolver = new EmbeddedFontResolver(GetEmbeddedFontBytes())
+        };
+        using var output = new MemoryStream();
+
+        engine.GeneratePdf(template, output);
+
+        output.Position = 0;
+        using var reader = new StreamReader(output, leaveOpen: true);
+        var header = reader.ReadLine();
+        Assert.NotNull(header);
+        Assert.StartsWith("%PDF", header, StringComparison.Ordinal);
+    }
+
+    private static byte[] GetEmbeddedFontBytes()
+    {
+        var fontPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Example", "ipaexg.ttf"));
+        return File.ReadAllBytes(fontPath);
+    }
+
+    private sealed class EmbeddedFontResolver : IReportFontResolver
+    {
+        private readonly ReadOnlyMemory<byte> fontData;
+
+        public EmbeddedFontResolver(ReadOnlyMemory<byte> fontData)
+        {
+            this.fontData = fontData;
+        }
+
+        public ReportFontResolveResult? ResolveFont(ReportFontRequest request)
+        {
+            if (!string.Equals(request.FontName, "CustomEmbeddedFont", StringComparison.Ordinal))
+            {
+                return null;
+            }
+
+            return new ReportFontResolveResult
+            {
+                FontName = "IPAexGothic",
+                FontData = fontData
+            };
+        }
+    }
 }

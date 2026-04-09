@@ -156,4 +156,35 @@ public sealed class ExcelReaderTests
         Assert.NotEqual("#00000000", firstDataRowCell.Style.Fill.BackgroundColorHex);
         Assert.NotEqual(firstDataRowCell.Style.Fill.BackgroundColorHex, secondDataRowCell.Style.Fill.BackgroundColorHex);
     }
+
+    [Fact]
+    public void ReadShouldUseResolverProvidedMaxDigitWidth()
+    {
+        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        {
+            workbook.Style.Font.FontName = "CustomDigits";
+            workbook.Style.Font.FontSize = 10d;
+
+            var sheet = workbook.AddWorksheet("Digits");
+            sheet.Cell("A1").Value = "Width";
+        });
+
+        var workbook = ExcelReader.Read(stream, new FixedDigitWidthFontResolver(42d));
+
+        Assert.Equal(42d, workbook.MeasurementProfile.MaxDigitWidth);
+    }
+
+    private sealed class FixedDigitWidthFontResolver : IReportFontResolver
+    {
+        private readonly double maxDigitWidth;
+
+        public FixedDigitWidthFontResolver(double maxDigitWidth)
+        {
+            this.maxDigitWidth = maxDigitWidth;
+        }
+
+        public ReportFontResolveResult? ResolveFont(ReportFontRequest request) => null;
+
+        public double? ResolveMaxDigitWidth(string fontName, double fontSizePoints) => maxDigitWidth;
+    }
 }

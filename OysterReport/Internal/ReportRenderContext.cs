@@ -8,6 +8,8 @@ internal sealed record ReportRenderContext
 
     public IReportFontResolver? FontResolver { get; init; }
 
+    public ReportRenderingOptions RenderingOptions { get; init; } = new();
+
     public bool EmbedDocumentMetadata { get; init; } = true;
 
     public bool CompressContentStreams { get; init; } = true;

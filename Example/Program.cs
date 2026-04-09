@@ -7,20 +7,34 @@ using Example;
 using OysterReport;
 
 var inputPath = ResolveInputPath(args);
-var outputPath = ResolveOutputPath(args, inputPath);
+var outputPaths = ResolveOutputPaths(args, inputPath);
+var embeddedFontPath = Path.Combine(AppContext.BaseDirectory, "ipaexg.ttf");
 
-var engine = new OysterReportEngine
+var installedFontEngine = new OysterReportEngine
 {
-    FontResolver = new JapaneseFontResolver()
+    FontResolver = JapaneseFontResolver.CreateInstalledFontResolver()
+};
+
+var embeddedFontEngine = new OysterReportEngine
+{
+    FontResolver = JapaneseFontResolver.CreateEmbeddedFontResolver(embeddedFontPath)
 };
 
 using var workbook = new TemplateWorkbook(inputPath);
 
-using var output = File.Create(outputPath);
-engine.GeneratePdf(workbook, output);
+using (var output = File.Create(outputPaths.InstalledFontOutputPath))
+{
+    installedFontEngine.GeneratePdf(workbook, output);
+}
+
+using (var output = File.Create(outputPaths.EmbeddedFontOutputPath))
+{
+    embeddedFontEngine.GeneratePdf(workbook, output);
+}
 
 Console.WriteLine($"Input : {inputPath}");
-Console.WriteLine($"Output: {outputPath}");
+Console.WriteLine($"Installed font output: {outputPaths.InstalledFontOutputPath}");
+Console.WriteLine($"Embedded font output : {outputPaths.EmbeddedFontOutputPath}");
 
 static string ResolveInputPath(string[] args)
 {
@@ -38,18 +52,30 @@ static string ResolveInputPath(string[] args)
             return candidate;
         }
 
+        var exampleCandidate = Path.Combine(currentDirectory.FullName, "Example", "seikyusyo.xlsx");
+        if (File.Exists(exampleCandidate))
+        {
+            return exampleCandidate;
+        }
+
         currentDirectory = currentDirectory.Parent;
     }
 
     throw new FileNotFoundException("seikyusyo.xlsx not found");
 }
 
-static string ResolveOutputPath(string[] args, string inputPath)
+static (string InstalledFontOutputPath, string EmbeddedFontOutputPath) ResolveOutputPaths(string[] args, string inputPath)
 {
+    var baseOutputPath = Path.ChangeExtension(inputPath, ".pdf");
     if (args.Length > 1)
     {
-        return Path.GetFullPath(args[1]);
+        baseOutputPath = Path.GetFullPath(args[1]);
     }
 
-    return Path.ChangeExtension(inputPath, ".pdf");
+    var outputDirectory = Path.GetDirectoryName(baseOutputPath) ?? Path.GetDirectoryName(inputPath) ?? Directory.GetCurrentDirectory();
+    var outputFileNameWithoutExtension = Path.GetFileNameWithoutExtension(baseOutputPath);
+
+    return (
+        Path.Combine(outputDirectory, outputFileNameWithoutExtension + ".installed-fonts.pdf"),
+        Path.Combine(outputDirectory, outputFileNameWithoutExtension + ".ipaexg.pdf"));
 }
