@@ -546,7 +546,7 @@ internal static class ExcelReader
         {
             var request = new ReportFontRequest { FontName = fontName };
             var resolution = fontResolver.ResolveFont(request);
-            if (resolution?.FontData is ReadOnlyMemory<byte> fontData)
+            if (resolution?.FontData is { } fontData)
             {
                 // SkiaSharp で 10pt 基準の幅を求め、指定サイズに比例補正する
                 var measured = FontMetricsHelper.MeasureMaxDigitWidth(fontData, ReferenceFontSizePoints);

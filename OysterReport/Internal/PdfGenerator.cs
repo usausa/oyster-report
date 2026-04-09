@@ -406,7 +406,7 @@ internal static class PdfGenerator
             {
                 var resolvedName = string.IsNullOrWhiteSpace(resolution.FontName) ? font.Name : resolution.FontName;
 
-                if (resolution.FontData is ReadOnlyMemory<byte> fontData)
+                if (resolution.FontData is { } fontData)
                 {
                     // 埋め込みフォントをアダプタに事前登録する。
                     // 同じバイト列を複数回登録してもべき等であるため問題ない。
@@ -434,7 +434,7 @@ internal static class PdfGenerator
     }
 
     // ヘッダー/フッター用のフォールバックフォントを候補一覧から作成する。
-    private static XFont CreateFallbackFont(double size, IReadOnlyList<string> fontNames)
+    private static XFont CreateFallbackFont(double size, IEnumerable<string> fontNames)
     {
         foreach (var fontName in fontNames)
         {
