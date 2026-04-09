@@ -19,7 +19,6 @@ internal static class ExcelReader
     private const double ScreenDpi = 96d;
 
     // フォント計測に使用する定数 (10pt 基準の1文字最大幅)
-    private const double DefaultFallbackDigitWidth = 7d;
     private const double ReferenceFontSizePoints = 10d;
     private const double MeiryoDigitWidthAt10Pt = 8.28125d;
     private const double YuGothicDigitWidthAt10Pt = 8.5d;

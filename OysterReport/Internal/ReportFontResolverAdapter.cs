@@ -1,21 +1,29 @@
 namespace OysterReport.Internal;
 
 using System.Collections.Concurrent;
-using System.Security.Cryptography;
-using System.Threading;
 
 using PdfSharp.Fonts;
 
+// PDFSharp の IFontResolver として登録されるアダプタ。
+// PdfGenerator.ResolveFont が事前登録した埋め込みフォントを優先し、
+// 未登録の場合は Windows インストール済みフォントへフォールバックする。
 #pragma warning disable CA1416
 internal sealed class ReportFontResolverAdapter : IFontResolver
 {
-    private static readonly AsyncLocal<IReportFontResolver?> CurrentResolver = new();
-    private static readonly ConcurrentDictionary<string, byte[]> EmbeddedFontCache = new(StringComparer.OrdinalIgnoreCase);
-    private static readonly Lazy<WindowsInstalledFontResolver?> WindowsFallback = new(CreateWindowsFallback);
+    // 埋め込みフォントキャッシュ。キー: フォントファミリー名 (大文字小文字無視)
+    private static readonly ConcurrentDictionary<string, byte[]> EmbeddedFontCache =
+        new(StringComparer.OrdinalIgnoreCase);
 
-    public static void SetCurrentResolver(IReportFontResolver? resolver)
+    private static readonly Lazy<WindowsInstalledFontResolver?> WindowsFallback =
+        new(CreateWindowsFallback);
+
+    /// <summary>
+    /// 埋め込みフォントのバイト列を事前登録する。
+    /// <see cref="ResolveTypeface"/> より前に呼び出すこと。
+    /// </summary>
+    public static void RegisterEmbeddedFont(string fontName, ReadOnlyMemory<byte> fontData)
     {
-        CurrentResolver.Value = resolver;
+        EmbeddedFontCache[fontName] = fontData.ToArray();
     }
 
     public byte[] GetFont(string faceName)
@@ -25,39 +33,31 @@ internal sealed class ReportFontResolverAdapter : IFontResolver
             return fontBytes;
         }
 
+        // bold/italic バリアント ("familyName#b" 等) が個別登録されていない場合は
+        // ベース名にフォールバックする。
+        ParseFaceName(faceName, out var family, out _, out _);
+        if (!string.Equals(family, faceName, StringComparison.OrdinalIgnoreCase) &&
+            EmbeddedFontCache.TryGetValue(family, out fontBytes))
+        {
+            return fontBytes;
+        }
+
         if (WindowsFallback.Value is not null)
         {
             return WindowsFallback.Value.GetFont(faceName);
         }
 
-        throw new InvalidOperationException($"Font data was not provided for '{faceName}', and no Windows font fallback is available.");
+        throw new InvalidOperationException(
+            $"Font data was not provided for '{faceName}', and no Windows font fallback is available.");
     }
 
     public FontResolverInfo ResolveTypeface(string familyName, bool isBold, bool isItalic)
     {
-        var request = new ReportFontRequest
+        // 事前登録された埋め込みフォントを優先する。
+        // GetFont でベース名へのフォールバックを行うため、bold/italic の face 名でも登録不要。
+        if (EmbeddedFontCache.ContainsKey(familyName))
         {
-            FontName = familyName,
-            Bold = isBold,
-            Italic = isItalic
-        };
-
-        var resolution = CurrentResolver.Value?.ResolveFont(request);
-        if (resolution is not null)
-        {
-            var resolvedFontName = string.IsNullOrWhiteSpace(resolution.FontName)
-                ? familyName
-                : resolution.FontName;
-            var faceName = resolution.FontData is ReadOnlyMemory<byte> fontData
-                ? BuildEmbeddedFaceName(resolvedFontName, isBold, isItalic, fontData)
-                : BuildFaceName(resolvedFontName, isBold, isItalic);
-
-            if (resolution.FontData is ReadOnlyMemory<byte> embeddedFontData)
-            {
-                EmbeddedFontCache[faceName] = embeddedFontData.ToArray();
-            }
-
-            return new FontResolverInfo(faceName);
+            return new FontResolverInfo(BuildFaceName(familyName, isBold, isItalic));
         }
 
         if (WindowsFallback.Value is not null)
@@ -68,33 +68,33 @@ internal sealed class ReportFontResolverAdapter : IFontResolver
         return new FontResolverInfo(BuildFaceName(familyName, isBold, isItalic));
     }
 
-    private static string BuildEmbeddedFaceName(string familyName, bool bold, bool italic, ReadOnlyMemory<byte> fontData)
+    private static void ParseFaceName(string faceName, out string family, out bool bold, out bool italic)
     {
-        var hash = Convert.ToHexString(SHA256.HashData(fontData.Span))[..12];
-        return BuildFaceName($"{familyName}#{hash}", bold, italic);
+        bold = faceName.Contains("#b", StringComparison.OrdinalIgnoreCase);
+        italic = faceName.Contains("#i", StringComparison.OrdinalIgnoreCase);
+        family = faceName
+            .Replace("#b", string.Empty, StringComparison.OrdinalIgnoreCase)
+            .Replace("#i", string.Empty, StringComparison.OrdinalIgnoreCase)
+            .Trim();
     }
 
     private static string BuildFaceName(string familyName, bool bold, bool italic)
     {
-        var faceName = familyName;
+        var name = familyName;
         if (bold)
         {
-            faceName += "#b";
+            name += "#b";
         }
 
         if (italic)
         {
-            faceName += "#i";
+            name += "#i";
         }
 
-        return faceName;
+        return name;
     }
 
-    private static WindowsInstalledFontResolver? CreateWindowsFallback()
-    {
-        return OperatingSystem.IsWindows()
-            ? new WindowsInstalledFontResolver()
-            : null;
-    }
+    private static WindowsInstalledFontResolver? CreateWindowsFallback() =>
+        OperatingSystem.IsWindows() ? new WindowsInstalledFontResolver() : null;
 }
 #pragma warning restore CA1416

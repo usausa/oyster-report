@@ -23,42 +23,35 @@ internal static class PdfGenerator
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(output);
 
-        ReportFontResolverAdapter.SetCurrentResolver(context.FontResolver);
         EnsurePdfSharpFontConfiguration();
-        try
+
+        using var document = new PdfDocument();
+        document.Options.CompressContentStreams = context.CompressContentStreams;
+
+        if (context.EmbedDocumentMetadata)
         {
-            using var document = new PdfDocument();
-            document.Options.CompressContentStreams = context.CompressContentStreams;
-
-            if (context.EmbedDocumentMetadata)
-            {
-                document.Info.Title = context.Workbook.Metadata.TemplateName;
-            }
-
-            for (var sheetIndex = 0; sheetIndex < context.SheetPlans.Count; sheetIndex++)
-            {
-                var sheetPlan = context.SheetPlans[sheetIndex];
-                var sourceSheet = context.Workbook.Sheets[sheetIndex];
-                foreach (var pagePlan in sheetPlan.Pages)
-                {
-                    var page = document.AddPage();
-                    page.Width = XUnit.FromPoint(pagePlan.PageBounds.Width);
-                    page.Height = XUnit.FromPoint(pagePlan.PageBounds.Height);
-                    using var graphics = XGraphics.FromPdfPage(page);
-                    DrawPageBackground(graphics, pagePlan.PageBounds);
-                    DrawCells(graphics, sourceSheet, pagePlan.Cells, context);
-                    DrawBorders(graphics, sourceSheet, pagePlan.Cells, context.RenderingOptions);
-                    DrawImages(graphics, sheetPlan.Images);
-                    DrawHeaderFooter(graphics, pagePlan.HeaderFooter, pagePlan.PageNumber, sheetPlan.Pages.Count, context.RenderingOptions);
-                }
-            }
-
-            document.Save(output, closeStream: false);
+            document.Info.Title = context.Workbook.Metadata.TemplateName;
         }
-        finally
+
+        for (var sheetIndex = 0; sheetIndex < context.SheetPlans.Count; sheetIndex++)
         {
-            ReportFontResolverAdapter.SetCurrentResolver(null);
+            var sheetPlan = context.SheetPlans[sheetIndex];
+            var sourceSheet = context.Workbook.Sheets[sheetIndex];
+            foreach (var pagePlan in sheetPlan.Pages)
+            {
+                var page = document.AddPage();
+                page.Width = XUnit.FromPoint(pagePlan.PageBounds.Width);
+                page.Height = XUnit.FromPoint(pagePlan.PageBounds.Height);
+                using var graphics = XGraphics.FromPdfPage(page);
+                DrawPageBackground(graphics, pagePlan.PageBounds);
+                DrawCells(graphics, sourceSheet, pagePlan.Cells, context);
+                DrawBorders(graphics, sourceSheet, pagePlan.Cells, context.RenderingOptions);
+                DrawImages(graphics, sheetPlan.Images);
+                DrawHeaderFooter(graphics, pagePlan.HeaderFooter, pagePlan.PageNumber, sheetPlan.Pages.Count, context.RenderingOptions);
+            }
         }
+
+        document.Save(output, closeStream: false);
     }
 
     // PDFSharp のフォントリゾルバーが未設定の場合に
@@ -381,6 +374,8 @@ internal static class PdfGenerator
     }
 
     // ReportFont 属性とフォントリゾルバーから PDFSharp 用 XFont を生成する。
+    // リゾルバーが返した名前を XFont に渡すことで PDFSharp のフォントキャッシュを
+    // リゾルバーごとに分離し、埋め込みフォントが確実に使われるようにする。
     private static XFont ResolveFont(ReportFont font, ReportRenderContext context)
     {
         var fontSize = font.Size <= 0 ? context.RenderingOptions.DefaultCellFontSizePoints : font.Size;
@@ -389,14 +384,50 @@ internal static class PdfGenerator
         {
             style |= XFontStyleEx.Bold;
         }
+
         if (font.Italic)
         {
             style |= XFontStyleEx.Italic;
         }
 
-        if (!string.IsNullOrWhiteSpace(font.Name) && TryCreateFont(font.Name, fontSize, style, out var resolvedFont))
+        var nameToUse = font.Name;
+
+        if (context.FontResolver is not null)
+        {
+            var request = new ReportFontRequest
+            {
+                FontName = font.Name,
+                Bold = font.Bold,
+                Italic = font.Italic
+            };
+
+            var resolution = context.FontResolver.ResolveFont(request);
+            if (resolution is not null)
+            {
+                var resolvedName = string.IsNullOrWhiteSpace(resolution.FontName) ? font.Name : resolution.FontName;
+
+                if (resolution.FontData is ReadOnlyMemory<byte> fontData)
+                {
+                    // 埋め込みフォントをアダプタに事前登録する。
+                    // 同じバイト列を複数回登録してもべき等であるため問題ない。
+                    ReportFontResolverAdapter.RegisterEmbeddedFont(resolvedName, fontData);
+                }
+
+                nameToUse = resolvedName;
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(nameToUse) && TryCreateFont(nameToUse, fontSize, style, out var resolvedFont))
         {
             return resolvedFont;
+        }
+
+        // リゾルバーが返した名前で失敗した場合は元の Excel フォント名にフォールバックする。
+        if (!string.Equals(nameToUse, font.Name, StringComparison.OrdinalIgnoreCase) &&
+            !string.IsNullOrWhiteSpace(font.Name) &&
+            TryCreateFont(font.Name, fontSize, style, out var fallbackFont))
+        {
+            return fallbackFont;
         }
 
         throw new InvalidOperationException($"No appropriate font found for family name '{font.Name}'.");
