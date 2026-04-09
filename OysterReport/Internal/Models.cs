@@ -2,8 +2,6 @@ namespace OysterReport.Internal;
 
 using ClosedXML.Excel;
 
-// ---- 中間モデル階層 ----
-//
 // ReportWorkbook
 // ├── ReportMetadata          (テンプレート名)
 // ├── ReportMeasurementProfile (列幅計算用フォントメトリクス)
@@ -25,12 +23,18 @@ using ClosedXML.Excel;
 //     ├── ReportPrintArea?     (印刷範囲)
 //     └── ReportPageBreak[]    (水平/垂直改ページ)
 
-// ---- Workbook metadata ----
+//--------------------------------------------------------------------------------
+// Metadata
+//--------------------------------------------------------------------------------
 
 internal sealed record ReportMetadata
 {
     public string TemplateName { get; init; } = string.Empty;
 }
+
+//--------------------------------------------------------------------------------
+// ReportMeasurementProfile
+//--------------------------------------------------------------------------------
 
 internal sealed record ReportMeasurementProfile
 {
@@ -45,7 +49,9 @@ internal sealed record ReportMeasurementProfile
     public double ColumnWidthAdjustment { get; init; } = 1d;
 }
 
+//--------------------------------------------------------------------------------
 // ---- Cell value and style ----
+//--------------------------------------------------------------------------------
 
 internal sealed record ReportCellValue
 {
@@ -126,7 +132,9 @@ internal sealed record ReportMergeInfo
     public ReportRange Range { get; init; }
 }
 
+//--------------------------------------------------------------------------------
 // ---- Page setup ----
+//--------------------------------------------------------------------------------
 
 internal sealed record ReportPageBreak
 {
@@ -189,7 +197,9 @@ internal sealed record ReportPageSetup
     public bool CenterVertically { get; init; }
 }
 
+//--------------------------------------------------------------------------------
 // ---- Sheet structure ----
+//--------------------------------------------------------------------------------
 
 internal sealed class ReportRow
 {

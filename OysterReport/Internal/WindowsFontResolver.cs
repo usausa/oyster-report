@@ -11,7 +11,7 @@ using Microsoft.Win32;
 using PdfSharp.Fonts;
 
 [SupportedOSPlatform("windows")]
-internal sealed class WindowsInstalledFontResolver : IFontResolver
+internal sealed class WindowsFontResolver : IFontResolver
 {
     private static readonly string WindowsFontsDirectory =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
@@ -19,7 +19,7 @@ internal sealed class WindowsInstalledFontResolver : IFontResolver
     private readonly Dictionary<string, (string Path, int FaceIndex)> fontNameToPathAndFace;
     private readonly ConcurrentDictionary<string, byte[]> cache = new(StringComparer.OrdinalIgnoreCase);
 
-    public WindowsInstalledFontResolver()
+    public WindowsFontResolver()
     {
         fontNameToPathAndFace = LoadFontRegistry();
     }

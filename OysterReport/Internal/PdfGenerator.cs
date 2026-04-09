@@ -570,8 +570,8 @@ internal static class PdfGenerator
     // 二重線罫線を並列に 2 本の実線で描画する。
     private static void DrawDoubleBorder(XGraphics graphics, XColor color, double width, ReportLine line)
     {
-        var gap = Math.Max(PdfRenderingConstants.MinimumDoubleBorderGapPoints, width * PdfRenderingConstants.DoubleBorderGapWidthMultiplier);
-        if (Math.Abs(line.Y1 - line.Y2) < PdfRenderingConstants.StraightLineTolerancePoints)
+        var gap = Math.Max(RenderConstants.MinimumDoubleBorderGapPoints, width * RenderConstants.DoubleBorderGapWidthMultiplier);
+        if (Math.Abs(line.Y1 - line.Y2) < RenderConstants.StraightLineTolerancePoints)
         {
             DrawSolidBorder(graphics, color, width, line with { Y1 = line.Y1 - (gap / 2d), Y2 = line.Y2 - (gap / 2d) });
             DrawSolidBorder(graphics, color, width, line with { Y1 = line.Y1 + (gap / 2d), Y2 = line.Y2 + (gap / 2d) });
@@ -634,7 +634,7 @@ internal static class PdfGenerator
     private static void DrawSolidBorder(XGraphics graphics, XColor color, double width, ReportLine line)
     {
         var brush = new XSolidBrush(color);
-        if (Math.Abs(line.Y1 - line.Y2) < PdfRenderingConstants.StraightLineTolerancePoints)
+        if (Math.Abs(line.Y1 - line.Y2) < RenderConstants.StraightLineTolerancePoints)
         {
             var left = Math.Min(line.X1, line.X2);
             var top = line.Y1 - (width / 2d);

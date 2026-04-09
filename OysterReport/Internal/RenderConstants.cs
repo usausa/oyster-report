@@ -1,6 +1,6 @@
 namespace OysterReport.Internal;
 
-internal static class PdfRenderingConstants
+internal static class RenderConstants
 {
     public const double MinimumDoubleBorderGapPoints = 1.5d;
 
