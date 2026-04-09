@@ -375,27 +375,23 @@ internal static class PdfGenerator
         var nameToUse = font.Name;
         var simulateBold = false;
 
-        if (context.FontResolver is not null)
+        var resolvedTypeface = context.FontResolver?.ResolveTypeface(font.Name, font.Bold, font.Italic);
+        if (resolvedTypeface != null && !String.IsNullOrWhiteSpace(resolvedTypeface.FaceName))
         {
-            var resolvedTypeface = context.FontResolver.ResolveTypeface(font.Name, font.Bold, font.Italic);
-            if (resolvedTypeface is not null && !String.IsNullOrWhiteSpace(resolvedTypeface.FaceName))
+            ReportFontResolverAdapter.RegisterResolvedTypeface(resolvedTypeface);
+            var embeddedFontData = context.FontResolver?.GetFont(resolvedTypeface.FaceName);
+            if (embeddedFontData is { } fontData)
             {
-                ReportFontResolverAdapter.RegisterResolvedTypeface(resolvedTypeface);
-                var embeddedFontData = context.FontResolver.GetFont(resolvedTypeface.FaceName);
+                // 埋め込みフォントをアダプタに事前登録する。
+                // 同じバイト列を複数回登録してもべき等であるため問題ない。
+                ReportFontResolverAdapter.RegisterEmbeddedFont(resolvedTypeface.FaceName, fontData);
 
-                if (embeddedFontData is { } fontData)
-                {
-                    // 埋め込みフォントをアダプタに事前登録する。
-                    // 同じバイト列を複数回登録してもべき等であるため問題ない。
-                    ReportFontResolverAdapter.RegisterEmbeddedFont(resolvedTypeface.FaceName, fontData);
-
-                    // 単一の埋め込みフォント資源を返した場合、Bold は描画時にシミュレーションする。
-                    // Italic は ReportFontResolverAdapter が PDFsharp の公式シミュレーションへ委譲する。
-                    simulateBold = resolvedTypeface.MustSimulateBold;
-                }
-
-                nameToUse = resolvedTypeface.FaceName;
+                // 単一の埋め込みフォント資源を返した場合、Bold は描画時にシミュレーションする。
+                // Italic は ReportFontResolverAdapter が PDFsharp の公式シミュレーションへ委譲する。
+                simulateBold = resolvedTypeface.MustSimulateBold;
             }
+
+            nameToUse = resolvedTypeface.FaceName;
         }
 
         if (!simulateBold && font.Bold && ReportFontResolverAdapter.NeedsBoldSimulationForInstalledFont(nameToUse, font.Italic))
