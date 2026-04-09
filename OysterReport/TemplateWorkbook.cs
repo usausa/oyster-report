@@ -36,7 +36,7 @@ public sealed class TemplateWorkbook : IDisposable
     public TemplateSheet GetSheet(string name)
     {
         ArgumentNullException.ThrowIfNull(name);
-        return sheets.FirstOrDefault(s => string.Equals(s.Name, name, StringComparison.Ordinal))
+        return sheets.FirstOrDefault(s => String.Equals(s.Name, name, StringComparison.Ordinal))
             ?? throw new InvalidOperationException($"Sheet '{name}' not found.");
     }
 

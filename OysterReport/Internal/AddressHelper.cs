@@ -11,11 +11,11 @@ internal static class AddressHelper
         while (current > 0)
         {
             current--;
-            result = string.Concat((char)('A' + (current % 26)), result);
+            result = String.Concat((char)('A' + (current % 26)), result);
             current /= 26;
         }
 
-        return string.Create(CultureInfo.InvariantCulture, $"{result}{row}");
+        return String.Create(CultureInfo.InvariantCulture, $"{result}{row}");
     }
 
     public static (int Row, int Column) ParseAddress(string address)
@@ -35,9 +35,9 @@ internal static class AddressHelper
             }
         }
 
-        if (string.IsNullOrEmpty(letters) || string.IsNullOrEmpty(digits))
+        if (String.IsNullOrEmpty(letters) || String.IsNullOrEmpty(digits))
         {
-            throw new FormatException(string.Create(CultureInfo.InvariantCulture, $"Invalid cell address '{address}'."));
+            throw new FormatException(String.Create(CultureInfo.InvariantCulture, $"Invalid cell address '{address}'."));
         }
 
         var column = 0;
@@ -46,6 +46,6 @@ internal static class AddressHelper
             column = (column * 26) + (character - 'A' + 1);
         }
 
-        return (int.Parse(digits, CultureInfo.InvariantCulture), column);
+        return (Int32.Parse(digits, CultureInfo.InvariantCulture), column);
     }
 }

@@ -9,7 +9,7 @@ internal static class ColorHelper
 {
     public static string NormalizeHex(string? argb)
     {
-        if (string.IsNullOrWhiteSpace(argb))
+        if (String.IsNullOrWhiteSpace(argb))
         {
             return "#00000000";
         }
@@ -46,13 +46,13 @@ internal static class ColorHelper
 
     public static Color ApplyTint(Color color, double tint)
     {
-        if (double.IsNaN(tint))
+        if (Double.IsNaN(tint))
         {
             return color;
         }
 
         var clampedTint = Math.Clamp(tint, -1d, 1d);
-        if (Math.Abs(clampedTint) < double.Epsilon)
+        if (Math.Abs(clampedTint) < Double.Epsilon)
         {
             return color;
         }
@@ -96,7 +96,7 @@ internal static class ColorHelper
         var saturation = 0d;
         var lightness = (max + min) / 2d;
 
-        if (Math.Abs(max - min) < double.Epsilon)
+        if (Math.Abs(max - min) < Double.Epsilon)
         {
             return (hue, saturation, lightness);
         }
@@ -106,11 +106,11 @@ internal static class ColorHelper
             ? delta / (2d - max - min)
             : delta / (max + min);
 
-        if (Math.Abs(max - red) < double.Epsilon)
+        if (Math.Abs(max - red) < Double.Epsilon)
         {
             hue = ((green - blue) / delta) + (green < blue ? 6d : 0d);
         }
-        else if (Math.Abs(max - green) < double.Epsilon)
+        else if (Math.Abs(max - green) < Double.Epsilon)
         {
             hue = ((blue - red) / delta) + 2d;
         }

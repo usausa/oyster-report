@@ -277,7 +277,7 @@ internal static class PdfRenderPlanner
 
             if (cellsByRowCol.TryGetValue((cell.Row, nextCol), out var adjacentCell))
             {
-                if (!string.IsNullOrEmpty(adjacentCell.DisplayText))
+                if (!String.IsNullOrEmpty(adjacentCell.DisplayText))
                 {
                     break;
                 }

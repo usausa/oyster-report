@@ -57,7 +57,7 @@ internal static class FontMetricsHelper
     /// </summary>
     public static double? MeasureMaxDigitWidth(string fontFamilyName, double fontSizePoints)
     {
-        if (string.IsNullOrWhiteSpace(fontFamilyName) || fontSizePoints <= 0d)
+        if (String.IsNullOrWhiteSpace(fontFamilyName) || fontSizePoints <= 0d)
         {
             return null;
         }

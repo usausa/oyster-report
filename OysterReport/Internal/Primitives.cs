@@ -77,6 +77,6 @@ internal readonly record struct ReportRange
         var endAddress = AddressHelper.ToAddress(EndRow, EndColumn);
         return startAddress == endAddress
             ? startAddress
-            : string.Create(CultureInfo.InvariantCulture, $"{startAddress}:{endAddress}");
+            : String.Create(CultureInfo.InvariantCulture, $"{startAddress}:{endAddress}");
     }
 }

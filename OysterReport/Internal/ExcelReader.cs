@@ -266,10 +266,10 @@ internal static class ExcelReader
         new()
         {
             AlignWithMargins = worksheet.PageSetup.AlignHFWithMargins,
-            DifferentFirst = !string.IsNullOrWhiteSpace(worksheet.PageSetup.Header.GetText(XLHFOccurrence.FirstPage)) ||
-                             !string.IsNullOrWhiteSpace(worksheet.PageSetup.Footer.GetText(XLHFOccurrence.FirstPage)),
-            DifferentOddEven = !string.IsNullOrWhiteSpace(worksheet.PageSetup.Header.GetText(XLHFOccurrence.EvenPages)) ||
-                               !string.IsNullOrWhiteSpace(worksheet.PageSetup.Footer.GetText(XLHFOccurrence.EvenPages)),
+            DifferentFirst = !String.IsNullOrWhiteSpace(worksheet.PageSetup.Header.GetText(XLHFOccurrence.FirstPage)) ||
+                             !String.IsNullOrWhiteSpace(worksheet.PageSetup.Footer.GetText(XLHFOccurrence.FirstPage)),
+            DifferentOddEven = !String.IsNullOrWhiteSpace(worksheet.PageSetup.Header.GetText(XLHFOccurrence.EvenPages)) ||
+                               !String.IsNullOrWhiteSpace(worksheet.PageSetup.Footer.GetText(XLHFOccurrence.EvenPages)),
             ScaleWithDocument = worksheet.PageSetup.ScaleHFWithDocument,
             OddHeader = worksheet.PageSetup.Header.GetText(XLHFOccurrence.OddPages),
             OddFooter = worksheet.PageSetup.Footer.GetText(XLHFOccurrence.OddPages),
@@ -311,10 +311,10 @@ internal static class ExcelReader
             return false;
         }
 
-        var startRow = int.MaxValue;
-        var startColumn = int.MaxValue;
-        var endRow = int.MinValue;
-        var endColumn = int.MinValue;
+        var startRow = Int32.MaxValue;
+        var startColumn = Int32.MaxValue;
+        var endRow = Int32.MinValue;
+        var endColumn = Int32.MinValue;
 
         IncludeRange(contentRange);
         IncludeRange(formattedRange);
@@ -331,7 +331,7 @@ internal static class ExcelReader
             endColumn = Math.Max(endColumn, mergedRange.RangeAddress.LastAddress.ColumnNumber);
         }
 
-        if (startRow == int.MaxValue || endRow == int.MinValue)
+        if (startRow == Int32.MaxValue || endRow == Int32.MinValue)
         {
             range = default;
             return false;
@@ -430,7 +430,7 @@ internal static class ExcelReader
             }
 
             var themeName = table.Theme.ToString();
-            if (!string.Equals(themeName, "TableStyleLight4", StringComparison.OrdinalIgnoreCase))
+            if (!String.Equals(themeName, "TableStyleLight4", StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }
@@ -524,7 +524,7 @@ internal static class ExcelReader
         double fontSize,
         ReportRenderingOptions renderingOptions)
     {
-        if (string.IsNullOrWhiteSpace(fontName) || fontSize <= 0d)
+        if (String.IsNullOrWhiteSpace(fontName) || fontSize <= 0d)
         {
             return renderingOptions.FallbackMaxDigitWidth;
         }

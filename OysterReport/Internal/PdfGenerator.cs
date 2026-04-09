@@ -149,7 +149,7 @@ internal static class PdfGenerator
                 continue;
             }
 
-            if (string.IsNullOrEmpty(sourceCell.DisplayText))
+            if (String.IsNullOrEmpty(sourceCell.DisplayText))
             {
                 continue;
             }
@@ -310,17 +310,17 @@ internal static class PdfGenerator
         ReportRect bounds,
         XFont font)
     {
-        if (!string.IsNullOrWhiteSpace(sections.Left))
+        if (!String.IsNullOrWhiteSpace(sections.Left))
         {
             graphics.DrawString(sections.Left, font, XBrushes.Black, new XRect(bounds.X, bounds.Y, bounds.Width, bounds.Height), XStringFormats.TopLeft);
         }
 
-        if (!string.IsNullOrWhiteSpace(sections.Center))
+        if (!String.IsNullOrWhiteSpace(sections.Center))
         {
             graphics.DrawString(sections.Center, font, XBrushes.Black, new XRect(bounds.X, bounds.Y, bounds.Width, bounds.Height), XStringFormats.TopCenter);
         }
 
-        if (!string.IsNullOrWhiteSpace(sections.Right))
+        if (!String.IsNullOrWhiteSpace(sections.Right))
         {
             graphics.DrawString(sections.Right, font, XBrushes.Black, new XRect(bounds.X, bounds.Y, bounds.Width, bounds.Height), XStringFormats.TopRight);
         }
@@ -329,7 +329,7 @@ internal static class PdfGenerator
     // Excel ヘッダー/フッター書式文字列 (&L, &C, &R, &P, &N) を解析し左・中央・右とページ番号に分解する。
     private static HeaderFooterSections ResolveHeaderFooterSections(string? text, int pageNumber, int totalPages)
     {
-        if (string.IsNullOrWhiteSpace(text))
+        if (String.IsNullOrWhiteSpace(text))
         {
             return HeaderFooterSections.Empty;
         }
@@ -378,7 +378,7 @@ internal static class PdfGenerator
         if (context.FontResolver is not null)
         {
             var resolvedTypeface = context.FontResolver.ResolveTypeface(font.Name, font.Bold, font.Italic);
-            if (resolvedTypeface is not null && !string.IsNullOrWhiteSpace(resolvedTypeface.FaceName))
+            if (resolvedTypeface is not null && !String.IsNullOrWhiteSpace(resolvedTypeface.FaceName))
             {
                 ReportFontResolverAdapter.RegisterResolvedTypeface(resolvedTypeface);
                 var embeddedFontData = context.FontResolver.GetFont(resolvedTypeface.FaceName);
@@ -405,7 +405,7 @@ internal static class PdfGenerator
 
         var style = BuildActualFontStyle(font, simulateBold);
 
-        if (!string.IsNullOrWhiteSpace(nameToUse) && TryCreateFont(nameToUse, fontSize, style, out var resolvedFont))
+        if (!String.IsNullOrWhiteSpace(nameToUse) && TryCreateFont(nameToUse, fontSize, style, out var resolvedFont))
         {
             return new ResolvedFontRenderInfo
             {
@@ -415,8 +415,8 @@ internal static class PdfGenerator
         }
 
         // リゾルバーが返した名前で失敗した場合は元の Excel フォント名にフォールバックする。
-        if (!string.Equals(nameToUse, font.Name, StringComparison.OrdinalIgnoreCase) &&
-            !string.IsNullOrWhiteSpace(font.Name) &&
+        if (!String.Equals(nameToUse, font.Name, StringComparison.OrdinalIgnoreCase) &&
+            !String.IsNullOrWhiteSpace(font.Name) &&
             TryCreateFont(font.Name, fontSize, BuildActualFontStyle(font, simulateBold: false), out var fallbackFont))
         {
             return new ResolvedFontRenderInfo
@@ -738,7 +738,7 @@ internal static class PdfGenerator
 
     private static string BuildLineKey(ReportLine line)
     {
-        return string.Create(
+        return String.Create(
             CultureInfo.InvariantCulture,
             $"{Math.Round(Math.Min(line.X1, line.X2), 4)}:{Math.Round(Math.Min(line.Y1, line.Y2), 4)}:{Math.Round(Math.Max(line.X1, line.X2), 4)}:{Math.Round(Math.Max(line.Y1, line.Y2), 4)}");
     }

@@ -218,12 +218,12 @@ public sealed class PdfGeneratorTests
         }
 
         public FontInfo? ResolveTypeface(string familyName, bool bold, bool italic) =>
-            string.Equals(familyName, "CustomEmbeddedFont", StringComparison.Ordinal)
+            String.Equals(familyName, "CustomEmbeddedFont", StringComparison.Ordinal)
                 ? new FontInfo("IPAexGothic")
                 : null;
 
         public ReadOnlyMemory<byte>? GetFont(string faceName) =>
-            string.Equals(faceName, "IPAexGothic", StringComparison.Ordinal)
+            String.Equals(faceName, "IPAexGothic", StringComparison.Ordinal)
                 ? fontData
                 : null;
     }
@@ -242,13 +242,13 @@ public sealed class PdfGeneratorTests
         public FontInfo? ResolveTypeface(string familyName, bool bold, bool italic)
         {
             Requests.Add((familyName, bold, italic));
-            return string.Equals(familyName, "CustomEmbeddedFont", StringComparison.Ordinal)
+            return String.Equals(familyName, "CustomEmbeddedFont", StringComparison.Ordinal)
                 ? new FontInfo("IPAexGothic")
                 : null;
         }
 
         public ReadOnlyMemory<byte>? GetFont(string faceName) =>
-            string.Equals(faceName, "IPAexGothic", StringComparison.Ordinal)
+            String.Equals(faceName, "IPAexGothic", StringComparison.Ordinal)
                 ? fontData
                 : null;
     }

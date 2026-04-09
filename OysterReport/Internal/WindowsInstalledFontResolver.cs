@@ -40,7 +40,7 @@ internal sealed class WindowsInstalledFontResolver : IFontResolver
 
         var rawBytes = File.ReadAllBytes(path);
 
-        if (string.Equals(Path.GetExtension(path), ".ttc", StringComparison.OrdinalIgnoreCase))
+        if (String.Equals(Path.GetExtension(path), ".ttc", StringComparison.OrdinalIgnoreCase))
         {
             rawBytes = ExtractTtfFaceFromTtc(rawBytes, faceIndex);
         }
@@ -160,7 +160,7 @@ internal sealed class WindowsInstalledFontResolver : IFontResolver
 
         foreach (var valueName in key.GetValueNames())
         {
-            if (key.GetValue(valueName) is not string registryValue || string.IsNullOrWhiteSpace(registryValue))
+            if (key.GetValue(valueName) is not string registryValue || String.IsNullOrWhiteSpace(registryValue))
             {
                 continue;
             }
@@ -169,9 +169,9 @@ internal sealed class WindowsInstalledFontResolver : IFontResolver
                 ? registryValue
                 : Path.Combine(WindowsFontsDirectory, registryValue);
             var extension = Path.GetExtension(path);
-            if (!string.Equals(extension, ".ttf", StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(extension, ".otf", StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(extension, ".ttc", StringComparison.OrdinalIgnoreCase))
+            if (!String.Equals(extension, ".ttf", StringComparison.OrdinalIgnoreCase) &&
+                !String.Equals(extension, ".otf", StringComparison.OrdinalIgnoreCase) &&
+                !String.Equals(extension, ".ttc", StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }
@@ -187,7 +187,7 @@ internal sealed class WindowsInstalledFontResolver : IFontResolver
             for (var i = 0; i < parts.Length; i++)
             {
                 var name = parts[i].Trim();
-                if (!string.IsNullOrEmpty(name) && !map.ContainsKey(name))
+                if (!String.IsNullOrEmpty(name) && !map.ContainsKey(name))
                 {
                     map[name] = (path, i);
                 }
