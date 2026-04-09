@@ -8,30 +8,29 @@ using OysterReport;
 
 var inputPath = ResolveInputPath(args);
 var (installedFontOutputPath, embeddedFontOutputPath) = ResolveOutputPaths(args, inputPath);
-var embeddedFontPath = Path.Combine(AppContext.BaseDirectory, "ipaexg.ttf");
+
+
+using var workbook = new TemplateWorkbook(inputPath);
+workbook.ReplacePlaceholder("TotalAmount", "123,456,789");
 
 var installedFontEngine = new OysterReportEngine
 {
     FontResolver = new WindowsJapaneseFontResolver()
 };
-
-var embeddedFontEngine = new OysterReportEngine
-{
-    FontResolver = new IpaExGothicFontResolver(embeddedFontPath)
-};
-
-using var workbook = new TemplateWorkbook(inputPath);
-workbook.ReplacePlaceholder("TotalAmount", "123,456,789");
-
 using (var output = File.Create(installedFontOutputPath))
 {
     installedFontEngine.GeneratePdf(workbook, output);
 }
 
-using (var output = File.Create(embeddedFontOutputPath))
-{
-    embeddedFontEngine.GeneratePdf(workbook, output);
-}
+//var embeddedFontPath = Path.Combine(AppContext.BaseDirectory, "ipaexg.ttf");
+//var embeddedFontEngine = new OysterReportEngine
+//{
+//    FontResolver = new IpaExGothicFontResolver(embeddedFontPath)
+//};
+//using (var output = File.Create(embeddedFontOutputPath))
+//{
+//    embeddedFontEngine.GeneratePdf(workbook, output);
+//}
 
 Console.WriteLine($"Input : {inputPath}");
 Console.WriteLine($"Installed font output: {installedFontOutputPath}");
