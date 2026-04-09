@@ -1,7 +1,6 @@
 namespace OysterReport.Internal;
 
 using System.Globalization;
-using System.Text;
 
 using ClosedXML.Excel;
 using ClosedXML.Excel.Drawings;
@@ -18,12 +17,8 @@ internal static class ExcelReader
     private const double PointsPerInch = 72d;
     private const double ScreenDpi = 96d;
 
-    // フォント計測に使用する定数 (10pt 基準の1文字最大幅)
+    // フォント計測に使用する定数
     private const double ReferenceFontSizePoints = 10d;
-    private const double MeiryoDigitWidthAt10Pt = 8.28125d;
-    private const double YuGothicDigitWidthAt10Pt = 8.5d;
-    private const double MsPgothicDigitWidthAt10Pt = 6.66667d;
-    private const double ArialDigitWidthAt10Pt = 7.41536d;
 
     // ClosedXML ワークブックオブジェクトから ReportWorkbook を生成する。
     public static ReportWorkbook Read(IXLWorkbook workbook, IReportFontResolver? fontResolver = null, ReportRenderingOptions? renderingOptions = null)
@@ -525,8 +520,9 @@ internal static class ExcelReader
         return pixelWidth * PointsPerInch / ScreenDpi * adjustment;
     }
 
-    // フォント名とサイズから最大桁幅（ポイント）を推定する。
-    // フォントごとの実測値を 10pt 基準で保持し、指定サイズに比例補正して返す。
+    // ブック既定フォントの最大桁幅を解決する。
+    // 優先順: (1) リゾルバーが直接返す値 → (2) リゾルバーが返すフォントバイト列を SkiaSharp で計測
+    //          → (3) FallbackMaxDigitWidth
     private static double ResolveMaxDigitWidth(
         string? fontName,
         double fontSize,
@@ -538,26 +534,31 @@ internal static class ExcelReader
             return renderingOptions.FallbackMaxDigitWidth;
         }
 
+        // (1) リゾルバーが直接値を返す場合
         var resolved = fontResolver?.ResolveMaxDigitWidth(fontName, fontSize);
         if (resolved is > 0d)
         {
             return resolved.Value;
         }
 
-        var normalized = NormalizeFontName(fontName);
-        var baseWidth = normalized switch
+        // (2) リゾルバーがフォントバイト列を返す場合は SkiaSharp で実測する
+        if (fontResolver is not null)
         {
-            var v when v.Contains("meiryoui", StringComparison.Ordinal) => MeiryoDigitWidthAt10Pt,
-            var v when v.Contains("meiryo", StringComparison.Ordinal) => MeiryoDigitWidthAt10Pt,
-            var v when v.Contains("yugothicui", StringComparison.Ordinal) => YuGothicDigitWidthAt10Pt,
-            var v when v.Contains("yugothic", StringComparison.Ordinal) => YuGothicDigitWidthAt10Pt,
-            var v when v.Contains("mspgothic", StringComparison.Ordinal) => MsPgothicDigitWidthAt10Pt,
-            var v when v.Contains("msgothic", StringComparison.Ordinal) => MsPgothicDigitWidthAt10Pt,
-            var v when v.Contains("arial", StringComparison.Ordinal) => ArialDigitWidthAt10Pt,
-            _ => renderingOptions.FallbackMaxDigitWidth
-        };
+            var request = new ReportFontRequest { FontName = fontName };
+            var resolution = fontResolver.ResolveFont(request);
+            if (resolution?.FontData is ReadOnlyMemory<byte> fontData)
+            {
+                // SkiaSharp で 10pt 基準の幅を求め、指定サイズに比例補正する
+                var measured = FontMetricsHelper.MeasureMaxDigitWidth(fontData, ReferenceFontSizePoints);
+                if (measured is > 0d)
+                {
+                    return Math.Max(renderingOptions.FallbackMaxDigitWidth, measured.Value * (fontSize / ReferenceFontSizePoints));
+                }
+            }
+        }
 
-        return Math.Max(renderingOptions.FallbackMaxDigitWidth, baseWidth * (fontSize / ReferenceFontSizePoints));
+        // (3) フォント情報が得られない場合はフォールバック値
+        return renderingOptions.FallbackMaxDigitWidth;
     }
 
     private static double ResolveBorderWidth(XLBorderStyleValues style, ReportRenderingOptions renderingOptions) =>
@@ -569,20 +570,4 @@ internal static class ExcelReader
             XLBorderStyleValues.Hair => renderingOptions.HairBorderWidthPoints,
             _ => renderingOptions.NormalBorderWidthPoints
         };
-
-    // フォント名を正規化形式に変換し、英数字のみ小文字で返す。
-    private static string NormalizeFontName(string fontName)
-    {
-        var normalized = fontName.Normalize(NormalizationForm.FormKC);
-        var builder = new StringBuilder(normalized.Length);
-        foreach (var character in normalized)
-        {
-            if (char.IsLetterOrDigit(character))
-            {
-                builder.Append(char.ToLowerInvariant(character));
-            }
-        }
-
-        return builder.ToString();
-    }
 }
