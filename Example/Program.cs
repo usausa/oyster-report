@@ -21,6 +21,7 @@ var embeddedFontEngine = new OysterReportEngine
 };
 
 using var workbook = new TemplateWorkbook(inputPath);
+workbook.ReplacePlaceholder("TotalAmount", "123,456,789");
 
 using (var output = File.Create(installedFontOutputPath))
 {
