@@ -12,5 +12,5 @@ public interface IReportFontResolver
     /// フェース名からフォントバイナリを取得する。
     /// <see langword="null" /> を返した場合は既定のフォント取得処理へフォールバックする。
     /// </summary>
-    ReadOnlyMemory<byte>? GetFontData(string faceName) => null;
+    ReadOnlyMemory<byte>? GetFont(string faceName) => null;
 }

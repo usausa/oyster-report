@@ -28,7 +28,5 @@ internal sealed class WindowsJapaneseFontResolver : IReportFontResolver
         };
 
     public FontInfo? ResolveTypeface(string familyName, bool bold, bool italic) =>
-        FontMap.TryGetValue(familyName, out var resolvedName)
-            ? new FontInfo { FaceName = resolvedName }
-            : null;
+        FontMap.TryGetValue(familyName, out var resolvedName) ? new FontInfo(resolvedName) : null;
 }

@@ -156,5 +156,4 @@ public sealed class ExcelReaderTests
         Assert.NotEqual("#00000000", firstDataRowCell.Style.Fill.BackgroundColorHex);
         Assert.NotEqual(firstDataRowCell.Style.Fill.BackgroundColorHex, secondDataRowCell.Style.Fill.BackgroundColorHex);
     }
-
 }

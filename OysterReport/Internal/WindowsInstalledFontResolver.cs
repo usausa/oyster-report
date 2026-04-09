@@ -1,8 +1,10 @@
 namespace OysterReport.Internal;
 
+using System.Buffers.Binary;
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.Versioning;
+using System.Text;
 
 using Microsoft.Win32;
 
@@ -49,7 +51,7 @@ internal sealed class WindowsInstalledFontResolver : IFontResolver
 
     public FontResolverInfo ResolveTypeface(string familyName, bool isBold, bool isItalic)
     {
-        ResolveFontMatch(familyName, isBold, isItalic, out var resolvedFamilyName, out var hasBoldFace, out var hasItalicFace);
+        ResolveFontMatch(familyName, isBold, isItalic, out var resolvedFamilyName, out _, out var hasItalicFace);
         return new FontResolverInfo(
             BuildFaceName(resolvedFamilyName, false, false),
             mustSimulateBold: false,
@@ -64,29 +66,29 @@ internal sealed class WindowsInstalledFontResolver : IFontResolver
 
     private static byte[] ExtractTtfFaceFromTtc(byte[] ttc, int faceIndex)
     {
-        uint ReadUInt32(int offset) =>
-            ((uint)ttc[offset] << 24) | ((uint)ttc[offset + 1] << 16) | ((uint)ttc[offset + 2] << 8) | ttc[offset + 3];
-        ushort ReadUInt16(int offset) =>
-            (ushort)(((uint)ttc[offset] << 8) | ttc[offset + 1]);
+        static uint ReadUInt32(byte[] data, int offset) =>
+            BinaryPrimitives.ReadUInt32BigEndian(data.AsSpan(offset, sizeof(uint)));
+        static ushort ReadUInt16(byte[] data, int offset) =>
+            BinaryPrimitives.ReadUInt16BigEndian(data.AsSpan(offset, sizeof(ushort)));
 
-        var numFonts = (int)ReadUInt32(8);
+        var numFonts = (int)ReadUInt32(ttc, 8);
         if (faceIndex >= numFonts)
         {
             throw new ArgumentOutOfRangeException(nameof(faceIndex), $"TTC has {numFonts} faces, requested index {faceIndex}.");
         }
 
-        var faceOffset = (int)ReadUInt32(12 + (4 * faceIndex));
-        var numTables = ReadUInt16(faceOffset + 4);
+        var faceOffset = (int)ReadUInt32(ttc, 12 + (4 * faceIndex));
+        var numTables = ReadUInt16(ttc, faceOffset + 4);
 
         var tables = new (string Tag, uint CheckSum, int SrcOffset, int Length)[numTables];
         for (var i = 0; i < numTables; i++)
         {
             var rec = faceOffset + 12 + (i * 16);
             tables[i] = (
-                Tag: System.Text.Encoding.ASCII.GetString(ttc, rec, 4),
-                CheckSum: ReadUInt32(rec + 4),
-                SrcOffset: (int)ReadUInt32(rec + 8),
-                Length: (int)ReadUInt32(rec + 12));
+                Tag: Encoding.ASCII.GetString(ttc, rec, 4),
+                CheckSum: ReadUInt32(ttc, rec + 4),
+                SrcOffset: (int)ReadUInt32(ttc, rec + 8),
+                Length: (int)ReadUInt32(ttc, rec + 12));
         }
 
         var headerSize = 12 + (numTables * 16);
@@ -103,23 +105,18 @@ internal sealed class WindowsInstalledFontResolver : IFontResolver
         }
 
         var ttf = new byte[totalSize];
-        void WriteUInt32(int offset, uint value)
-        {
-            ttf[offset] = (byte)(value >> 24);
-            ttf[offset + 1] = (byte)(value >> 16);
-            ttf[offset + 2] = (byte)(value >> 8);
-            ttf[offset + 3] = (byte)value;
-        }
+        static void WriteUInt32(byte[] data, int offset, uint value) =>
+            BinaryPrimitives.WriteUInt32BigEndian(data.AsSpan(offset, sizeof(uint)), value);
 
         Array.Copy(ttc, faceOffset, ttf, 0, 12);
 
         for (var i = 0; i < numTables; i++)
         {
             var rec = 12 + (i * 16);
-            System.Text.Encoding.ASCII.GetBytes(tables[i].Tag, 0, 4, ttf, rec);
-            WriteUInt32(rec + 4, tables[i].CheckSum);
-            WriteUInt32(rec + 8, (uint)tableOffsets[i]);
-            WriteUInt32(rec + 12, (uint)tables[i].Length);
+            Encoding.ASCII.GetBytes(tables[i].Tag, 0, 4, ttf, rec);
+            WriteUInt32(ttf, rec + 4, tables[i].CheckSum);
+            WriteUInt32(ttf, rec + 8, (uint)tableOffsets[i]);
+            WriteUInt32(ttf, rec + 12, (uint)tables[i].Length);
             Array.Copy(ttc, tables[i].SrcOffset, ttf, tableOffsets[i], tables[i].Length);
         }
 

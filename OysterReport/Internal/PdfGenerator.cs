@@ -381,7 +381,7 @@ internal static class PdfGenerator
             if (resolvedTypeface is not null && !string.IsNullOrWhiteSpace(resolvedTypeface.FaceName))
             {
                 ReportFontResolverAdapter.RegisterResolvedTypeface(resolvedTypeface);
-                var embeddedFontData = context.FontResolver.GetFontData(resolvedTypeface.FaceName);
+                var embeddedFontData = context.FontResolver.GetFont(resolvedTypeface.FaceName);
 
                 if (embeddedFontData is { } fontData)
                 {

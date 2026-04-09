@@ -39,15 +39,14 @@ internal sealed class IpaExGothicFontResolver : IReportFontResolver
             return null;
         }
 
-        return new FontInfo
+        return new FontInfo(BuildFaceName(bold, italic))
         {
-            FaceName = BuildFaceName(bold, italic),
             MustSimulateBold = bold,
             MustSimulateItalic = italic
         };
     }
 
-    public ReadOnlyMemory<byte>? GetFontData(string faceName) =>
+    public ReadOnlyMemory<byte>? GetFont(string faceName) =>
         string.Equals(ExtractBaseFaceName(faceName), EmbeddedFontName, StringComparison.Ordinal)
             ? fontData
             : null;
