@@ -377,28 +377,24 @@ internal static class PdfGenerator
 
         if (context.FontResolver is not null)
         {
-            var request = new ReportFontRequest
+            var resolvedTypeface = context.FontResolver.ResolveTypeface(font.Name, font.Bold, font.Italic);
+            if (resolvedTypeface is not null && !string.IsNullOrWhiteSpace(resolvedTypeface.FaceName))
             {
-                FontName = font.Name
-            };
-
-            var resolvedName = context.FontResolver.ResolveFaceName(request);
-            if (!string.IsNullOrWhiteSpace(resolvedName))
-            {
-                var embeddedFontData = context.FontResolver.GetFontData(resolvedName);
+                ReportFontResolverAdapter.RegisterResolvedTypeface(resolvedTypeface);
+                var embeddedFontData = context.FontResolver.GetFontData(resolvedTypeface.FaceName);
 
                 if (embeddedFontData is { } fontData)
                 {
                     // 埋め込みフォントをアダプタに事前登録する。
                     // 同じバイト列を複数回登録してもべき等であるため問題ない。
-                    ReportFontResolverAdapter.RegisterEmbeddedFont(resolvedName, fontData);
+                    ReportFontResolverAdapter.RegisterEmbeddedFont(resolvedTypeface.FaceName, fontData);
 
                     // 単一の埋め込みフォント資源を返した場合、Bold は描画時にシミュレーションする。
                     // Italic は ReportFontResolverAdapter が PDFsharp の公式シミュレーションへ委譲する。
-                    simulateBold = font.Bold;
+                    simulateBold = resolvedTypeface.MustSimulateBold;
                 }
 
-                nameToUse = resolvedName;
+                nameToUse = resolvedTypeface.FaceName;
             }
         }
 

@@ -14,6 +14,9 @@ internal sealed class ReportFontResolverAdapter : IFontResolver
     private static readonly ConcurrentDictionary<string, byte[]> EmbeddedFontCache =
         new(StringComparer.OrdinalIgnoreCase);
 
+    private static readonly ConcurrentDictionary<string, FontInfo> ResolvedTypefaceCache =
+        new(StringComparer.OrdinalIgnoreCase);
+
     private static readonly Lazy<WindowsInstalledFontResolver?> WindowsFallback =
         new(CreateWindowsFallback);
 
@@ -24,6 +27,12 @@ internal sealed class ReportFontResolverAdapter : IFontResolver
     public static void RegisterEmbeddedFont(string fontName, ReadOnlyMemory<byte> fontData)
     {
         EmbeddedFontCache[fontName] = fontData.ToArray();
+    }
+
+    public static void RegisterResolvedTypeface(FontInfo fontResolverInfo)
+    {
+        ArgumentNullException.ThrowIfNull(fontResolverInfo);
+        ResolvedTypefaceCache[fontResolverInfo.FaceName] = fontResolverInfo;
     }
 
     public static bool NeedsBoldSimulationForInstalledFont(string faceName, bool isItalic)
@@ -60,12 +69,17 @@ internal sealed class ReportFontResolverAdapter : IFontResolver
     {
         // 事前登録された埋め込みフォントを優先する。
         // GetFont でベース名へのフォールバックを行うため、bold/italic の face 名でも登録不要。
-        if (EmbeddedFontCache.ContainsKey(familyName))
+        if (ResolvedTypefaceCache.TryGetValue(familyName, out var resolvedTypeface))
         {
             return new FontResolverInfo(
-                BuildFaceName(familyName, false, false),
+                BuildFaceName(resolvedTypeface.FaceName, false, false),
                 mustSimulateBold: false,
-                mustSimulateItalic: isItalic);
+                mustSimulateItalic: resolvedTypeface.MustSimulateItalic);
+        }
+
+        if (EmbeddedFontCache.ContainsKey(familyName))
+        {
+            return new FontResolverInfo(BuildFaceName(familyName, false, false));
         }
 
         if (WindowsFallback.Value is not null)

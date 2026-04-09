@@ -42,6 +42,35 @@ public sealed class PdfGeneratorTests
     }
 
     [Fact]
+    public void GenerateShouldPassBoldAndItalicRequestsToFontResolver()
+    {
+        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        {
+            var sheet = workbook.AddWorksheet("Report");
+
+            var boldCell = sheet.Cell("A1");
+            boldCell.Value = "Bold";
+            boldCell.Style.Font.FontName = "CustomEmbeddedFont";
+            boldCell.Style.Font.Bold = true;
+
+            var italicCell = sheet.Cell("A2");
+            italicCell.Value = "Italic";
+            italicCell.Style.Font.FontName = "CustomEmbeddedFont";
+            italicCell.Style.Font.Italic = true;
+        });
+
+        using var template = new TemplateWorkbook(stream);
+        var resolver = new TrackingEmbeddedFontResolver(GetEmbeddedFontBytes());
+        var engine = new OysterReportEngine { FontResolver = resolver };
+        using var output = new MemoryStream();
+
+        engine.GeneratePdf(template, output);
+
+        Assert.Contains(resolver.Requests, request => request.FamilyName == "CustomEmbeddedFont" && request.Bold);
+        Assert.Contains(resolver.Requests, request => request.FamilyName == "CustomEmbeddedFont" && request.Italic);
+    }
+
+    [Fact]
     public void CreateRenderContextShouldKeepLayoutIndependentFromFontResolver()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
@@ -188,10 +217,35 @@ public sealed class PdfGeneratorTests
             this.fontData = fontData;
         }
 
-        public string? ResolveFaceName(ReportFontRequest request) =>
-            string.Equals(request.FontName, "CustomEmbeddedFont", StringComparison.Ordinal)
-                ? "IPAexGothic"
+        public FontInfo? ResolveTypeface(string familyName, bool bold, bool italic) =>
+            string.Equals(familyName, "CustomEmbeddedFont", StringComparison.Ordinal)
+                ? new FontInfo { FaceName = "IPAexGothic" }
                 : null;
+
+        public ReadOnlyMemory<byte>? GetFontData(string faceName) =>
+            string.Equals(faceName, "IPAexGothic", StringComparison.Ordinal)
+                ? fontData
+                : null;
+    }
+
+    private sealed class TrackingEmbeddedFontResolver : IReportFontResolver
+    {
+        private readonly ReadOnlyMemory<byte> fontData;
+
+        public TrackingEmbeddedFontResolver(ReadOnlyMemory<byte> fontData)
+        {
+            this.fontData = fontData;
+        }
+
+        public List<(string FamilyName, bool Bold, bool Italic)> Requests { get; } = [];
+
+        public FontInfo? ResolveTypeface(string familyName, bool bold, bool italic)
+        {
+            Requests.Add((familyName, bold, italic));
+            return string.Equals(familyName, "CustomEmbeddedFont", StringComparison.Ordinal)
+                ? new FontInfo { FaceName = "IPAexGothic" }
+                : null;
+        }
 
         public ReadOnlyMemory<byte>? GetFontData(string faceName) =>
             string.Equals(faceName, "IPAexGothic", StringComparison.Ordinal)
