@@ -2,26 +2,24 @@ namespace OysterReport;
 
 using ClosedXML.Excel;
 
-/// <summary>
-/// PDF 描画時の調整値をまとめたオプション。
-/// 既定値は Excel に近い見た目になるように調整されている。
-/// </summary>
+// PDF 描画時の調整値をまとめたオプション。
+// 既定値は Excel に近い見た目になるように調整されている。
 public sealed record ReportRenderingOptions
 {
-    /// <summary>用紙サイズからページ幅・高さ (pt) を解決する関数。</summary>
+    // 用紙サイズからページ幅・高さ (pt) を解決する関数。
     [CLSCompliant(false)]
     public Func<XLPaperSize, (double Width, double Height)> PageSizeResolver { get; set; } = ResolveDefaultPageSize;
 
-    /// <summary>セル内テキストの左右余白 (pt)。</summary>
+    // セル内テキストの左右余白 (pt)。
     public double HorizontalCellTextPaddingPoints { get; set; } = 2d;
 
-    /// <summary>セル内テキストの既定フォントサイズ (pt)。</summary>
+    // セル内テキストの既定フォントサイズ (pt)。
     public double DefaultCellFontSizePoints { get; set; } = 11d;
 
-    /// <summary>ヘッダー・フッターの既定フォントサイズ (pt)。</summary>
+    // ヘッダー・フッターの既定フォントサイズ (pt)。
     public double HeaderFooterFontSizePoints { get; set; } = 9d;
 
-    /// <summary>ヘッダー・フッター描画時のフォールバック候補一覧。</summary>
+    // ヘッダー・フッター描画時のフォールバック候補一覧。
     public IReadOnlyList<string> HeaderFooterFallbackFontNames { get; set; } =
     [
         "Arial",
@@ -31,22 +29,22 @@ public sealed record ReportRenderingOptions
         "DejaVu Sans"
     ];
 
-    /// <summary>Thick 罫線の描画幅 (pt)。</summary>
+    // Thick 罫線の描画幅 (pt)。
     public double ThickBorderWidthPoints { get; set; } = 2.25d;
 
-    /// <summary>Medium 罫線の描画幅 (pt)。</summary>
+    // Medium 罫線の描画幅 (pt)。
     public double MediumBorderWidthPoints { get; set; } = 1.5d;
 
-    /// <summary>通常罫線の描画幅 (pt)。</summary>
+    // 通常罫線の描画幅 (pt)。
     public double NormalBorderWidthPoints { get; set; } = 0.75d;
 
-    /// <summary>Hair 罫線の描画幅 (pt)。</summary>
+    // Hair 罫線の描画幅 (pt)。
     public double HairBorderWidthPoints { get; set; } = 0.25d;
 
-    /// <summary>列幅ポイント変換時の補正係数。</summary>
+    // 列幅ポイント変換時の補正係数。
     public double ColumnWidthAdjustment { get; set; } = 1d;
 
-    /// <summary>未知フォントに使用するフォールバック最大桁幅 (96 DPI 参照ピクセル)。</summary>
+    // 未知フォントに使用するフォールバック最大桁幅 (96 DPI 参照ピクセル)。
     public double FallbackMaxDigitWidth { get; set; } = 7d;
 
     private static (double Width, double Height) ResolveDefaultPageSize(XLPaperSize paperSize) =>

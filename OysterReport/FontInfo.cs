@@ -1,15 +1,15 @@
 namespace OysterReport;
 
-/// <summary>フォント解決結果。</summary>
+// フォント解決結果。
 public sealed record FontInfo
 {
-    /// <summary>描画時に使用するフェース名。</summary>
+    // 描画時に使用するフェース名。
     public string FaceName { get; }
 
-    /// <summary>太字を描画側でシミュレーションするかどうか。</summary>
+    // 太字を描画側でシミュレーションするかどうか。
     public bool MustSimulateBold { get; set; }
 
-    /// <summary>斜体をフォント解決側でシミュレーションするかどうか。</summary>
+    // 斜体をフォント解決側でシミュレーションするかどうか。
     public bool MustSimulateItalic { get; set; }
 
     public FontInfo(string faceName)

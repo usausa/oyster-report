@@ -20,10 +20,8 @@ internal sealed class ReportFontResolverAdapter : IFontResolver
     private static readonly Lazy<WindowsInstalledFontResolver?> WindowsFallback =
         new(CreateWindowsFallback);
 
-    /// <summary>
-    /// 埋め込みフォントのバイト列を事前登録する。
-    /// <see cref="ResolveTypeface"/> より前に呼び出すこと。
-    /// </summary>
+    // 埋め込みフォントのバイト列を事前登録する。
+    // <see cref="ResolveTypeface"/> より前に呼び出すこと。
     public static void RegisterEmbeddedFont(string fontName, ReadOnlyMemory<byte> fontData)
     {
         EmbeddedFontCache[fontName] = fontData.ToArray();
