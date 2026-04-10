@@ -10,6 +10,7 @@ using ClosedXML.Excel;
 using ClosedXML.Excel.Drawings;
 
 using OysterReport.Internal;
+using OysterReport.Tests.Helpers;
 
 using Xunit;
 

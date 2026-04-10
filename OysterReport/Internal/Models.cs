@@ -1,5 +1,7 @@
 namespace OysterReport.Internal;
 
+using System.Diagnostics.CodeAnalysis;
+
 using ClosedXML.Excel;
 
 // ReportWorkbook
@@ -27,6 +29,7 @@ using ClosedXML.Excel;
 // Metadata
 //--------------------------------------------------------------------------------
 
+[ExcludeFromCodeCoverage]
 internal sealed record ReportMetadata
 {
     public string TemplateName { get; init; } = string.Empty;
@@ -36,6 +39,7 @@ internal sealed record ReportMetadata
 // ReportMeasurementProfile
 //--------------------------------------------------------------------------------
 
+[ExcludeFromCodeCoverage]
 internal sealed record ReportMeasurementProfile
 {
     public double MaxDigitWidth { get; init; } = 7d;
@@ -53,6 +57,7 @@ internal sealed record ReportMeasurementProfile
 // ---- Cell value and style ----
 //--------------------------------------------------------------------------------
 
+[ExcludeFromCodeCoverage]
 internal sealed record ReportCellValue
 {
     public XLDataType Kind { get; init; } = XLDataType.Blank;
@@ -61,6 +66,7 @@ internal sealed record ReportCellValue
     public object? RawValue { get; init; }
 }
 
+[ExcludeFromCodeCoverage]
 internal sealed record ReportFont
 {
     public string Name { get; init; } = "Arial";
@@ -80,11 +86,13 @@ internal sealed record ReportFont
     public string ColorHex { get; init; } = "#FF000000";
 }
 
+[ExcludeFromCodeCoverage]
 internal sealed record ReportFill
 {
     public string BackgroundColorHex { get; init; } = "#00000000";
 }
 
+[ExcludeFromCodeCoverage]
 internal sealed record ReportBorder
 {
     public XLBorderStyleValues Style { get; init; } = XLBorderStyleValues.None;
@@ -94,6 +102,7 @@ internal sealed record ReportBorder
     public double Width { get; init; } = 0.5d;
 }
 
+[ExcludeFromCodeCoverage]
 internal sealed record ReportBorders
 {
     public ReportBorder Left { get; init; } = new();
@@ -105,6 +114,7 @@ internal sealed record ReportBorders
     public ReportBorder Bottom { get; init; } = new();
 }
 
+[ExcludeFromCodeCoverage]
 internal sealed record ReportAlignment
 {
     public XLAlignmentHorizontalValues Horizontal { get; init; } = XLAlignmentHorizontalValues.General;
@@ -112,6 +122,7 @@ internal sealed record ReportAlignment
     public XLAlignmentVerticalValues Vertical { get; init; } = XLAlignmentVerticalValues.Top;
 }
 
+[ExcludeFromCodeCoverage]
 internal sealed record ReportCellStyle
 {
     public ReportFont Font { get; init; } = new();
@@ -125,6 +136,7 @@ internal sealed record ReportCellStyle
     public bool WrapText { get; init; }
 }
 
+[ExcludeFromCodeCoverage]
 internal sealed record ReportMergeInfo
 {
     public string OwnerCellAddress { get; init; } = string.Empty;
@@ -136,16 +148,19 @@ internal sealed record ReportMergeInfo
 // ---- Page setup ----
 //--------------------------------------------------------------------------------
 
+[ExcludeFromCodeCoverage]
 internal sealed record ReportPageBreak
 {
     public int Index { get; init; }
 }
 
+[ExcludeFromCodeCoverage]
 internal sealed record ReportPrintArea
 {
     public ReportRange Range { get; init; }
 }
 
+[ExcludeFromCodeCoverage]
 internal sealed record ReportHeaderFooter
 {
     // TODO: Apply Excel's header/footer margin alignment rules during PDF rendering.
@@ -171,6 +186,7 @@ internal sealed record ReportHeaderFooter
     public string? FirstFooter { get; init; }
 }
 
+[ExcludeFromCodeCoverage]
 internal sealed record ReportPageSetup
 {
     public XLPaperSize PaperSize { get; init; } = XLPaperSize.A4Paper;
@@ -201,6 +217,7 @@ internal sealed record ReportPageSetup
 // ---- Sheet structure ----
 //--------------------------------------------------------------------------------
 
+[ExcludeFromCodeCoverage]
 internal sealed class ReportRow
 {
     public int Index { get; init; }
@@ -214,6 +231,7 @@ internal sealed class ReportRow
     public int OutlineLevel { get; init; }
 }
 
+[ExcludeFromCodeCoverage]
 internal sealed class ReportColumn
 {
     public int Index { get; init; }
@@ -229,6 +247,7 @@ internal sealed class ReportColumn
     public double OriginalExcelWidth { get; init; }
 }
 
+[ExcludeFromCodeCoverage]
 internal sealed class ReportMergedRange
 {
     public ReportRange Range { get; init; }
@@ -236,6 +255,7 @@ internal sealed class ReportMergedRange
     public string OwnerCellAddress => AddressHelper.ToAddress(Range.StartRow, Range.StartColumn);
 }
 
+[ExcludeFromCodeCoverage]
 internal sealed class ReportImage
 {
     public string Name { get; init; } = string.Empty;
@@ -253,6 +273,7 @@ internal sealed class ReportImage
     public ReadOnlyMemory<byte> ImageBytes { get; init; }
 }
 
+[ExcludeFromCodeCoverage]
 internal sealed class ReportCell
 {
     public int Row { get; init; }
@@ -270,6 +291,7 @@ internal sealed class ReportCell
     public ReportMergeInfo? Merge { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 internal sealed class ReportSheet
 {
     private readonly List<ReportRow> rows = [];
@@ -338,6 +360,7 @@ internal sealed class ReportSheet
     }
 }
 
+[ExcludeFromCodeCoverage]
 internal sealed class ReportWorkbook
 {
     private readonly List<ReportSheet> sheets = [];

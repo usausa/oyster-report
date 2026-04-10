@@ -470,7 +470,7 @@ internal static class PdfGenerator
                         resolvedFont.Font,
                         brush,
                         passRect,
-                        ResolveStringFormat(sourceCell));
+                        XStringFormats.TopLeft);
                     continue;
                 }
 

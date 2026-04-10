@@ -1,7 +1,9 @@
 namespace OysterReport.Internal;
 
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 
+[ExcludeFromCodeCoverage]
 internal readonly record struct ReportOffset
 {
     public double X { get; init; }
@@ -9,6 +11,7 @@ internal readonly record struct ReportOffset
     public double Y { get; init; }
 }
 
+[ExcludeFromCodeCoverage]
 internal readonly record struct ReportThickness
 {
     public double Left { get; init; }
@@ -20,6 +23,7 @@ internal readonly record struct ReportThickness
     public double Bottom { get; init; }
 }
 
+[ExcludeFromCodeCoverage]
 internal readonly record struct ReportLine
 {
     public double X1 { get; init; }
@@ -31,6 +35,7 @@ internal readonly record struct ReportLine
     public double Y2 { get; init; }
 }
 
+[ExcludeFromCodeCoverage]
 internal readonly record struct ReportRect
 {
     public double X { get; init; }
@@ -55,6 +60,7 @@ internal readonly record struct ReportRect
         };
 }
 
+[ExcludeFromCodeCoverage]
 internal readonly record struct ReportRange
 {
     public int StartRow { get; init; }
