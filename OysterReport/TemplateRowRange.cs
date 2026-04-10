@@ -34,7 +34,6 @@ public sealed class TemplateRowRange
     // コピー元は this、挿入位置は afterRange の直下。フロー A で使用する。
     public TemplateRowRange InsertCopyAfter(TemplateRowRange afterRange)
     {
-        ArgumentNullException.ThrowIfNull(afterRange);
         var newStartRow = afterRange.EndRow + 1;
         var lastColumn = worksheet.LastColumnUsed()?.ColumnNumber() ?? 1;
 
@@ -64,8 +63,6 @@ public sealed class TemplateRowRange
     // この行範囲内のプレースホルダを置換する。
     public int ReplacePlaceholder(string markerName, string value)
     {
-        ArgumentNullException.ThrowIfNull(markerName);
-        ArgumentNullException.ThrowIfNull(value);
         var placeholder = "{{" + markerName + "}}";
         var count = 0;
         var lastColumn = worksheet.LastColumnUsed()?.ColumnNumber() ?? 1;
@@ -90,7 +87,6 @@ public sealed class TemplateRowRange
     // この行範囲内のプレースホルダを辞書で一括置換する。
     public int ReplacePlaceholders(IReadOnlyDictionary<string, string?> values)
     {
-        ArgumentNullException.ThrowIfNull(values);
         var count = 0;
         foreach (var (key, value) in values)
         {

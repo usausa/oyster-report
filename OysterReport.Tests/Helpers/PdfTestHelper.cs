@@ -119,7 +119,7 @@ internal static class PdfTestHelper
     {
         using var doc = PdfDocument.Open(pdfBytes);
         var page = doc.GetPage(pageNumber);
-        return ((double)page.Width, (double)page.Height);
+        return (page.Width, page.Height);
     }
 
     /// <summary>

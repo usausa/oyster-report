@@ -24,13 +24,8 @@ internal static class PdfGenerator
 
     // レンダリングコンテキストをもとに PDF ドキュメントを生成し、出力ストリームへ書き込む。
     // PDFSharp のフォント設定を初期化し、全シート・全ページを順に描画する。
-    internal static void WritePdf(
-        ReportRenderContext context,
-        Stream output)
+    internal static void WritePdf(ReportRenderContext context, Stream output)
     {
-        ArgumentNullException.ThrowIfNull(context);
-        ArgumentNullException.ThrowIfNull(output);
-
         EnsurePdfSharpFontConfiguration();
 
         using var document = new PdfDocument();

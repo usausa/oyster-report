@@ -28,7 +28,6 @@ internal sealed class IpaExGothicFontResolver : IReportFontResolver
 
     public IpaExGothicFontResolver(string fontFilePath)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(fontFilePath);
         fontData = File.ReadAllBytes(fontFilePath);
     }
 

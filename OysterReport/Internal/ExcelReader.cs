@@ -36,8 +36,6 @@ internal static class ExcelReader
     // 単一ワークシートから 1 シートのみ含む ReportWorkbook を生成する。
     public static ReportWorkbook Read(IXLWorksheet worksheet, ReportRenderOption? renderOption = null)
     {
-        ArgumentNullException.ThrowIfNull(worksheet);
-
         var effectiveOptions = renderOption ?? new ReportRenderOption();
         var measurementProfile = CreateMeasurementProfile(worksheet.Workbook, effectiveOptions);
         var metadata = new ReportMetadata { TemplateName = worksheet.Name };

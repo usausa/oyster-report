@@ -30,7 +30,6 @@ internal sealed class ReportFontResolverAdapter : IFontResolver
     //--------------------------------------------------------------------------------
     //--------------------------------------------------------------------------------
 
-
     public static bool NeedsBoldSimulationForInstalledFont(string faceName, bool isItalic)
     {
         return WindowsFallback.Value is not null && WindowsFallback.Value.NeedsBoldSimulation(faceName, isItalic);

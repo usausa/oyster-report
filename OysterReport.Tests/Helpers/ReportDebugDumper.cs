@@ -21,18 +21,12 @@ internal sealed class ReportDebugDumper
 
     public void DumpWorkbook(ReportRenderContext context, Stream output, ReportDumpFormat format = ReportDumpFormat.Json)
     {
-        ArgumentNullException.ThrowIfNull(context);
-        ArgumentNullException.ThrowIfNull(output);
-
         var payload = DumpPayloadFactory.CreateWorkbookPayload(context.Workbook);
         WritePayload(output, payload, format, "Workbook");
     }
 
     public void DumpPdfPreparation(ReportRenderContext context, Stream output, ReportDumpFormat format = ReportDumpFormat.Json)
     {
-        ArgumentNullException.ThrowIfNull(context);
-        ArgumentNullException.ThrowIfNull(output);
-
         var payload = DumpPayloadFactory.CreatePdfPreparationPayload(context.Workbook, context.SheetPlans);
         WritePayload(output, payload, format, "PdfPreparation");
     }
