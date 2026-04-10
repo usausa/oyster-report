@@ -1,0 +1,81 @@
+// <copyright file="FeatureTests.Image.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
+namespace OysterReport.Tests;
+
+using ClosedXML.Excel.Drawings;
+
+using OysterReport.Tests.Helpers;
+
+using Xunit;
+
+/// <summary>画像埋め込みに関する機能テスト。</summary>
+public sealed partial class FeatureTests
+{
+    private static readonly byte[] OnePxPng = Convert.FromBase64String(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+kZs8AAAAASUVORK5CYII=");
+
+    [Fact]
+    public void PdfShouldEmbedSingleImage()
+    {
+        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        {
+            var sheet = workbook.AddWorksheet("Report");
+            sheet.Cell("A1").Value = "WithImage";
+            using var imgStream = new MemoryStream(OnePxPng, writable: false);
+            sheet.AddPicture(imgStream, XLPictureFormat.Png, "Logo")
+                .MoveTo(sheet.Cell("B2"))
+                .WithSize(60, 40);
+        });
+
+        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(PdfShouldEmbedSingleImage), stream);
+
+        Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
+        Assert.Contains("WithImage", PdfTestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
+        Assert.True(pdfBytes.Length > 1000);
+    }
+
+    [Fact]
+    public void PdfShouldEmbedMultipleImages()
+    {
+        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        {
+            var sheet = workbook.AddWorksheet("Report");
+            sheet.Cell("A1").Value = "MultiImage";
+            using var img1 = new MemoryStream(OnePxPng, writable: false);
+            sheet.AddPicture(img1, XLPictureFormat.Png, "Image1")
+                .MoveTo(sheet.Cell("B1"))
+                .WithSize(40, 30);
+            using var img2 = new MemoryStream(OnePxPng, writable: false);
+            sheet.AddPicture(img2, XLPictureFormat.Png, "Image2")
+                .MoveTo(sheet.Cell("D1"))
+                .WithSize(40, 30);
+        });
+
+        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(PdfShouldEmbedMultipleImages), stream);
+
+        Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
+        Assert.True(pdfBytes.Length > 1000);
+    }
+
+    [Fact]
+    public void PdfShouldHandleFreeFloatingImage()
+    {
+        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        {
+            var sheet = workbook.AddWorksheet("Report");
+            sheet.Cell("A1").Value = "FreeFloat";
+            using var imgStream = new MemoryStream(OnePxPng, writable: false);
+            sheet.AddPicture(imgStream, XLPictureFormat.Png, "FreeImg")
+                .MoveTo(20, 30)
+                .WithPlacement(XLPicturePlacement.FreeFloating)
+                .WithSize(50, 30);
+        });
+
+        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(PdfShouldHandleFreeFloatingImage), stream);
+
+        Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
+        Assert.Contains("FreeFloat", PdfTestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
+    }
+}

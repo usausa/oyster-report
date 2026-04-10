@@ -23,7 +23,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="ipaexg.ttf">
+    <Compile Update="FeatureTests.*.cs">
+      <DependentUpon>FeatureTests.cs</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\ipaexg.ttf" Link="ipaexg.ttf">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
