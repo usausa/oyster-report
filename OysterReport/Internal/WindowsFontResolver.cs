@@ -38,8 +38,7 @@ internal sealed class WindowsFontResolver : IFontResolver
         ParseFaceName(faceName, out var family, out var wantBold, out var wantItalic);
         if (!TryFindFont(family, wantBold, wantItalic, out var path, out var faceIndex))
         {
-            throw new FileNotFoundException(
-                $"Installed font not found. faceName=[{faceName}], family=[{family}], bold=[{wantBold}], italic=[{wantItalic}]");
+            throw new FileNotFoundException($"Installed font not found. faceName=[{faceName}], family=[{family}], bold=[{wantBold}], italic=[{wantItalic}]");
         }
 
         var rawBytes = File.ReadAllBytes(path);
@@ -66,7 +65,7 @@ internal sealed class WindowsFontResolver : IFontResolver
     // Bold simulation
     //--------------------------------------------------------------------------------
 
-    internal bool NeedsBoldSimulation(string familyName, bool isItalic)
+    internal bool IsBoldSimulationRequired(string familyName, bool isItalic)
     {
         ResolveFontMatch(familyName, bold: true, isItalic, out _, out var hasBoldFace, out _);
         return !hasBoldFace;
@@ -129,7 +128,7 @@ internal sealed class WindowsFontResolver : IFontResolver
     }
 
     //--------------------------------------------------------------------------------
-    // Face name
+    // Helper
     //--------------------------------------------------------------------------------
 
     private static string BuildFaceName(string family, bool bold, bool italic)

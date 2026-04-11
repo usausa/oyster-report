@@ -5,25 +5,25 @@ using System.Diagnostics.CodeAnalysis;
 using ClosedXML.Excel;
 
 // ReportWorkbook
-// ├── ReportMetadata                 テンプレート名
-// ├── ReportMeasurementProfile       列幅計算用フォントメトリクス
+// ├── ReportMetadata                 Template name
+// ├── ReportMeasurementProfile       Font metrics for column width calculation
 // └── ReportSheet[]
-//     ├── ReportRow[]                行高・表示/非表示・アウトラインレベル
-//     ├── ReportColumn[]             列幅・表示/非表示
+//     ├── ReportRow[]                Row height, visibility, and outline level
+//     ├── ReportColumn[]             Column width and visibility
 //     ├── ReportCell[]
-//     │   ├── ReportCellValue       型別の値
+//     │   ├── ReportCellValue       Typed value
 //     │   ├── ReportCellStyle
 //     │   │   ├── ReportFont
 //     │   │   ├── ReportFill
 //     │   │   ├── ReportBorders
 //     │   │   └── ReportAlignment
-//     │   └── ReportMergeInfo?      マージ先情報
-//     ├── ReportMergedRange[]        マージセル範囲
-//     ├── ReportImage[]              埋め込み画像
-//     ├── ReportPageSetup            用紙・余白・中央揃え
-//     ├── ReportHeaderFooter         ヘッダー/フッターテキスト
-//     ├── ReportPrintArea?           印刷範囲
-//     └── ReportPageBreak[]          水平/垂直改ページ
+//     │   └── ReportMergeInfo?      Merge owner information
+//     ├── ReportMergedRange[]        Merged cell ranges
+//     ├── ReportImage[]              Embedded images
+//     ├── ReportPageSetup            Paper, margins, and centering
+//     ├── ReportHeaderFooter         Header/footer text
+//     ├── ReportPrintArea?           Print area
+//     └── ReportPageBreak[]          Horizontal/vertical page breaks
 
 //--------------------------------------------------------------------------------
 // Metadata
@@ -56,7 +56,7 @@ internal sealed record ReportCellValue
 {
     public XLDataType Kind { get; init; } = XLDataType.Blank;
 
-    // TODO: Use the typed source value when adding value-aware formatting or placeholder features.
+    // [MEMO]: Use the typed source value when adding value-aware formatting or placeholder features.
     public object? RawValue { get; init; }
 }
 
@@ -131,9 +131,7 @@ internal sealed record ReportCellStyle
 [ExcludeFromCodeCoverage]
 internal sealed record ReportMergeInfo
 {
-    // ExcelReader で設定されるが、レンダリングパイプラインは cell.Address を直接使用するため
-    // 現時点では参照されない。デバッグや非オーナーセルからオーナーを特定する
-    // 将来機能のために保持している。
+    // [MEMO] Retained for debugging and for future features that need to identify the owner from a non-owner merged cell.
     public string OwnerCellAddress { get; init; } = string.Empty;
 
     public ReportRange Range { get; init; }
@@ -146,9 +144,7 @@ internal sealed record ReportMergeInfo
 [ExcludeFromCodeCoverage]
 internal sealed record ReportPageBreak
 {
-    // 改ページが発生する行または列のインデックス。
-    // 現在の単一ページレンダリングでは参照されないが、
-    // 複数ページ対応を実装する際に HorizontalPageBreaks / VerticalPageBreaks と合わせて使用する。
+    // [MEMO] Not used by the current single-page rendering flow, but kept for future multipage support together with HorizontalPageBreaks / VerticalPageBreaks.
     public int Index { get; init; }
 }
 
@@ -161,14 +157,14 @@ internal sealed record ReportPrintArea
 [ExcludeFromCodeCoverage]
 internal sealed record ReportHeaderFooter
 {
-    // TODO: Apply Excel's header/footer margin alignment rules during PDF rendering.
+    // [MEMO]: Apply Excel's header/footer margin alignment rules during PDF rendering.
     public bool AlignWithMargins { get; init; } = true;
 
     public bool DifferentFirst { get; init; }
 
     public bool DifferentOddEven { get; init; }
 
-    // TODO: Apply Excel's header/footer scaling rule during PDF rendering.
+    // [MEMO]: Apply Excel's header/footer scaling rule during PDF rendering.
     public bool ScaleWithDocument { get; init; } = true;
 
     public string? OddHeader { get; init; }
@@ -197,13 +193,13 @@ internal sealed record ReportPageSetup
 
     public double FooterMarginPoint { get; init; } = 18d;
 
-    // TODO: Apply Excel print scaling when multipage fit/scaling support is implemented.
+    // [MEMO]: Apply Excel print scaling when multipage fit/scaling support is implemented.
     public int ScalePercent { get; init; } = 100;
 
-    // TODO: Apply Excel fit-to-page width scaling when multipage fit/scaling support is implemented.
+    // [MEMO]: Apply Excel fit-to-page width scaling when multipage fit/scaling support is implemented.
     public int? FitToPagesWide { get; init; }
 
-    // TODO: Apply Excel fit-to-page height scaling when multipage fit/scaling support is implemented.
+    // [MEMO]: Apply Excel fit-to-page height scaling when multipage fit/scaling support is implemented.
     public int? FitToPagesTall { get; init; }
 
     public bool CenterHorizontally { get; init; }

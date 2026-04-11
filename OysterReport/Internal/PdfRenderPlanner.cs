@@ -167,8 +167,8 @@ internal static class PdfRenderPlanner
 
             var contentBounds = outerBounds.Deflate(new ReportThickness
             {
-                Left = renderOption.HorizontalCellTextPaddingPoints,
-                Right = renderOption.HorizontalCellTextPaddingPoints
+                Left = renderOption.HorizontalCellTextPadding,
+                Right = renderOption.HorizontalCellTextPadding
             });
             pageCells.Add(new PdfCellRenderInfo
             {
@@ -285,7 +285,7 @@ internal static class PdfRenderPlanner
         Dictionary<(int Row, int Column), ReportMergedRange> mergedRangeByCell)
     {
         // Computes text drawing bounds
-        if (cell.Style.WrapText || (cell.DisplayText.Contains('\n', StringComparison.Ordinal)))
+        if (cell.Style.WrapText || cell.DisplayText.Contains('\n', StringComparison.Ordinal))
         {
             return contentBounds;
         }

@@ -11,7 +11,7 @@ internal sealed class ReportFontResolverAdapter : IFontResolver
 
     private static readonly ConcurrentDictionary<string, byte[]> EmbeddedFontCache = new(StringComparer.OrdinalIgnoreCase);
 
-    private static readonly Lazy<WindowsFontResolver?> WindowsFallback = new(CreateWindowsFallback);
+    private static readonly Lazy<WindowsFontResolver?> WindowsFallback = new(() => OperatingSystem.IsWindows() ? new WindowsFontResolver() : null);
 
     //--------------------------------------------------------------------------------
     // Register
@@ -28,24 +28,12 @@ internal sealed class ReportFontResolverAdapter : IFontResolver
     }
 
     //--------------------------------------------------------------------------------
-    // Bold simulation
-    //--------------------------------------------------------------------------------
-
-    public static bool NeedsBoldSimulationForInstalledFont(string faceName, bool isItalic)
-    {
-        return WindowsFallback.Value is not null && WindowsFallback.Value.NeedsBoldSimulation(faceName, isItalic);
-    }
-
-    //--------------------------------------------------------------------------------
     // IFontResolver
     //--------------------------------------------------------------------------------
 
     public FontResolverInfo ResolveTypeface(string familyName, bool isBold, bool isItalic)
     {
-        // 事前登録された埋め込みフォントを優先する。
-        // GetFont でベース名へのフォールバックを行うため、bold/italic の face 名でも登録不要。
-        // Prioritizes pre-registered embedded fonts.
-        // Fallback to the base name is handled in GetFont, so bold/italic face names need not be registered separately.
+        // Fallback to the base name is handled in GetFont, so bold/italic face names need not be registered separately
         if (ResolvedTypefaceCache.TryGetValue(familyName, out var resolvedTypeface))
         {
             return new FontResolverInfo(
@@ -74,8 +62,7 @@ internal sealed class ReportFontResolverAdapter : IFontResolver
             return fontBytes;
         }
 
-        // bold/italic バリアント ("familyName#b" 等) が個別登録されていない場合はベース名にフォールバックする。
-        // Falls back to the base family name when bold/italic variants (e.g. "familyName#b") are not individually registered.
+        // Falls back to the base family name when bold/italic variants (e.g. "familyName#b") are not individually registered
         var family = ExtractFamilyName(faceName);
         if (!String.Equals(family, faceName, StringComparison.OrdinalIgnoreCase) &&
             EmbeddedFontCache.TryGetValue(family, out fontBytes))
@@ -88,8 +75,16 @@ internal sealed class ReportFontResolverAdapter : IFontResolver
             return WindowsFallback.Value.GetFont(faceName);
         }
 
-        throw new InvalidOperationException(
-            $"Font data not provided and no Windows fallback available. faceName=[{faceName}]");
+        throw new InvalidOperationException($"Font data not provided and no Windows fallback available. faceName=[{faceName}]");
+    }
+
+    //--------------------------------------------------------------------------------
+    // Bold simulation
+    //--------------------------------------------------------------------------------
+
+    public static bool IsBoldSimulationRequired(string faceName, bool isItalic)
+    {
+        return WindowsFallback.Value is not null && WindowsFallback.Value.IsBoldSimulationRequired(faceName, isItalic);
     }
 
     //--------------------------------------------------------------------------------
@@ -123,7 +118,5 @@ internal sealed class ReportFontResolverAdapter : IFontResolver
             .Replace("#b", string.Empty, StringComparison.OrdinalIgnoreCase)
             .Replace("#i", string.Empty, StringComparison.OrdinalIgnoreCase)
             .Trim();
-
-    private static WindowsFontResolver? CreateWindowsFallback() => OperatingSystem.IsWindows() ? new WindowsFontResolver() : null;
 }
 #pragma warning restore CA1416

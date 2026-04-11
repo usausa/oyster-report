@@ -78,7 +78,6 @@ internal static class ExcelReader
             MaxDigitWidth = ResolveMaxDigitWidth(workbook.Style.Font.FontName, workbook.Style.Font.FontSize, renderOption),
             ColumnWidthAdjustment = renderOption.ColumnWidthAdjustment
         };
-
     }
 
     private static ReportSheet ReadSheet(IXLWorksheet worksheet, ReportMeasurementProfile measurementProfile)
@@ -180,130 +179,12 @@ internal static class ExcelReader
     }
 
     //--------------------------------------------------------------------------------
-    // Cell
+    // Print area
     //--------------------------------------------------------------------------------
 
-    // セルの値を種別ごとに取得し ReportCellValue に変換する。
-    // Reads the cell value by type and converts it to a ReportCellValue.
-    private static ReportCellValue ReadCellValue(IXLCell cell) =>
-        new()
-        {
-            Kind = cell.DataType,
-            RawValue = cell.DataType switch
-            {
-                XLDataType.Boolean => cell.Value.GetBoolean(),
-                XLDataType.Number => cell.Value.GetNumber(),
-                XLDataType.DateTime => cell.Value.GetDateTime(),
-                XLDataType.Text => cell.Value.GetText(),
-                _ => cell.Value.ToString(CultureInfo.InvariantCulture)
-            }
-        };
-
-    // セルのスタイル（フォント・塗り・罫線・配置）を ReportCellStyle に変換する。
-    // Converts the cell style (font, fill, borders, alignment) to a ReportCellStyle.
-    private static ReportCellStyle ReadCellStyle(IXLCell cell)
-    {
-        var style = cell.Style;
-        return new ReportCellStyle
-        {
-            Font = new ReportFont
-            {
-                Name = style.Font.FontName,
-                Size = style.Font.FontSize,
-                Bold = style.Font.Bold,
-                Italic = style.Font.Italic,
-                Underline = style.Font.Underline != XLFontUnderlineValues.None,
-                Strikeout = style.Font.Strikethrough,
-                ColorHex = ColorHelper.ResolveHex(style.Font.FontColor, cell.Worksheet.Workbook, "#FF000000")
-            },
-            Fill = new ReportFill
-            {
-                BackgroundColorHex = ResolveFillColorHex(style.Fill, cell.Worksheet.Workbook)
-            },
-            Borders = new ReportBorders
-            {
-                Left = ReadBorder(style.Border.LeftBorder, ColorHelper.ResolveHex(style.Border.LeftBorderColor, cell.Worksheet.Workbook, "#FF000000")),
-                Top = ReadBorder(style.Border.TopBorder, ColorHelper.ResolveHex(style.Border.TopBorderColor, cell.Worksheet.Workbook, "#FF000000")),
-                Right = ReadBorder(style.Border.RightBorder, ColorHelper.ResolveHex(style.Border.RightBorderColor, cell.Worksheet.Workbook, "#FF000000")),
-                Bottom = ReadBorder(style.Border.BottomBorder, ColorHelper.ResolveHex(style.Border.BottomBorderColor, cell.Worksheet.Workbook, "#FF000000"))
-            },
-            Alignment = new ReportAlignment
-            {
-                Horizontal = style.Alignment.Horizontal,
-                Vertical = style.Alignment.Vertical
-            },
-            WrapText = style.Alignment.WrapText
-        };
-    }
-
-    // 罫線スタイルと色を ReportBorder に変換する。透明色は黒に補正する。
-    // Converts a border style and color to a ReportBorder. Transparent colors are corrected to black.
-    private static ReportBorder ReadBorder(XLBorderStyleValues styleValue, string colorHex)
-    {
-        var resolvedColorHex = ColorHelper.NormalizeHex(colorHex);
-        if ((styleValue != XLBorderStyleValues.None) && resolvedColorHex.StartsWith("#00", StringComparison.Ordinal))
-        {
-            resolvedColorHex = "#FF000000";
-        }
-
-        return new ReportBorder
-        {
-            Style = styleValue,
-            ColorHex = resolvedColorHex,
-            Width = ResolveBorderWidth(styleValue, new ReportRenderOption())
-        };
-    }
-
-    //--------------------------------------------------------------------------------
-    // Page setup
-    //--------------------------------------------------------------------------------
-
-    // ページ設定（用紙・余白・中央揃え等）を ReportPageSetup に変換する。
-    // Converts page setup (paper size, margins, centering, etc.) to a ReportPageSetup.
-    private static ReportPageSetup ReadPageSetup(IXLWorksheet worksheet) =>
-        new()
-        {
-            PaperSize = worksheet.PageSetup.PaperSize,
-            Orientation = worksheet.PageSetup.PageOrientation,
-            Margins = new ReportThickness
-            {
-                Left = ConvertInchToPoint(worksheet.PageSetup.Margins.Left),
-                Top = ConvertInchToPoint(worksheet.PageSetup.Margins.Top),
-                Right = ConvertInchToPoint(worksheet.PageSetup.Margins.Right),
-                Bottom = ConvertInchToPoint(worksheet.PageSetup.Margins.Bottom)
-            },
-            HeaderMarginPoint = ConvertInchToPoint(worksheet.PageSetup.Margins.Header),
-            FooterMarginPoint = ConvertInchToPoint(worksheet.PageSetup.Margins.Footer),
-            ScalePercent = worksheet.PageSetup.Scale,
-            FitToPagesWide = worksheet.PageSetup.PagesWide == 0 ? null : worksheet.PageSetup.PagesWide,
-            FitToPagesTall = worksheet.PageSetup.PagesTall == 0 ? null : worksheet.PageSetup.PagesTall,
-            CenterHorizontally = worksheet.PageSetup.CenterHorizontally,
-            CenterVertically = worksheet.PageSetup.CenterVertically
-        };
-
-    // ヘッダー・フッターのテキストと表示条件を ReportHeaderFooter に変換する。
-    // Converts header/footer text and display conditions to a ReportHeaderFooter.
-    private static ReportHeaderFooter ReadHeaderFooter(IXLWorksheet worksheet) =>
-        new()
-        {
-            AlignWithMargins = worksheet.PageSetup.AlignHFWithMargins,
-            DifferentFirst = !String.IsNullOrWhiteSpace(worksheet.PageSetup.Header.GetText(XLHFOccurrence.FirstPage)) ||
-                             !String.IsNullOrWhiteSpace(worksheet.PageSetup.Footer.GetText(XLHFOccurrence.FirstPage)),
-            DifferentOddEven = !String.IsNullOrWhiteSpace(worksheet.PageSetup.Header.GetText(XLHFOccurrence.EvenPages)) ||
-                               !String.IsNullOrWhiteSpace(worksheet.PageSetup.Footer.GetText(XLHFOccurrence.EvenPages)),
-            ScaleWithDocument = worksheet.PageSetup.ScaleHFWithDocument,
-            OddHeader = worksheet.PageSetup.Header.GetText(XLHFOccurrence.OddPages),
-            OddFooter = worksheet.PageSetup.Footer.GetText(XLHFOccurrence.OddPages),
-            EvenHeader = worksheet.PageSetup.Header.GetText(XLHFOccurrence.EvenPages),
-            EvenFooter = worksheet.PageSetup.Footer.GetText(XLHFOccurrence.EvenPages),
-            FirstHeader = worksheet.PageSetup.Header.GetText(XLHFOccurrence.FirstPage),
-            FirstFooter = worksheet.PageSetup.Footer.GetText(XLHFOccurrence.FirstPage)
-        };
-
-    // 印刷範囲が設定されていれば ReportPrintArea に変換する。未設定の場合は null を返す。
-    // Converts the print area to a ReportPrintArea if set. Returns null if not configured.
     private static ReportPrintArea? ReadPrintArea(IXLWorksheet worksheet)
     {
+        // Converts the print area to a ReportPrintArea if set
         var printArea = worksheet.PageSetup.PrintAreas.FirstOrDefault();
         if (printArea is null)
         {
@@ -326,10 +207,9 @@ internal static class ExcelReader
     // Sheet range
     //--------------------------------------------------------------------------------
 
-    // シートの使用セル範囲・印刷範囲・マージ範囲を統合し、描画対象範囲を決定する。
-    // Merges the used cell range, print area, and merged ranges to determine the rendering range.
     private static bool TryResolveSheetRange(IXLWorksheet worksheet, ReportPrintArea? printArea, out ReportRange range)
     {
+        // Merges the used cell range, print area, and merged ranges to determine the rendering range
         var contentRange = worksheet.RangeUsed();
         var formattedRange = worksheet.RangeUsed(XLCellsUsedOptions.All);
         if ((contentRange is null) && (formattedRange is null) && (worksheet.MergedRanges.Count == 0) && (printArea is null))
@@ -390,13 +270,152 @@ internal static class ExcelReader
     }
 
     //--------------------------------------------------------------------------------
+    // Page setup
+    //--------------------------------------------------------------------------------
+
+    private static ReportPageSetup ReadPageSetup(IXLWorksheet worksheet)
+    {
+        // Converts page setup (paper size, margins, centering, etc.) to a ReportPageSetup
+        return new()
+        {
+            PaperSize = worksheet.PageSetup.PaperSize,
+            Orientation = worksheet.PageSetup.PageOrientation,
+            Margins = new ReportThickness
+            {
+                Left = ConvertInchToPoint(worksheet.PageSetup.Margins.Left),
+                Top = ConvertInchToPoint(worksheet.PageSetup.Margins.Top),
+                Right = ConvertInchToPoint(worksheet.PageSetup.Margins.Right),
+                Bottom = ConvertInchToPoint(worksheet.PageSetup.Margins.Bottom)
+            },
+            HeaderMarginPoint = ConvertInchToPoint(worksheet.PageSetup.Margins.Header),
+            FooterMarginPoint = ConvertInchToPoint(worksheet.PageSetup.Margins.Footer),
+            ScalePercent = worksheet.PageSetup.Scale,
+            FitToPagesWide = worksheet.PageSetup.PagesWide == 0 ? null : worksheet.PageSetup.PagesWide,
+            FitToPagesTall = worksheet.PageSetup.PagesTall == 0 ? null : worksheet.PageSetup.PagesTall,
+            CenterHorizontally = worksheet.PageSetup.CenterHorizontally,
+            CenterVertically = worksheet.PageSetup.CenterVertically
+        };
+    }
+
+    private static ReportHeaderFooter ReadHeaderFooter(IXLWorksheet worksheet)
+    {
+        // Converts header/footer text and display conditions to a ReportHeaderFooter
+        return new()
+        {
+            AlignWithMargins = worksheet.PageSetup.AlignHFWithMargins,
+            DifferentFirst = !String.IsNullOrWhiteSpace(worksheet.PageSetup.Header.GetText(XLHFOccurrence.FirstPage)) ||
+                             !String.IsNullOrWhiteSpace(worksheet.PageSetup.Footer.GetText(XLHFOccurrence.FirstPage)),
+            DifferentOddEven = !String.IsNullOrWhiteSpace(worksheet.PageSetup.Header.GetText(XLHFOccurrence.EvenPages)) ||
+                               !String.IsNullOrWhiteSpace(worksheet.PageSetup.Footer.GetText(XLHFOccurrence.EvenPages)),
+            ScaleWithDocument = worksheet.PageSetup.ScaleHFWithDocument,
+            OddHeader = worksheet.PageSetup.Header.GetText(XLHFOccurrence.OddPages),
+            OddFooter = worksheet.PageSetup.Footer.GetText(XLHFOccurrence.OddPages),
+            EvenHeader = worksheet.PageSetup.Header.GetText(XLHFOccurrence.EvenPages),
+            EvenFooter = worksheet.PageSetup.Footer.GetText(XLHFOccurrence.EvenPages),
+            FirstHeader = worksheet.PageSetup.Header.GetText(XLHFOccurrence.FirstPage),
+            FirstFooter = worksheet.PageSetup.Footer.GetText(XLHFOccurrence.FirstPage)
+        };
+    }
+
+    //--------------------------------------------------------------------------------
+    // Cell
+    //--------------------------------------------------------------------------------
+
+    private static ReportCellValue ReadCellValue(IXLCell cell)
+    {
+        // Reads the cell value by type and converts it to a ReportCellValue
+        return new()
+        {
+            Kind = cell.DataType,
+            RawValue = cell.DataType switch
+            {
+                XLDataType.Boolean => cell.Value.GetBoolean(),
+                XLDataType.Number => cell.Value.GetNumber(),
+                XLDataType.DateTime => cell.Value.GetDateTime(),
+                XLDataType.Text => cell.Value.GetText(),
+                _ => cell.Value.ToString(CultureInfo.InvariantCulture)
+            }
+        };
+    }
+
+    private static ReportCellStyle ReadCellStyle(IXLCell cell)
+    {
+        // Converts the cell style (font, fill, borders, alignment) to a ReportCellStyle
+        var style = cell.Style;
+        return new ReportCellStyle
+        {
+            Font = new ReportFont
+            {
+                Name = style.Font.FontName,
+                Size = style.Font.FontSize,
+                Bold = style.Font.Bold,
+                Italic = style.Font.Italic,
+                Underline = style.Font.Underline != XLFontUnderlineValues.None,
+                Strikeout = style.Font.Strikethrough,
+                ColorHex = ColorHelper.ResolveHex(style.Font.FontColor, cell.Worksheet.Workbook, "#FF000000")
+            },
+            Fill = new ReportFill
+            {
+                BackgroundColorHex = ResolveFillColorHex(style.Fill, cell.Worksheet.Workbook)
+            },
+            Borders = new ReportBorders
+            {
+                Left = ReadBorder(style.Border.LeftBorder, ColorHelper.ResolveHex(style.Border.LeftBorderColor, cell.Worksheet.Workbook, "#FF000000")),
+                Top = ReadBorder(style.Border.TopBorder, ColorHelper.ResolveHex(style.Border.TopBorderColor, cell.Worksheet.Workbook, "#FF000000")),
+                Right = ReadBorder(style.Border.RightBorder, ColorHelper.ResolveHex(style.Border.RightBorderColor, cell.Worksheet.Workbook, "#FF000000")),
+                Bottom = ReadBorder(style.Border.BottomBorder, ColorHelper.ResolveHex(style.Border.BottomBorderColor, cell.Worksheet.Workbook, "#FF000000"))
+            },
+            Alignment = new ReportAlignment
+            {
+                Horizontal = style.Alignment.Horizontal,
+                Vertical = style.Alignment.Vertical
+            },
+            WrapText = style.Alignment.WrapText
+        };
+    }
+
+    private static ReportBorder ReadBorder(XLBorderStyleValues styleValue, string colorHex)
+    {
+        // Converts a border style and color to a ReportBorder. Transparent colors are corrected to black
+        var resolvedColorHex = ColorHelper.NormalizeHex(colorHex);
+        if ((styleValue != XLBorderStyleValues.None) && resolvedColorHex.StartsWith("#00", StringComparison.Ordinal))
+        {
+            resolvedColorHex = "#FF000000";
+        }
+
+        return new ReportBorder
+        {
+            Style = styleValue,
+            ColorHex = resolvedColorHex,
+            Width = ResolveBorderWidth(styleValue, new ReportRenderOption())
+        };
+    }
+
+    private static string ResolveFillColorHex(IXLFill fill, IXLWorkbook workbook)
+    {
+        // Converts the cell fill background color to an ARGB hex string
+        // Pattern fills prioritize the pattern color.
+        if (fill.PatternType == XLFillPatternValues.None)
+        {
+            return "#00000000";
+        }
+
+        var background = ColorHelper.ResolveHex(fill.BackgroundColor, workbook, "#00000000");
+        if (!background.StartsWith("#00", StringComparison.Ordinal))
+        {
+            return background;
+        }
+
+        return ColorHelper.ResolveHex(fill.PatternColor, workbook, "#00000000");
+    }
+
+    //--------------------------------------------------------------------------------
     // Image
     //--------------------------------------------------------------------------------
 
-    // ClosedXML の画像情報をポイント単位の座標に変換し ReportImage を生成する。
-    // Converts ClosedXML image data to point-based coordinates and produces a ReportImage.
     private static ReportImage ReadImage(IXLPicture picture)
     {
+        // Converts ClosedXML image data to point-based coordinates and produces a ReportImage
         using var memoryStream = new MemoryStream();
         picture.ImageStream.Position = 0;
         picture.ImageStream.CopyTo(memoryStream);
@@ -416,10 +435,9 @@ internal static class ExcelReader
         };
     }
 
-    // MoveAndSize 配置の画像のみ右下セルアドレスを取得する。取得できない場合は null を返す。
-    // Returns the bottom-right cell address for MoveAndSize-placed images only. Returns null if unavailable.
     private static string? TryGetBottomRightCellAddress(IXLPicture picture)
     {
+        // Returns the bottom-right cell address for MoveAndSize-placed images only
         if (picture.Placement != XLPicturePlacement.MoveAndSize)
         {
             return null;
@@ -436,31 +454,28 @@ internal static class ExcelReader
     }
 
     //--------------------------------------------------------------------------------
-    // Post-processing
+    // Post processing
     //--------------------------------------------------------------------------------
 
-    // セル塗りつぶしの背景色を ARGB16 進文字列に変換する。パターン塗りはパターン色を優先する。
-    // Converts the cell fill background color to an ARGB hex string. Pattern fills prioritize the pattern color.
-    private static string ResolveFillColorHex(IXLFill fill, IXLWorkbook workbook)
+    private static void ApplyMergedRanges(ReportSheet reportSheet)
     {
-        if (fill.PatternType == XLFillPatternValues.None)
+        // Assigns merged-cell info to the Merge property of each affected cell
+        foreach (var mergedRange in reportSheet.MergedRanges)
         {
-            return "#00000000";
+            foreach (var cell in reportSheet.Cells.Where(x => mergedRange.Range.Contains(x.Row, x.Column)))
+            {
+                cell.Merge = new ReportMergeInfo
+                {
+                    OwnerCellAddress = mergedRange.OwnerCellAddress,
+                    Range = mergedRange.Range
+                };
+            }
         }
-
-        var background = ColorHelper.ResolveHex(fill.BackgroundColor, workbook, "#00000000");
-        if (!background.StartsWith("#00", StringComparison.Ordinal))
-        {
-            return background;
-        }
-
-        return ColorHelper.ResolveHex(fill.PatternColor, workbook, "#00000000");
     }
 
-    // テーブルスタイル（縞模様等）をセルスタイルに適用する。現在は TableStyleLight4 の奇数行縞に対応。
-    // Applies table styles (striped rows, etc.) to cell styles. Currently supports odd-row stripes for TableStyleLight4.
     private static void ApplyTableStyles(ReportSheet reportSheet, IXLWorksheet worksheet)
     {
+        // Applies table styles (striped rows, etc.) to cell styles
         foreach (var table in worksheet.Tables)
         {
             if (!table.ShowRowStripes)
@@ -468,6 +483,7 @@ internal static class ExcelReader
                 continue;
             }
 
+            // Currently supports odd-row stripes for TableStyleLight4
             var themeName = table.Theme.ToString();
             if (!String.Equals(themeName, "TableStyleLight4", StringComparison.OrdinalIgnoreCase))
             {
@@ -494,10 +510,9 @@ internal static class ExcelReader
                     continue;
                 }
 
-                foreach (var cell in reportSheet.Cells.Where(x =>
-                             x.Row == rowIndex &&
-                             x.Column >= tableRange.StartColumn &&
-                             x.Column <= tableRange.EndColumn))
+                foreach (var cell in reportSheet.Cells.Where(x => x.Row == rowIndex &&
+                                                                  x.Column >= tableRange.StartColumn &&
+                                                                  x.Column <= tableRange.EndColumn))
                 {
                     if (!IsTransparentFill(cell.Style.Fill.BackgroundColorHex))
                     {
@@ -513,23 +528,6 @@ internal static class ExcelReader
         }
     }
 
-    // マージセル情報を各セルの Merge プロパティに設定する。
-    // Assigns merged-cell info to the Merge property of each affected cell.
-    private static void ApplyMergedRanges(ReportSheet reportSheet)
-    {
-        foreach (var mergedRange in reportSheet.MergedRanges)
-        {
-            foreach (var cell in reportSheet.Cells.Where(x => mergedRange.Range.Contains(x.Row, x.Column)))
-            {
-                cell.Merge = new ReportMergeInfo
-                {
-                    OwnerCellAddress = mergedRange.OwnerCellAddress,
-                    Range = mergedRange.Range
-                };
-            }
-        }
-    }
-
     //--------------------------------------------------------------------------------
     // Helper
     //--------------------------------------------------------------------------------
@@ -539,12 +537,10 @@ internal static class ExcelReader
     private static bool IsTransparentFill(string colorHex) =>
         ColorHelper.NormalizeHex(colorHex).StartsWith("#00", StringComparison.Ordinal);
 
-    // Excel 列幅（文字数単位）をポイント値に変換する。
-    // Excel の列幅ピクセル計算仕様に従い、最大桁幅と画面 DPI を用いて算出する。
-    // Converts Excel column width (in character units) to points.
-    // Calculated using max digit width and screen DPI per the Excel column width spec.
     private static double ConvertExcelColumnWidthToPoint(double excelWidth, double maxDigitWidth, double adjustment)
     {
+        // Converts Excel column width (in character units) to points
+        // Calculated using max digit width and screen DPI per the Excel column width spec
         var normalizedWidth = Math.Max(0, excelWidth);
         var effectiveMaxDigitWidth = maxDigitWidth <= 0d ? DefaultMaxDigitWidth : maxDigitWidth;
         var pixelPadding = (ExcelColumnPaddingMultiplier * Math.Ceiling(effectiveMaxDigitWidth / ExcelColumnPaddingDivisor)) + ExcelColumnPaddingOffsetPixels;
@@ -562,17 +558,9 @@ internal static class ExcelReader
         return pixelWidth * PointsPerInch / ScreenDpi * adjustment;
     }
 
-    // ブック既定フォントの最大桁幅を解決する。
-    // 列幅は Excel ブック自体の既定フォントに対して定義されるため、
-    // 出力用のフォント置換とは独立に元のフォント名だけで計測する。
-    // Resolves the maximum digit width for the workbook's default font.
-    // Column widths are defined relative to the workbook default font, so measurement
-    // is done using the original font name independently of any output font substitution.
-    private static double ResolveMaxDigitWidth(
-        string? fontName,
-        double fontSize,
-        ReportRenderOption renderOption)
+    private static double ResolveMaxDigitWidth(string? fontName, double fontSize, ReportRenderOption renderOption)
     {
+        // Resolves the maximum digit width for the workbook's default font
         if (String.IsNullOrWhiteSpace(fontName) || fontSize <= 0d)
         {
             return renderOption.FallbackMaxDigitWidth;
@@ -590,10 +578,10 @@ internal static class ExcelReader
     private static double ResolveBorderWidth(XLBorderStyleValues style, ReportRenderOption renderOption) =>
         style switch
         {
-            XLBorderStyleValues.Thick => renderOption.ThickBorderWidthPoints,
-            XLBorderStyleValues.Medium => renderOption.MediumBorderWidthPoints,
-            XLBorderStyleValues.Double => renderOption.NormalBorderWidthPoints,
-            XLBorderStyleValues.Hair => renderOption.HairBorderWidthPoints,
-            _ => renderOption.NormalBorderWidthPoints
+            XLBorderStyleValues.Thick => renderOption.ThickBorderWidth,
+            XLBorderStyleValues.Medium => renderOption.MediumBorderWidth,
+            XLBorderStyleValues.Double => renderOption.NormalBorderWidth,
+            XLBorderStyleValues.Hair => renderOption.HairBorderWidth,
+            _ => renderOption.NormalBorderWidth
         };
 }

@@ -94,7 +94,7 @@ internal static class PdfGenerator
     }
 
     //--------------------------------------------------------------------------------
-    // Drawing
+    // Page background
     //--------------------------------------------------------------------------------
 
     // ページ全体を白い背景矩形で塗りつぶす。
@@ -103,6 +103,10 @@ internal static class PdfGenerator
     {
         graphics.DrawRectangle(XBrushes.White, pageBounds.X, pageBounds.Y, pageBounds.Width, pageBounds.Height);
     }
+
+    //--------------------------------------------------------------------------------
+    // Cell
+    //--------------------------------------------------------------------------------
 
     // セルの背景色とテキストを描画する。
     // 背景は同色のセルをまとめて描画し、テキストは折り返し・中央揃え等に応じて配置する。
@@ -212,6 +216,10 @@ internal static class PdfGenerator
         }
     }
 
+    //--------------------------------------------------------------------------------
+    // Border
+    //--------------------------------------------------------------------------------
+
     // セルの罫線を描画する。重複する辺は優先度の高い罫線スタイルを採用し一度だけ描画する。
     // Draws cell borders. Duplicate edges adopt the higher-priority border style and are drawn only once.
     private static void DrawBorders(XGraphics graphics, ReportSheet sourceSheet, IEnumerable<PdfCellRenderInfo> cells, ReportRenderOption renderOption)
@@ -248,7 +256,7 @@ internal static class PdfGenerator
     }
 
     //--------------------------------------------------------------------------------
-    // Border
+    // Border helpers
     //--------------------------------------------------------------------------------
 
     // 1 辺の罫線情報を収集する。同一辺に複数スタイルがある場合は優先度の高いほうを残す。
@@ -338,7 +346,7 @@ internal static class PdfGenerator
     {
         var headerSections = ResolveHeaderFooterSections(headerFooter.HeaderText, pageNumber, totalPages);
         var footerSections = ResolveHeaderFooterSections(headerFooter.FooterText, pageNumber, totalPages);
-        var font = CreateFallbackFont(renderOption.HeaderFooterFontSizePoints, renderOption.HeaderFooterFallbackFontNames);
+        var font = CreateFallbackFont(renderOption.HeaderFooterFontSize, renderOption.HeaderFooterFallbackFonts);
 
         DrawHeaderFooterSections(graphics, headerSections, headerFooter.HeaderBounds, font);
         DrawHeaderFooterSections(graphics, footerSections, headerFooter.FooterBounds, font);
@@ -421,7 +429,7 @@ internal static class PdfGenerator
     // and ensures embedded fonts are used reliably.
     private static ResolvedFontRenderInfo ResolveFont(ReportFont font, ReportRenderContext context)
     {
-        var fontSize = font.Size <= 0 ? context.RenderingOptions.DefaultCellFontSizePoints : font.Size;
+        var fontSize = font.Size <= 0 ? context.RenderingOptions.DefaultCellFontSize : font.Size;
         var nameToUse = font.Name;
         var simulateBold = false;
 
@@ -448,7 +456,7 @@ internal static class PdfGenerator
             nameToUse = resolvedTypeface.FaceName;
         }
 
-        if (!simulateBold && font.Bold && ReportFontResolverAdapter.NeedsBoldSimulationForInstalledFont(nameToUse, font.Italic))
+        if (!simulateBold && font.Bold && ReportFontResolverAdapter.IsBoldSimulationRequired(nameToUse, font.Italic))
         {
             simulateBold = true;
         }
@@ -617,8 +625,8 @@ internal static class PdfGenerator
             decorationX = horizontalAlignment switch
             {
                 XLAlignmentHorizontalValues.Center => textRect.X + ((textRect.Width - decorationWidth) / 2),
-                XLAlignmentHorizontalValues.Right  => textRect.X + textRect.Width - decorationWidth,
-                _                                  => textRect.X
+                XLAlignmentHorizontalValues.Right => textRect.X + textRect.Width - decorationWidth,
+                _ => textRect.X
             };
         }
 
@@ -633,7 +641,7 @@ internal static class PdfGenerator
             // 通常は負値（ベースライン下方）なので、スクリーン座標では減算することで下方に移動する。
             // UnderlinePosition is the offset from baseline in font coordinates (Y up).
             // Typically negative (below baseline); negating it moves the line downward in screen space.
-            var lineThickness = Math.Max(renderOption.UnderlineWidthPoints, Math.Abs(metrics.UnderlineThickness * scale));
+            var lineThickness = Math.Max(renderOption.UnderlineWidth, Math.Abs(metrics.UnderlineThickness * scale));
             var lineY = textTopY + ascentPt - (metrics.UnderlinePosition * scale);
             DrawSolidBorder(graphics, color, lineThickness, new ReportLine
             {
@@ -648,7 +656,7 @@ internal static class PdfGenerator
         {
             // StrikethroughPosition はフォント座標系でのベースラインから上方向の距離（正値）。
             // StrikethroughPosition is above the baseline in font coordinates (positive value).
-            var lineThickness = Math.Max(renderOption.StrikeoutWidthPoints, Math.Abs(metrics.StrikethroughThickness * scale));
+            var lineThickness = Math.Max(renderOption.StrikeoutWidth, Math.Abs(metrics.StrikethroughThickness * scale));
             var lineY = textTopY + ascentPt - (metrics.StrikethroughPosition * scale);
             DrawSolidBorder(graphics, color, lineThickness, new ReportLine
             {
@@ -722,11 +730,11 @@ internal static class PdfGenerator
     private static double ResolveBorderWidth(XLBorderStyleValues style, ReportRenderOption renderOption) =>
         style switch
         {
-            XLBorderStyleValues.Thick => renderOption.ThickBorderWidthPoints,
-            XLBorderStyleValues.Medium => renderOption.MediumBorderWidthPoints,
-            XLBorderStyleValues.Double => renderOption.NormalBorderWidthPoints,
-            XLBorderStyleValues.Hair => renderOption.HairBorderWidthPoints,
-            _ => renderOption.NormalBorderWidthPoints
+            XLBorderStyleValues.Thick => renderOption.ThickBorderWidth,
+            XLBorderStyleValues.Medium => renderOption.MediumBorderWidth,
+            XLBorderStyleValues.Double => renderOption.NormalBorderWidth,
+            XLBorderStyleValues.Hair => renderOption.HairBorderWidth,
+            _ => renderOption.NormalBorderWidth
         };
 
     // 罫線スタイルに応じた破線パターンを XPen に適用する。

@@ -82,7 +82,7 @@ public sealed class AddressHelperTests
     [Fact]
     public void ParseAddressShouldThrowFormatExceptionForEmptyString()
     {
-        Assert.Throws<FormatException>(() => AddressHelper.ParseAddress(""));
+        Assert.Throws<FormatException>(() => AddressHelper.ParseAddress(string.Empty));
     }
 
     //--------------------------------------------------------------------------------
