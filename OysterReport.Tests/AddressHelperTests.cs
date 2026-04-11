@@ -22,8 +22,6 @@ public sealed class AddressHelperTests
     [InlineData(1048576, 16384, "XFD1048576")]
     public void ToAddressShouldReturnExpectedAddress(int row, int column, string expected)
     {
-        // Arrange
-
         // Act
         var result = AddressHelper.ToAddress(row, column);
 
@@ -47,8 +45,6 @@ public sealed class AddressHelperTests
     [InlineData("XFD1048576", 1048576, 16384)]
     public void ParseAddressShouldReturnExpectedRowAndColumn(string address, int expectedRow, int expectedColumn)
     {
-        // Arrange
-
         // Act
         var (row, column) = AddressHelper.ParseAddress(address);
 
@@ -60,8 +56,6 @@ public sealed class AddressHelperTests
     [Fact]
     public void ParseAddressShouldBeCaseInsensitive()
     {
-        // Arrange
-
         // Act
         var (row, column) = AddressHelper.ParseAddress("xfd1048576");
 
@@ -73,8 +67,6 @@ public sealed class AddressHelperTests
     [Fact]
     public void ParseAddressShouldTrimWhitespace()
     {
-        // Arrange
-
         // Act
         var (row, column) = AddressHelper.ParseAddress("  B5  ");
 
@@ -86,11 +78,8 @@ public sealed class AddressHelperTests
     [Fact]
     public void ParseAddressShouldThrowFormatExceptionWhenNoLetters()
     {
-        // Arrange
-        Action act = () => AddressHelper.ParseAddress("123");
-
         // Act
-        var exception = Record.Exception(act);
+        var exception = Record.Exception((Action)(() => AddressHelper.ParseAddress("123")));
 
         // Assert
         Assert.IsType<FormatException>(exception);
@@ -99,11 +88,8 @@ public sealed class AddressHelperTests
     [Fact]
     public void ParseAddressShouldThrowFormatExceptionWhenNoDigits()
     {
-        // Arrange
-        Action act = () => AddressHelper.ParseAddress("ABC");
-
         // Act
-        var exception = Record.Exception(act);
+        var exception = Record.Exception((Action)(() => AddressHelper.ParseAddress("ABC")));
 
         // Assert
         Assert.IsType<FormatException>(exception);
@@ -112,8 +98,6 @@ public sealed class AddressHelperTests
     [Fact]
     public void ParseAddressShouldThrowFormatExceptionForEmptyString()
     {
-        // Arrange
-
         // Act / Assert
         Assert.Throws<FormatException>(() => AddressHelper.ParseAddress(string.Empty));
     }
@@ -130,8 +114,6 @@ public sealed class AddressHelperTests
     [InlineData(1048576, 16384)]
     public void ToAddressThenParseAddressShouldReturnOriginalValues(int row, int column)
     {
-        // Arrange
-
         // Act
         var address = AddressHelper.ToAddress(row, column);
         var (parsedRow, parsedColumn) = AddressHelper.ParseAddress(address);

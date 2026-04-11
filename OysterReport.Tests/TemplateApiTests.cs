@@ -27,11 +27,8 @@ public sealed class TemplateApiTests
         var missingKeyCount = sheet.ReplacePlaceholder("NoSuchKey", "Ignored");
 
         // Assert
-        // CustomerName は 2 セルに存在するので 2 が返るはず
         Assert.Equal(2, customerNameCount);
-        // OtherField は 1 セルにのみ存在
         Assert.Equal(1, otherFieldCount);
-        // 存在しないキーは 0
         Assert.Equal(0, missingKeyCount);
     }
 

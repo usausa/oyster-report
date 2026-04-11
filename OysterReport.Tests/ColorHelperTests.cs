@@ -18,8 +18,6 @@ public sealed class ColorHelperTests
     [InlineData("   ")]
     public void NormalizeHexShouldReturnTransparentBlackForNullOrWhitespace(string? input)
     {
-        // Arrange
-
         // Act
         var result = ColorHelper.NormalizeHex(input);
 
@@ -34,8 +32,6 @@ public sealed class ColorHelperTests
     [InlineData("00000000", "#00000000")]
     public void NormalizeHexShouldAddHashPrefixAndUppercase(string input, string expected)
     {
-        // Arrange
-
         // Act
         var result = ColorHelper.NormalizeHex(input);
 
@@ -49,8 +45,6 @@ public sealed class ColorHelperTests
     [InlineData("#FFFFFFFF", "#FFFFFFFF")]
     public void NormalizeHexShouldUppercaseWhenHashAlreadyPresent(string input, string expected)
     {
-        // Arrange
-
         // Act
         var result = ColorHelper.NormalizeHex(input);
 
@@ -61,8 +55,6 @@ public sealed class ColorHelperTests
     [Fact]
     public void NormalizeHexShouldTrimWhitespaceBeforeProcessing()
     {
-        // Arrange
-
         // Act
         var result = ColorHelper.NormalizeHex("  FF0000  ");
 
@@ -77,8 +69,6 @@ public sealed class ColorHelperTests
     [Fact]
     public void ToHexShouldReturnCorrectHexForRed()
     {
-        // Arrange
-
         // Act
         var result = ColorHelper.ToHex(Color.Red);
 
@@ -89,8 +79,6 @@ public sealed class ColorHelperTests
     [Fact]
     public void ToHexShouldReturnCorrectHexForBlack()
     {
-        // Arrange
-
         // Act
         var result = ColorHelper.ToHex(Color.Black);
 
@@ -101,8 +89,6 @@ public sealed class ColorHelperTests
     [Fact]
     public void ToHexShouldReturnCorrectHexForWhite()
     {
-        // Arrange
-
         // Act
         var result = ColorHelper.ToHex(Color.White);
 
@@ -130,8 +116,6 @@ public sealed class ColorHelperTests
     [Fact]
     public void ApplyTintShouldReturnSameColorWhenTintIsNaN()
     {
-        // Arrange
-
         // Act
         var result = ColorHelper.ApplyTint(Color.Red, double.NaN);
 
@@ -142,8 +126,6 @@ public sealed class ColorHelperTests
     [Fact]
     public void ApplyTintShouldReturnSameColorWhenTintIsZero()
     {
-        // Arrange
-
         // Act
         var result = ColorHelper.ApplyTint(Color.Red, 0d);
 
@@ -184,8 +166,6 @@ public sealed class ColorHelperTests
     [Fact]
     public void ApplyTintShouldDarkenColorWhenTintIsNegative()
     {
-        // Arrange
-
         // Act
         var result = ColorHelper.ApplyTint(Color.Red, -0.5d);
 
@@ -197,8 +177,6 @@ public sealed class ColorHelperTests
     [Fact]
     public void ApplyTintShouldLightenColorWhenTintIsPositive()
     {
-        // Arrange
-
         // Act
         var result = ColorHelper.ApplyTint(Color.Red, 0.5d);
 

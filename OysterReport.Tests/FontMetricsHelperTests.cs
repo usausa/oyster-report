@@ -16,8 +16,6 @@ public sealed class FontMetricsHelperTests
     [InlineData("   ")]
     public void MeasureMaxDigitWidthShouldReturnNullForNullOrWhitespaceFontName(string? fontName)
     {
-        // Arrange
-
         // Act
         var result = FontMetricsHelper.MeasureMaxDigitWidth(fontName!, 11d);
 
