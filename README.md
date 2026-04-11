@@ -31,7 +31,7 @@ foreach (var item in items)
     row.ReplacePlaceholders(new Dictionary<string, string?>
     {
         ["ItemName"] = item.Name,
-        ["Amount"]   = item.Amount.ToString()
+        ["Amount"] = item.Amount.ToString()
     });
 }
 templateRow.Delete();
