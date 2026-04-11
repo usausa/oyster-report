@@ -11,6 +11,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="System.CommandLine" Version="2.0.5" />
+    <PackageReference Include="Usa.Smart.CommandLine.Hosting" Version="2.3.1" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Include="..\ipaexg.ttf" Link="ipaexg.ttf">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

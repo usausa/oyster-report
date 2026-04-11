@@ -7,20 +7,20 @@ A .NET library that converts Excel (.xlsx) templates to PDF.
 ```csharp
 var engine = new OysterReportEngine();
 
-using var workbook = new TemplateWorkbook("invoice.xlsx");
+using var workbook = new TemplateWorkbook("Invoice.xlsx");
 var sheet = workbook.GetSheet("Invoice");
 
 // Replace simple placeholders
 sheet.ReplacePlaceholder("CustomerName", "Acme Corp");
 sheet.ReplacePlaceholder("IssueDate", "2025-01-15");
 
-// Expand a detail row (template row contains {{ItemName}}, {{Amount}}, ...)
+// Expand a detail row
 var templateRow = sheet.FindRow("ItemName");
-var last = templateRow;
+var row = templateRow;
 foreach (var item in items)
 {
-    last = templateRow.InsertCopyAfter(last);
-    last.ReplacePlaceholders(new Dictionary<string, string?>
+    row = templateRow.InsertCopyAfter(row);
+    row.ReplacePlaceholders(new Dictionary<string, string?>
     {
         ["ItemName"] = item.Name,
         ["Amount"]   = item.Amount.ToString()
@@ -55,3 +55,4 @@ engine.GeneratePdf(workbook, output);
 - Dependencies:
   - [ClosedXML](https://github.com/ClosedXML/ClosedXML)
   - [PDFsharp](https://github.com/empira/PDFsharp)
+  - [SkiaSharp](https://github.com/mono/SkiaSharp)
