@@ -466,7 +466,7 @@ internal static class PdfGenerator
             };
         }
 
-        throw new InvalidOperationException($"No appropriate font found for family name '{font.Name}'.");
+        throw new InvalidOperationException($"No appropriate font found. name=[{font.Name}]");
     }
 
     private static XFontStyleEx BuildActualFontStyle(ReportFont font, bool simulateBold)

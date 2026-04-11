@@ -44,7 +44,7 @@ internal static class AddressHelper
 
         if (String.IsNullOrEmpty(lettersStr) || String.IsNullOrEmpty(digitsStr))
         {
-            throw new FormatException(String.Create(CultureInfo.InvariantCulture, $"Invalid cell address '{address}'."));
+            throw new FormatException(String.Create(CultureInfo.InvariantCulture, $"Invalid cell address. address=[{address}]"));
         }
 
         var column = 0;

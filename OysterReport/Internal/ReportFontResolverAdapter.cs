@@ -89,7 +89,7 @@ internal sealed class ReportFontResolverAdapter : IFontResolver
         }
 
         throw new InvalidOperationException(
-            $"Font data was not provided for '{faceName}', and no Windows font fallback is available.");
+            $"Font data not provided and no Windows fallback available. faceName=[{faceName}]");
     }
 
     //--------------------------------------------------------------------------------

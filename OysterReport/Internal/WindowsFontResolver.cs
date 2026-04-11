@@ -39,7 +39,7 @@ internal sealed class WindowsFontResolver : IFontResolver
         if (!TryFindFont(family, wantBold, wantItalic, out var path, out var faceIndex))
         {
             throw new FileNotFoundException(
-                $"Installed font not found for '{faceName}' (family='{family}', bold={wantBold}, italic={wantItalic}).");
+                $"Installed font not found. faceName=[{faceName}], family=[{family}], bold=[{wantBold}], italic=[{wantItalic}]");
         }
 
         var rawBytes = File.ReadAllBytes(path);
@@ -81,7 +81,7 @@ internal sealed class WindowsFontResolver : IFontResolver
         var numFonts = (int)BinaryPrimitives.ReadUInt32BigEndian(ttc.AsSpan(8, sizeof(uint)));
         if (faceIndex >= numFonts)
         {
-            throw new ArgumentOutOfRangeException(nameof(faceIndex), $"TTC has {numFonts} faces, requested index {faceIndex}.");
+            throw new ArgumentOutOfRangeException(nameof(faceIndex), $"TTC face index out of range. numFonts=[{numFonts}], faceIndex=[{faceIndex}]");
         }
 
         var faceOffset = (int)BinaryPrimitives.ReadUInt32BigEndian(ttc.AsSpan(12 + (4 * faceIndex), sizeof(uint)));
@@ -117,11 +117,11 @@ internal sealed class WindowsFontResolver : IFontResolver
 
         for (var i = 0; i < numTables; i++)
         {
-            var ttfTableEntryOffset = 12 + (i * 16);
-            Encoding.ASCII.GetBytes(tables[i].Tag, 0, 4, ttf, ttfTableEntryOffset);
-            BinaryPrimitives.WriteUInt32BigEndian(ttf.AsSpan(ttfTableEntryOffset + 4, sizeof(uint)), tables[i].CheckSum);
-            BinaryPrimitives.WriteUInt32BigEndian(ttf.AsSpan(ttfTableEntryOffset + 8, sizeof(uint)), (uint)tableOffsets[i]);
-            BinaryPrimitives.WriteUInt32BigEndian(ttf.AsSpan(ttfTableEntryOffset + 12, sizeof(uint)), (uint)tables[i].Length);
+            var ttfEntryOffset = 12 + (i * 16);
+            Encoding.ASCII.GetBytes(tables[i].Tag, 0, 4, ttf, ttfEntryOffset);
+            BinaryPrimitives.WriteUInt32BigEndian(ttf.AsSpan(ttfEntryOffset + 4, sizeof(uint)), tables[i].CheckSum);
+            BinaryPrimitives.WriteUInt32BigEndian(ttf.AsSpan(ttfEntryOffset + 8, sizeof(uint)), (uint)tableOffsets[i]);
+            BinaryPrimitives.WriteUInt32BigEndian(ttf.AsSpan(ttfEntryOffset + 12, sizeof(uint)), (uint)tables[i].Length);
             Array.Copy(ttc, tables[i].SrcOffset, ttf, tableOffsets[i], tables[i].Length);
         }
 
