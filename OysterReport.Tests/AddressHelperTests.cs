@@ -87,18 +87,26 @@ public sealed class AddressHelperTests
     public void ParseAddressShouldThrowFormatExceptionWhenNoLetters()
     {
         // Arrange
+        Action act = () => AddressHelper.ParseAddress("123");
 
-        // Act / Assert
-        Assert.Throws<FormatException>(() => AddressHelper.ParseAddress("123"));
+        // Act
+        var exception = Record.Exception(act);
+
+        // Assert
+        Assert.IsType<FormatException>(exception);
     }
 
     [Fact]
     public void ParseAddressShouldThrowFormatExceptionWhenNoDigits()
     {
         // Arrange
+        Action act = () => AddressHelper.ParseAddress("ABC");
 
-        // Act / Assert
-        Assert.Throws<FormatException>(() => AddressHelper.ParseAddress("ABC"));
+        // Act
+        var exception = Record.Exception(act);
+
+        // Assert
+        Assert.IsType<FormatException>(exception);
     }
 
     [Fact]
