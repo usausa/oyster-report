@@ -15,6 +15,7 @@ public sealed class ExcelReaderTests
     [Fact]
     public void ReadShouldPopulateWorkbookModel()
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
@@ -27,8 +28,10 @@ public sealed class ExcelReaderTests
             sheet.PageSetup.Footer.Left.AddText("Footer", XLHFOccurrence.OddPages);
         });
 
+        // Act
         var workbook = ExcelReader.Read(stream);
 
+        // Assert
         var sheet = Assert.Single(workbook.Sheets);
         Assert.Equal("Report", sheet.Name);
         Assert.Single(sheet.MergedRanges);
@@ -41,22 +44,26 @@ public sealed class ExcelReaderTests
     [Fact]
     public void ReadShouldPreserveGeneralAlignmentForNumericCells()
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Alignment");
             sheet.Cell("A1").Value = 123;
         });
 
+        // Act
         var workbook = ExcelReader.Read(stream);
         var sheet = Assert.Single(workbook.Sheets);
         var cell = sheet.Cells.Single(item => item.Address == "A1");
 
+        // Assert
         Assert.Equal(XLAlignmentHorizontalValues.General, cell.Style.Alignment.Horizontal);
     }
 
     [Fact]
     public void ReadShouldResolveThemeColorsWithoutThrowing()
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Theme");
@@ -68,8 +75,10 @@ public sealed class ExcelReaderTests
             cell.Style.Border.LeftBorderColor = XLColor.FromTheme(XLThemeColor.Accent3, 0.2);
         });
 
+        // Act
         var workbook = ExcelReader.Read(stream);
 
+        // Assert
         var sheet = Assert.Single(workbook.Sheets);
         var cell = sheet.Cells.Single(item => item.Address == "A1");
         Assert.NotEqual("#00000000", cell.Style.Font.ColorHex);
@@ -80,6 +89,7 @@ public sealed class ExcelReaderTests
     [Fact]
     public void ReadShouldSupportFreeFloatingPicturesWithoutBottomRightCell()
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Pictures");
@@ -93,8 +103,10 @@ public sealed class ExcelReaderTests
                 .WithSize(24, 12);
         });
 
+        // Act
         var workbook = ExcelReader.Read(stream);
 
+        // Assert
         var sheet = Assert.Single(workbook.Sheets);
         var image = Assert.Single(sheet.Images);
         Assert.Equal("Logo", image.Name);
@@ -104,6 +116,7 @@ public sealed class ExcelReaderTests
     [Fact]
     public void ReadShouldConvertPageMarginsToPoints()
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Margins");
@@ -116,7 +129,10 @@ public sealed class ExcelReaderTests
             sheet.PageSetup.Margins.Footer = 0.2;
         });
 
+        // Act
         var workbook = ExcelReader.Read(stream);
+
+        // Assert
         var sheet = Assert.Single(workbook.Sheets);
 
         Assert.Equal(90d, sheet.PageSetup.Margins.Left, 3);
@@ -130,6 +146,7 @@ public sealed class ExcelReaderTests
     [Fact]
     public void ReadShouldApplyTableStripeFillFromExcelTableTheme()
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Table");
@@ -145,7 +162,10 @@ public sealed class ExcelReaderTests
             table.ShowRowStripes = true;
         });
 
+        // Act
         var workbook = ExcelReader.Read(stream);
+
+        // Assert
         var sheet = Assert.Single(workbook.Sheets);
         var firstDataRowCell = sheet.Cells.Single(cell => cell.Address == "A2");
         var secondDataRowCell = sheet.Cells.Single(cell => cell.Address == "A3");

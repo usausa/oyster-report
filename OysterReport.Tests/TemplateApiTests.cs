@@ -9,6 +9,7 @@ public sealed class TemplateApiTests
     [Fact]
     public void ReplacePlaceholderShouldReturnReplacementCount()
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
@@ -20,17 +21,24 @@ public sealed class TemplateApiTests
         using var workbook = new TemplateWorkbook(stream);
         var sheet = Assert.Single(workbook.Sheets);
 
+        // Act
+        var customerNameCount = sheet.ReplacePlaceholder("CustomerName", "Alice");
+        var otherFieldCount = sheet.ReplacePlaceholder("OtherField", "Value");
+        var missingKeyCount = sheet.ReplacePlaceholder("NoSuchKey", "Ignored");
+
+        // Assert
         // CustomerName は 2 セルに存在するので 2 が返るはず
-        Assert.Equal(2, sheet.ReplacePlaceholder("CustomerName", "Alice"));
+        Assert.Equal(2, customerNameCount);
         // OtherField は 1 セルにのみ存在
-        Assert.Equal(1, sheet.ReplacePlaceholder("OtherField", "Value"));
+        Assert.Equal(1, otherFieldCount);
         // 存在しないキーは 0
-        Assert.Equal(0, sheet.ReplacePlaceholder("NoSuchKey", "Ignored"));
+        Assert.Equal(0, missingKeyCount);
     }
 
     [Fact]
     public void TemplateWorkbookShouldLoadFromFilePath()
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
@@ -45,10 +53,12 @@ public sealed class TemplateApiTests
                 stream.CopyTo(file);
             }
 
+            // Act
             using var workbook = new TemplateWorkbook(tempFile);
             var sheet = Assert.Single(workbook.Sheets);
             var count = sheet.ReplacePlaceholder("Name", "Bob");
 
+            // Assert
             Assert.Equal(1, count);
         }
         finally

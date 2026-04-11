@@ -16,8 +16,12 @@ public sealed class FontMetricsHelperTests
     [InlineData("   ")]
     public void MeasureMaxDigitWidthShouldReturnNullForNullOrWhitespaceFontName(string? fontName)
     {
+        // Arrange
+
+        // Act
         var result = FontMetricsHelper.MeasureMaxDigitWidth(fontName!, 11d);
 
+        // Assert
         Assert.Null(result);
     }
 
@@ -27,16 +31,24 @@ public sealed class FontMetricsHelperTests
     [InlineData(-100d)]
     public void MeasureMaxDigitWidthShouldReturnNullForNonPositiveFontSize(double fontSize)
     {
+        // Arrange
+
+        // Act
         var result = FontMetricsHelper.MeasureMaxDigitWidth("Arial", fontSize);
 
+        // Assert
         Assert.Null(result);
     }
 
     [Fact]
     public void MeasureMaxDigitWidthShouldReturnNullForUnknownFont()
     {
+        // Arrange
+
+        // Act
         var result = FontMetricsHelper.MeasureMaxDigitWidth("__NonExistentFont__XYZ__", 11d);
 
+        // Assert
         // SkiaSharp may fall back to a default typeface instead of returning null,
         // so only verify that a non-null result is positive.
         Assert.True(result is null || result > 0d);
@@ -49,13 +61,16 @@ public sealed class FontMetricsHelperTests
     [Fact]
     public void MeasureMaxDigitWidthShouldReturnPositiveValueForArialOnWindows()
     {
+        // Arrange
         if (!OperatingSystem.IsWindows())
         {
             Assert.Skip("Arial font is only guaranteed on Windows.");
         }
 
+        // Act
         var result = FontMetricsHelper.MeasureMaxDigitWidth("Arial", 11d);
 
+        // Assert
         Assert.NotNull(result);
         Assert.True(result > 0d);
     }
@@ -63,14 +78,17 @@ public sealed class FontMetricsHelperTests
     [Fact]
     public void MeasureMaxDigitWidthShouldReturnLargerValueForLargerFontSize()
     {
+        // Arrange
         if (!OperatingSystem.IsWindows())
         {
             Assert.Skip("Arial font is only guaranteed on Windows.");
         }
 
+        // Act
         var small = FontMetricsHelper.MeasureMaxDigitWidth("Arial", 8d);
         var large = FontMetricsHelper.MeasureMaxDigitWidth("Arial", 24d);
 
+        // Assert
         Assert.NotNull(small);
         Assert.NotNull(large);
         Assert.True(large > small);

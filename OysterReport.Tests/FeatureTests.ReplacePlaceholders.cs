@@ -4,6 +4,7 @@ using OysterReport.Tests.Helpers;
 
 using Xunit;
 
+public sealed partial class FeatureTests
 {
     [Fact]
     public void ReplacePlaceholdersShouldReplaceMultipleOnRow()

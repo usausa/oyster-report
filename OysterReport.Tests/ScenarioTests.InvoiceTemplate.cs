@@ -6,11 +6,12 @@ using OysterReport.Tests.Helpers;
 
 using Xunit;
 
-public sealed partial class FeatureTests
+public sealed partial class ScenarioTests
 {
     [Fact]
     public void InvoiceTemplateShouldRenderWithAllFeatures()
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Invoice");
@@ -74,10 +75,12 @@ public sealed partial class FeatureTests
         templateRow.Delete();
         sheet.ReplacePlaceholder("FooterNote", "上記の通りご請求申し上げます。");
 
+        // Act
         var pdfBytes = TestHelper.GeneratePdfAndSave(
             nameof(InvoiceTemplateShouldRenderWithAllFeatures),
             workbook);
 
+        // Assert
         Assert.True(TestHelper.IsValidPdf(pdfBytes));
         var text = TestHelper.ExtractAllText(pdfBytes);
         Assert.Contains("2025-01-15", text, StringComparison.Ordinal);
@@ -89,6 +92,7 @@ public sealed partial class FeatureTests
     [Fact]
     public void InvoiceTemplateShouldRenderListReportWithStripedRows()
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("List");
@@ -115,8 +119,10 @@ public sealed partial class FeatureTests
             }
         });
 
+        // Act
         var pdfBytes = TestHelper.GeneratePdfAndSave(nameof(InvoiceTemplateShouldRenderListReportWithStripedRows), stream);
 
+        // Assert
         Assert.True(TestHelper.IsValidPdf(pdfBytes));
         var text = TestHelper.ExtractAllText(pdfBytes);
         Assert.Contains("Name01", text, StringComparison.Ordinal);

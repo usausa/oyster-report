@@ -1,5 +1,7 @@
 namespace OysterReport.Tests;
 
+using System.Globalization;
+
 using OysterReport.Tests.Helpers;
 
 using Xunit;
@@ -23,7 +25,7 @@ public sealed partial class ScenarioTests
         using var stream = CreateMultiPageDetailTemplate();
         using var workbook = new TemplateWorkbook(stream);
         var items = Enumerable.Range(1, totalItems)
-            .Select(static i => (No: i.ToString(), Data: $"Item{i}"))
+            .Select(static i => (No: i.ToString(CultureInfo.InvariantCulture), Data: $"Item{i}"))
             .ToArray();
 
         FillMultiPageDetail(workbook, items);
@@ -51,7 +53,7 @@ public sealed partial class ScenarioTests
         using var stream = CreateMultiPageDetailTemplate();
         using var workbook = new TemplateWorkbook(stream);
         var items = Enumerable.Range(1, totalItems)
-            .Select(static i => (No: i.ToString(), Data: $"Item{i}"))
+            .Select(static i => (No: i.ToString(CultureInfo.InvariantCulture), Data: $"Item{i}"))
             .ToArray();
 
         FillMultiPageDetail(workbook, items);
@@ -102,7 +104,7 @@ public sealed partial class ScenarioTests
     // 5. Finally, delete the original template sheet
     private static void FillMultiPageDetail(
         TemplateWorkbook workbook,
-        IReadOnlyList<(string No, string Data)> items)
+        (string No, string Data)[] items)
     {
         const int rowsPerPage = 20;
 
@@ -110,7 +112,7 @@ public sealed partial class ScenarioTests
         // insertion keeps the footer in place; deleting the template row then moves it to row 21
         const int bufferDeleteRow = 22;
 
-        var remaining = items.Count;
+        var remaining = items.Length;
         var pageIndex = 0;
         var offset = 0;
 

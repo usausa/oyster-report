@@ -9,6 +9,7 @@ public sealed class EngineEndToEndTests
     [Fact]
     public void GeneratePdfFromFileBasedWorkbookShouldSucceed()
     {
+        // Arrange
         using var input = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
@@ -28,9 +29,11 @@ public sealed class EngineEndToEndTests
             var sheet = Assert.Single(workbook.Sheets);
             sheet.ReplacePlaceholder("Name", "Bob");
 
+            // Act
             using var output = new MemoryStream();
             engine.GeneratePdf(workbook, output);
 
+            // Assert
             Assert.True(TestHelper.IsValidPdf(output.ToArray()));
         }
         finally
@@ -42,6 +45,7 @@ public sealed class EngineEndToEndTests
     [Fact]
     public void GeneratePdfSingleSheetOverloadShouldSucceed()
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             workbook.AddWorksheet("Page1").Cell("A1").Value = "FirstPage";
@@ -52,9 +56,11 @@ public sealed class EngineEndToEndTests
         using var workbook = new TemplateWorkbook(stream);
         var engine = new OysterReportEngine();
 
+        // Act
         using var output = new MemoryStream();
         engine.GeneratePdf(workbook.Sheets[1], output);
 
+        // Assert
         Assert.True(TestHelper.IsValidPdf(output.ToArray()));
     }
 }

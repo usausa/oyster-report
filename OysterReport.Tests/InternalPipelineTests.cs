@@ -12,6 +12,7 @@ public sealed class InternalPipelineTests
     [Fact]
     public void WritePdfShouldProduceValidPdfBinary()
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
@@ -29,11 +30,14 @@ public sealed class InternalPipelineTests
             SheetPlans = renderPlan
         };
 
+        // Act
         PdfGenerator.WritePdf(context, output);
 
         output.Position = 0;
         using var reader = new StreamReader(output, leaveOpen: true);
         var header = reader.ReadLine();
+
+        // Assert
         Assert.NotNull(header);
         Assert.StartsWith("%PDF", header, StringComparison.Ordinal);
     }
@@ -41,6 +45,7 @@ public sealed class InternalPipelineTests
     [Fact]
     public void GeneratePdfShouldPassBoldAndItalicFlagsToFontResolver()
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
@@ -61,8 +66,10 @@ public sealed class InternalPipelineTests
         var engine = new OysterReportEngine { FontResolver = resolver };
         using var output = new MemoryStream();
 
+        // Act
         engine.GeneratePdf(template, output);
 
+        // Assert
         Assert.Contains(resolver.Requests, request => request.FamilyName == "CustomEmbeddedFont" && request.Bold);
         Assert.Contains(resolver.Requests, request => request.FamilyName == "CustomEmbeddedFont" && request.Italic);
     }
@@ -70,6 +77,7 @@ public sealed class InternalPipelineTests
     [Fact]
     public void CreateRenderContextShouldKeepLayoutIndependentFromFontResolver()
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             workbook.Style.Font.FontName = "Arial";
@@ -93,9 +101,11 @@ public sealed class InternalPipelineTests
         };
         var resolvedContext = resolvedEngine.CreateRenderContext(template2);
 
+        // Act
         var baselinePage = Assert.Single(baselineContext.SheetPlans[0].Pages);
         var resolvedPage = Assert.Single(resolvedContext.SheetPlans[0].Pages);
 
+        // Assert
         Assert.Equal(baselinePage.PrintableBounds.X, resolvedPage.PrintableBounds.X, 3);
         Assert.Equal(baselinePage.PrintableBounds.Width, resolvedPage.PrintableBounds.Width, 3);
         Assert.Equal(baselinePage.Cells[0].OuterBounds.X, resolvedPage.Cells[0].OuterBounds.X, 3);
@@ -105,6 +115,7 @@ public sealed class InternalPipelineTests
     [Fact]
     public void BuildRenderPlanShouldUseConfiguredPageSizeResolver()
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
@@ -118,9 +129,11 @@ public sealed class InternalPipelineTests
             PageSizeResolver = static paperSize => paperSize == XLPaperSize.A4Paper ? (700d, 900d) : (595.28d, 841.89d)
         };
 
+        // Act
         var renderPlan = PdfRenderPlanner.BuildPlan(workbook, options);
         var page = Assert.Single(renderPlan[0].Pages);
 
+        // Assert
         Assert.Equal(700d, page.PageBounds.Width, 3);
         Assert.Equal(900d, page.PageBounds.Height, 3);
     }
@@ -128,6 +141,7 @@ public sealed class InternalPipelineTests
     [Fact]
     public void BuildRenderPlanShouldPreserveCellHeightForTextLayout()
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
@@ -139,16 +153,19 @@ public sealed class InternalPipelineTests
             cell.Style.Alignment.Vertical = ClosedXML.Excel.XLAlignmentVerticalValues.Center;
         });
 
+        // Act
         var workbook = ExcelReader.Read(stream);
         var renderPlan = PdfRenderPlanner.BuildPlan(workbook);
         var cell = renderPlan[0].Pages[0].Cells.Single(info => info.CellAddress == "A1");
 
+        // Assert
         Assert.Equal(cell.OuterBounds.Height, cell.ContentBounds.Height, 3);
     }
 
     [Fact]
     public void DebugDumperShouldWriteWorkbookAndPdfPreparationAsJson()
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
@@ -160,14 +177,17 @@ public sealed class InternalPipelineTests
         var context = engine.CreateRenderContext(template);
         var dumper = new ReportDebugDumper();
 
+        // Act
         using var workbookDump = new MemoryStream();
         dumper.DumpWorkbook(context, workbookDump);
         var workbookJson = System.Text.Encoding.UTF8.GetString(workbookDump.ToArray());
-        Assert.Contains("\"Sheets\"", workbookJson, StringComparison.Ordinal);
 
         using var pdfPreparationDump = new MemoryStream();
         dumper.DumpPdfPreparation(context, pdfPreparationDump);
         var preparationJson = System.Text.Encoding.UTF8.GetString(pdfPreparationDump.ToArray());
+
+        // Assert
+        Assert.Contains("\"Sheets\"", workbookJson, StringComparison.Ordinal);
         Assert.Contains("\"RenderPlan\"", preparationJson, StringComparison.Ordinal);
     }
 
