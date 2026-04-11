@@ -483,14 +483,11 @@ internal static class ExcelReader
                 continue;
             }
 
-            // Currently supports odd-row stripes for TableStyleLight4
             var themeName = table.Theme.ToString();
-            if (!String.Equals(themeName, "TableStyleLight4", StringComparison.OrdinalIgnoreCase))
+            if (!TableStyleCatalog.TryResolveBand1RowFillHex(themeName, worksheet.Workbook, out var stripeFillHex))
             {
                 continue;
             }
-
-            const string stripeFillHex = "#FFDEEBF7";
 
             var tableRange = new ReportRange
             {

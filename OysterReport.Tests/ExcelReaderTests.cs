@@ -173,4 +173,63 @@ public sealed class ExcelReaderTests
         Assert.NotEqual("#00000000", firstDataRowCell.Style.Fill.BackgroundColorHex);
         Assert.NotEqual(firstDataRowCell.Style.Fill.BackgroundColorHex, secondDataRowCell.Style.Fill.BackgroundColorHex);
     }
+
+    [Fact]
+    public void ReadShouldApplyDifferentStripeColorsForDifferentTableStyles()
+    {
+        // Arrange: two tables on the same sheet using different accent-based styles
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
+        {
+            var sheet = workbook.AddWorksheet("Tables");
+
+            sheet.Cell("A1").Value = "No.";
+            sheet.Cell("A2").Value = 1;
+            sheet.Cell("A3").Value = 2;
+            var light4 = sheet.Range("A1:A3").CreateTable();
+            light4.Theme = XLTableTheme.TableStyleLight4;
+            light4.ShowRowStripes = true;
+
+            sheet.Cell("C1").Value = "No.";
+            sheet.Cell("C2").Value = 1;
+            sheet.Cell("C3").Value = 2;
+            var light6 = sheet.Range("C1:C3").CreateTable();
+            light6.Theme = XLTableTheme.TableStyleLight6;
+            light6.ShowRowStripes = true;
+        });
+
+        // Act
+        var workbook = ExcelReader.Read(stream);
+        var sheet = Assert.Single(workbook.Sheets);
+
+        var light4Cell = sheet.Cells.Single(cell => cell.Address == "A2");
+        var light6Cell = sheet.Cells.Single(cell => cell.Address == "C2");
+
+        // Assert: both styles apply a stripe fill, and the two fills are different
+        Assert.NotEqual("#00000000", light4Cell.Style.Fill.BackgroundColorHex);
+        Assert.NotEqual("#00000000", light6Cell.Style.Fill.BackgroundColorHex);
+        Assert.NotEqual(light4Cell.Style.Fill.BackgroundColorHex, light6Cell.Style.Fill.BackgroundColorHex);
+    }
+
+    [Fact]
+    public void ReadShouldSkipStripeForTableStyleWithoutCatalogEntry()
+    {
+        // Arrange: use a neutral style (Light1) that has no accent stripe fill
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
+        {
+            var sheet = workbook.AddWorksheet("Table");
+            sheet.Cell("A1").Value = "No.";
+            sheet.Cell("A2").Value = 1;
+            var table = sheet.Range("A1:A2").CreateTable();
+            table.Theme = XLTableTheme.TableStyleLight1;
+            table.ShowRowStripes = true;
+        });
+
+        // Act
+        var workbook = ExcelReader.Read(stream);
+        var sheet = Assert.Single(workbook.Sheets);
+        var dataCell = sheet.Cells.Single(cell => cell.Address == "A2");
+
+        // Assert: no stripe fill is applied because Light1 is not in the catalog
+        Assert.Equal("#00000000", dataCell.Style.Fill.BackgroundColorHex);
+    }
 }

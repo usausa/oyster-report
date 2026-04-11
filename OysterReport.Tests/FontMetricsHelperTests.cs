@@ -31,8 +31,6 @@ public sealed class FontMetricsHelperTests
     [InlineData(-100d)]
     public void MeasureMaxDigitWidthShouldReturnNullForNonPositiveFontSize(double fontSize)
     {
-        // Arrange
-
         // Act
         var result = FontMetricsHelper.MeasureMaxDigitWidth("Arial", fontSize);
 
@@ -43,8 +41,6 @@ public sealed class FontMetricsHelperTests
     [Fact]
     public void MeasureMaxDigitWidthShouldReturnNullForUnknownFont()
     {
-        // Arrange
-
         // Act
         var result = FontMetricsHelper.MeasureMaxDigitWidth("__NonExistentFont__XYZ__", 11d);
 
