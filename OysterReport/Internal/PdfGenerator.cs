@@ -12,8 +12,9 @@ using PdfSharp.Pdf;
 
 internal static class PdfGenerator
 {
-    private static int fontPlatformConfigured;
     private const double BoldSimulationOffsetPoints = 0.35d;
+
+    private static int fontPlatformConfigured;
 
     private sealed record ResolvedFontRenderInfo
     {

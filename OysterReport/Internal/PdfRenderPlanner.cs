@@ -2,42 +2,9 @@ namespace OysterReport.Internal;
 
 using ClosedXML.Excel;
 
-// ---- PDF レンダリングプラン型 (内部パイプライン専用) ----
-
-internal sealed record PdfRenderSheetPlan
-{
-    public string SheetName { get; init; } = string.Empty;
-
-    public IReadOnlyList<PdfRenderPagePlan> Pages { get; init; } = [];
-
-    public IReadOnlyList<PdfImageRenderInfo> Images { get; init; } = [];
-}
-
-internal sealed record PdfRenderPagePlan
-{
-    public int PageNumber { get; init; }
-
-    public ReportRect PageBounds { get; init; }
-
-    public ReportRect PrintableBounds { get; init; }
-
-    public PdfHeaderFooterRenderInfo HeaderFooter { get; init; } = new();
-
-    public IReadOnlyList<PdfCellRenderInfo> Cells { get; init; } = [];
-}
-
-internal sealed record PdfCellRenderInfo
-{
-    public string CellAddress { get; init; } = string.Empty;
-
-    public ReportRect OuterBounds { get; init; }
-
-    public ReportRect ContentBounds { get; init; }
-
-    public ReportRect TextBounds { get; init; }
-
-    public bool IsMergedOwner { get; init; }
-}
+//--------------------------------------------------------------------------------
+// Pipeline plan
+//--------------------------------------------------------------------------------
 
 internal sealed record PdfImageRenderInfo
 {
@@ -59,8 +26,44 @@ internal sealed record PdfHeaderFooterRenderInfo
     public ReportRect FooterBounds { get; init; }
 }
 
-// ---- プランナー ----
+internal sealed record PdfCellRenderInfo
+{
+    public string CellAddress { get; init; } = string.Empty;
 
+    public ReportRect OuterBounds { get; init; }
+
+    public ReportRect ContentBounds { get; init; }
+
+    public ReportRect TextBounds { get; init; }
+
+    public bool IsMergedOwner { get; init; }
+}
+
+internal sealed record PdfRenderPagePlan
+{
+    public int PageNumber { get; init; }
+
+    public ReportRect PageBounds { get; init; }
+
+    public ReportRect PrintableBounds { get; init; }
+
+    public PdfHeaderFooterRenderInfo HeaderFooter { get; init; } = new();
+
+    public IReadOnlyList<PdfCellRenderInfo> Cells { get; init; } = [];
+}
+
+internal sealed record PdfRenderSheetPlan
+{
+    public string SheetName { get; init; } = string.Empty;
+
+    public IReadOnlyList<PdfRenderPagePlan> Pages { get; init; } = [];
+
+    public IReadOnlyList<PdfImageRenderInfo> Images { get; init; } = [];
+}
+
+//--------------------------------------------------------------------------------
+// Planner
+//--------------------------------------------------------------------------------
 internal static class PdfRenderPlanner
 {
     // ワークブック内の全シートに対する PDF プラン一覧を構築する。
@@ -85,11 +88,11 @@ internal static class PdfRenderPlanner
         var renderRange = sheet.PrintArea?.Range ?? sheet.UsedRange;
 
         var visibleRows = sheet.Rows
-            .Where(x => !x.IsHidden && x.Index >= renderRange.StartRow && x.Index <= renderRange.EndRow)
+            .Where(x => !x.IsHidden && (x.Index >= renderRange.StartRow) && (x.Index <= renderRange.EndRow))
             .OrderBy(static x => x.Index)
             .ToList();
         var visibleColumns = sheet.Columns
-            .Where(x => !x.IsHidden && x.Index >= renderRange.StartColumn && x.Index <= renderRange.EndColumn)
+            .Where(x => !x.IsHidden && (x.Index >= renderRange.StartColumn) && (x.Index <= renderRange.EndColumn))
             .OrderBy(static x => x.Index)
             .ToList();
 
