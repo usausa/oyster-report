@@ -4,11 +4,13 @@
 
 namespace OysterReport.Tests;
 
+using ClosedXML.Excel;
+
 using OysterReport.Tests.Helpers;
 
 using Xunit;
 
-/// <summary>フォントスタイル (太字・斜体) に関する機能テスト。</summary>
+/// <summary>フォントスタイル (太字・斜体・下線・打ち消し線) に関する機能テスト。</summary>
 public sealed partial class FeatureTests
 {
     [Fact]
@@ -87,5 +89,59 @@ public sealed partial class FeatureTests
         Assert.Contains("Normal", text, StringComparison.Ordinal);
         Assert.Contains("Bold", text, StringComparison.Ordinal);
         Assert.Contains("Italic", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void PdfShouldContainUnderlinedText()
+    {
+        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        {
+            var sheet = workbook.AddWorksheet("Report");
+            var cell = sheet.Cell("A1");
+            cell.Value = "UnderlinedText";
+            cell.Style.Font.Underline = XLFontUnderlineValues.Single;
+        });
+
+        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(PdfShouldContainUnderlinedText), stream);
+
+        Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
+        Assert.Contains("UnderlinedText", PdfTestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void PdfShouldContainStrikethroughText()
+    {
+        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        {
+            var sheet = workbook.AddWorksheet("Report");
+            var cell = sheet.Cell("A1");
+            cell.Value = "StrikethroughText";
+            cell.Style.Font.Strikethrough = true;
+        });
+
+        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(PdfShouldContainStrikethroughText), stream);
+
+        Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
+        Assert.Contains("StrikethroughText", PdfTestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void PdfShouldContainTextWithAllDecorations()
+    {
+        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        {
+            var sheet = workbook.AddWorksheet("Report");
+            var cell = sheet.Cell("A1");
+            cell.Value = "AllDecorations";
+            cell.Style.Font.Bold = true;
+            cell.Style.Font.Italic = true;
+            cell.Style.Font.Underline = XLFontUnderlineValues.Single;
+            cell.Style.Font.Strikethrough = true;
+        });
+
+        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(PdfShouldContainTextWithAllDecorations), stream);
+
+        Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
+        Assert.Contains("AllDecorations", PdfTestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
     }
 }

@@ -169,7 +169,8 @@ internal static class PdfGenerator
             }
 
             var resolvedFont = ResolveFont(sourceCell.Style.Font, context);
-            var textBrush = new XSolidBrush(ToColor(sourceCell.Style.Font.ColorHex));
+            var fontColor = ToColor(sourceCell.Style.Font.ColorHex);
+            var textBrush = new XSolidBrush(fontColor);
             var textRect = new XRect(
                 renderCell.ContentBounds.X,
                 renderCell.ContentBounds.Y,
@@ -194,6 +195,15 @@ internal static class PdfGenerator
                     textBrush,
                     textRect,
                     sourceCell);
+
+                DrawTextDecorations(
+                    graphics,
+                    resolvedFont.Font,
+                    fontColor,
+                    textRect,
+                    sourceCell.DisplayText,
+                    sourceCell,
+                    context.RenderingOptions);
             }
             finally
             {
@@ -533,7 +543,117 @@ internal static class PdfGenerator
         }
     }
 
-    // ヘッダー/フッター用のフォールバックフォントを候補一覧から作成する。
+    // テキストの下線・打ち消し線をフォントメトリクスに基づいて描画する。
+    // Draws underline and/or strikeout for cell text based on font metrics.
+    private static void DrawTextDecorations(
+        XGraphics graphics,
+        XFont font,
+        XColor color,
+        XRect textRect,
+        string text,
+        ReportCell sourceCell,
+        ReportRenderOption renderOption)
+    {
+        if ((!sourceCell.Style.Font.Underline) && (!sourceCell.Style.Font.Strikeout))
+        {
+            return;
+        }
+
+        if ((textRect.Width <= 0) || (textRect.Height <= 0))
+        {
+            return;
+        }
+
+        var isWrap = sourceCell.Style.WrapText || text.Contains('\n', StringComparison.Ordinal);
+
+        // フォントメトリクスからベースラインのオフセット (pt) を算出する。
+        // Compute the baseline offset (pt) from font metrics.
+        var metrics = font.Metrics;
+        var scale = font.Size / metrics.UnitsPerEm;
+        var ascentPt = metrics.Ascent * scale;
+
+        // テキストの垂直開始位置を配置設定から決定する（折り返し時は常に上詰め）。
+        // Determine the vertical text start position from alignment (wrap always uses top).
+        double verticalOffset;
+        if (isWrap)
+        {
+            verticalOffset = 0;
+        }
+        else
+        {
+            var lineHeight = font.GetHeight();
+            verticalOffset = sourceCell.Style.Alignment.Vertical switch
+            {
+                XLAlignmentVerticalValues.Center => Math.Max(0, (textRect.Height - lineHeight) / 2),
+                XLAlignmentVerticalValues.Bottom => Math.Max(0, textRect.Height - lineHeight),
+                _ => 0
+            };
+        }
+
+        var textTopY = textRect.Y + verticalOffset;
+
+        // 装飾線の幅と X 開始位置を水平配置と実際のテキスト幅から決定する。
+        // Determine decoration width and X start from horizontal alignment and measured text width.
+        double decorationWidth;
+        double decorationX;
+        if (isWrap)
+        {
+            // 折り返しテキストはコンテンツ幅全体に描画する。
+            // For wrapped text, span the full content width.
+            decorationWidth = textRect.Width;
+            decorationX = textRect.X;
+        }
+        else
+        {
+            var measuredWidth = graphics.MeasureString(text, font).Width;
+            decorationWidth = Math.Min(measuredWidth, textRect.Width);
+            var horizontalAlignment = ResolveHorizontalAlignment(sourceCell);
+            decorationX = horizontalAlignment switch
+            {
+                XLAlignmentHorizontalValues.Center => textRect.X + Math.Max(0, (textRect.Width - decorationWidth) / 2),
+                XLAlignmentHorizontalValues.Right  => textRect.X + Math.Max(0, textRect.Width - decorationWidth),
+                _                                  => textRect.X
+            };
+        }
+
+        if (decorationWidth <= 0)
+        {
+            return;
+        }
+
+        if (sourceCell.Style.Font.Underline)
+        {
+            // UnderlinePosition はフォント座標系（Y 上向き）でのベースラインからの距離。
+            // 通常は負値（ベースライン下方）なので、スクリーン座標では減算することで下方に移動する。
+            // UnderlinePosition is the offset from baseline in font coordinates (Y up).
+            // Typically negative (below baseline); negating it moves the line downward in screen space.
+            var lineThickness = Math.Max(renderOption.UnderlineWidthPoints, Math.Abs(metrics.UnderlineThickness * scale));
+            var lineY = textTopY + ascentPt - (metrics.UnderlinePosition * scale);
+            DrawSolidBorder(graphics, color, lineThickness, new ReportLine
+            {
+                X1 = decorationX,
+                Y1 = lineY,
+                X2 = decorationX + decorationWidth,
+                Y2 = lineY
+            });
+        }
+
+        if (sourceCell.Style.Font.Strikeout)
+        {
+            // StrikethroughPosition はフォント座標系でのベースラインから上方向の距離（正値）。
+            // StrikethroughPosition is above the baseline in font coordinates (positive value).
+            var lineThickness = Math.Max(renderOption.StrikeoutWidthPoints, Math.Abs(metrics.StrikethroughThickness * scale));
+            var lineY = textTopY + ascentPt - (metrics.StrikethroughPosition * scale);
+            DrawSolidBorder(graphics, color, lineThickness, new ReportLine
+            {
+                X1 = decorationX,
+                Y1 = lineY,
+                X2 = decorationX + decorationWidth,
+                Y2 = lineY
+            });
+        }
+    }
+
     // Creates a fallback font for header/footer rendering from the candidate list.
     private static XFont CreateFallbackFont(double size, IEnumerable<string> fontNames)
     {

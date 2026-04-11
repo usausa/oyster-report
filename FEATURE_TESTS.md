@@ -55,6 +55,9 @@
 | `PdfShouldContainItalicText` | 斜体テキストが PDF に出力されること |
 | `PdfShouldContainBoldItalicText` | 太字＋斜体のテキストが PDF に出力されること |
 | `PdfShouldRenderMixedNormalBoldItalicOnSamePage` | 通常・太字・斜体が同一ページに共存すること |
+| `PdfShouldContainUnderlinedText` | 下線付きテキストが PDF に出力されること |
+| `PdfShouldContainStrikethroughText` | 打ち消し線付きテキストが PDF に出力されること |
+| `PdfShouldContainTextWithAllDecorations` | 太字・斜体・下線・打ち消し線の全装飾が共存して出力されること |
 
 **検証方法**: PdfPig でテキスト抽出し、期待文字列が含まれることを確認。
 

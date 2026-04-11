@@ -71,10 +71,8 @@ internal sealed record ReportFont
 
     public bool Italic { get; init; }
 
-    // TODO: Honor Excel underline when PDF text decoration support is added.
     public bool Underline { get; init; }
 
-    // TODO: Honor Excel strikeout when PDF text decoration support is added.
     public bool Strikeout { get; init; }
 
     public string ColorHex { get; init; } = "#FF000000";

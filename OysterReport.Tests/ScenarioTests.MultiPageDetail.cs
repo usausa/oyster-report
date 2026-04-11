@@ -1,4 +1,4 @@
-// <copyright file="FeatureTests.MultiPageDetail.cs" company="PlaceholderCompany">
+// <copyright file="ScenarioTests.MultiPageDetail.cs" company="PlaceholderCompany">
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
@@ -9,14 +9,14 @@ using OysterReport.Tests.Helpers;
 using Xunit;
 
 /// <summary>
-/// 複数ページ明細印刷のテスト。
+/// 複数ページ明細印刷のシナリオテスト。
 /// 1ページ20行・21行目フッタのテンプレートから複数ページを生成し、
 /// シート数・フッタ位置・PDF内容を検証する。
-/// Tests for multi-page detail printing.
+/// Scenario tests for multi-page detail printing.
 /// Generates multiple pages from a template with 20 detail rows and a footer at row 21,
 /// then verifies page count, footer position, and PDF content.
 /// </summary>
-public sealed partial class FeatureTests
+public sealed partial class ScenarioTests
 {
     private const string MultiPageDetailTemplateName = "Template";
 

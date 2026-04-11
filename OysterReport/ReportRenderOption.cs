@@ -41,6 +41,14 @@ public sealed record ReportRenderOption
     // Hair 罫線の描画幅 (pt)。
     public double HairBorderWidthPoints { get; set; } = 0.25d;
 
+    // 下線の描画幅 (pt)。フォントメトリクスの値より小さい場合のフォールバック最小値。
+    // Underline drawing width (pt). Minimum fallback when font metrics suggest a smaller value.
+    public double UnderlineWidthPoints { get; set; } = 0.5d;
+
+    // 打ち消し線の描画幅 (pt)。フォントメトリクスの値より小さい場合のフォールバック最小値。
+    // Strikeout drawing width (pt). Minimum fallback when font metrics suggest a smaller value.
+    public double StrikeoutWidthPoints { get; set; } = 0.5d;
+
     // 列幅ポイント変換時の補正係数。
     public double ColumnWidthAdjustment { get; set; } = 1d;
 
