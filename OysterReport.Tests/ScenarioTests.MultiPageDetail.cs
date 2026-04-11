@@ -80,12 +80,12 @@ public sealed partial class ScenarioTests
 
         FillMultiPageDetail(workbook, items);
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
+        var pdfBytes = TestHelper.GeneratePdfAndSave(
             nameof(MultiPageDetailPdfShouldContainAllDataItemsAndFooter),
             workbook);
 
-        Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
-        var text = PdfTestHelper.ExtractAllText(pdfBytes);
+        Assert.True(TestHelper.IsValidPdf(pdfBytes));
+        var text = TestHelper.ExtractAllText(pdfBytes);
 
         // 全ページにデータが含まれていること（各ページに固有の項目で代表して確認）。
         // Data from every page must be present (checked with items unique to each page).
@@ -118,7 +118,7 @@ public sealed partial class ScenarioTests
     /// </remarks>
     private static MemoryStream CreateMultiPageDetailTemplate()
     {
-        return WorkbookTestFactory.CreateWorkbook(workbook =>
+        return TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet(MultiPageDetailTemplateName);
             sheet.Cell("A1").Value = "{{No}}: {{Data}}";

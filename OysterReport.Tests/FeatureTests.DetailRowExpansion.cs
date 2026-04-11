@@ -14,7 +14,7 @@ public sealed partial class FeatureTests
     [Fact]
     public void DetailRowExpansionShouldContainExactlyThreeRows()
     {
-        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
             sheet.Cell("A1").Value = "Header";
@@ -37,12 +37,12 @@ public sealed partial class FeatureTests
 
         template.Delete();
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
+        var pdfBytes = TestHelper.GeneratePdfAndSave(
             nameof(DetailRowExpansionShouldContainExactlyThreeRows),
             workbook);
 
-        Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
-        var text = PdfTestHelper.ExtractAllText(pdfBytes);
+        Assert.True(TestHelper.IsValidPdf(pdfBytes));
+        var text = TestHelper.ExtractAllText(pdfBytes);
         Assert.Contains("Apple", text, StringComparison.Ordinal);
         Assert.Contains("Banana", text, StringComparison.Ordinal);
         Assert.Contains("Cherry", text, StringComparison.Ordinal);
@@ -54,7 +54,7 @@ public sealed partial class FeatureTests
     [Fact]
     public void DetailRowExpansionShouldRemovePlaceholderAfterDeletion()
     {
-        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
             sheet.Cell("A1").Value = "{{Product}}";
@@ -68,12 +68,12 @@ public sealed partial class FeatureTests
         row.ReplacePlaceholder("Product", "Widget");
         template.Delete();
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
+        var pdfBytes = TestHelper.GeneratePdfAndSave(
             nameof(DetailRowExpansionShouldRemovePlaceholderAfterDeletion),
             workbook);
 
-        Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
-        var text = PdfTestHelper.ExtractAllText(pdfBytes);
+        Assert.True(TestHelper.IsValidPdf(pdfBytes));
+        var text = TestHelper.ExtractAllText(pdfBytes);
         Assert.Contains("Widget", text, StringComparison.Ordinal);
         Assert.DoesNotContain("{{Product}}", text, StringComparison.Ordinal);
     }
@@ -81,7 +81,7 @@ public sealed partial class FeatureTests
     [Fact]
     public void DetailRowExpansionShouldPreserveHeaderAndFooter()
     {
-        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
             sheet.Cell("A1").Value = "ReportHeader";
@@ -101,12 +101,12 @@ public sealed partial class FeatureTests
         last.ReplacePlaceholder("Line", "LineB");
         template.Delete();
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
+        var pdfBytes = TestHelper.GeneratePdfAndSave(
             nameof(DetailRowExpansionShouldPreserveHeaderAndFooter),
             workbook);
 
-        Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
-        var text = PdfTestHelper.ExtractAllText(pdfBytes);
+        Assert.True(TestHelper.IsValidPdf(pdfBytes));
+        var text = TestHelper.ExtractAllText(pdfBytes);
         Assert.Contains("ReportHeader", text, StringComparison.Ordinal);
         Assert.Contains("LineA", text, StringComparison.Ordinal);
         Assert.Contains("LineB", text, StringComparison.Ordinal);
@@ -116,7 +116,7 @@ public sealed partial class FeatureTests
     [Fact]
     public void DetailRowExpansionShouldCountExactOccurrencesOfLabel()
     {
-        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
             sheet.Cell("A1").Value = "START";
@@ -138,12 +138,12 @@ public sealed partial class FeatureTests
 
         template.Delete();
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
+        var pdfBytes = TestHelper.GeneratePdfAndSave(
             nameof(DetailRowExpansionShouldCountExactOccurrencesOfLabel),
             workbook);
 
-        Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
-        var text = PdfTestHelper.ExtractAllText(pdfBytes);
+        Assert.True(TestHelper.IsValidPdf(pdfBytes));
+        var text = TestHelper.ExtractAllText(pdfBytes);
         Assert.Contains("ROW-1", text, StringComparison.Ordinal);
         Assert.Contains("ROW-2", text, StringComparison.Ordinal);
         Assert.Contains("ROW-3", text, StringComparison.Ordinal);

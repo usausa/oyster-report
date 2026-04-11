@@ -17,7 +17,7 @@ public sealed partial class FeatureTests
     [Fact]
     public void SingleSheetOutputShouldRenderTargetSheetByIndex()
     {
-        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             workbook.AddWorksheet("Sheet1").Cell("A1").Value = "Sheet1Content";
             workbook.AddWorksheet("Sheet2").Cell("A1").Value = "Sheet2Content";
@@ -27,13 +27,13 @@ public sealed partial class FeatureTests
         stream.Position = 0;
         using var workbook = new TemplateWorkbook(stream);
 
-        var pdfBytes = PdfTestHelper.GenerateSheetPdfAndSave(
+        var pdfBytes = TestHelper.GenerateSheetPdfAndSave(
             nameof(SingleSheetOutputShouldRenderTargetSheetByIndex),
             workbook.Sheets[1]);
 
-        Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
-        Assert.Equal(1, PdfTestHelper.GetPageCount(pdfBytes));
-        var text = PdfTestHelper.ExtractAllText(pdfBytes);
+        Assert.True(TestHelper.IsValidPdf(pdfBytes));
+        Assert.Equal(1, TestHelper.GetPageCount(pdfBytes));
+        var text = TestHelper.ExtractAllText(pdfBytes);
         Assert.Contains("Sheet2Content", text, StringComparison.Ordinal);
         Assert.DoesNotContain("Sheet1Content", text, StringComparison.Ordinal);
         Assert.DoesNotContain("Sheet3Content", text, StringComparison.Ordinal);
@@ -42,7 +42,7 @@ public sealed partial class FeatureTests
     [Fact]
     public void SingleSheetOutputShouldRenderTargetSheetByName()
     {
-        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             workbook.AddWorksheet("Summary").Cell("A1").Value = "SummaryContent";
             workbook.AddWorksheet("Detail").Cell("A1").Value = "DetailContent";
@@ -52,13 +52,13 @@ public sealed partial class FeatureTests
         stream.Position = 0;
         using var workbook = new TemplateWorkbook(stream);
 
-        var pdfBytes = PdfTestHelper.GenerateSheetPdfAndSave(
+        var pdfBytes = TestHelper.GenerateSheetPdfAndSave(
             nameof(SingleSheetOutputShouldRenderTargetSheetByName),
             workbook.GetSheet("Detail"));
 
-        Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
-        Assert.Equal(1, PdfTestHelper.GetPageCount(pdfBytes));
-        var text = PdfTestHelper.ExtractAllText(pdfBytes);
+        Assert.True(TestHelper.IsValidPdf(pdfBytes));
+        Assert.Equal(1, TestHelper.GetPageCount(pdfBytes));
+        var text = TestHelper.ExtractAllText(pdfBytes);
         Assert.Contains("DetailContent", text, StringComparison.Ordinal);
         Assert.DoesNotContain("SummaryContent", text, StringComparison.Ordinal);
         Assert.DoesNotContain("AppendixContent", text, StringComparison.Ordinal);
@@ -67,7 +67,7 @@ public sealed partial class FeatureTests
     [Fact]
     public void SingleSheetOutputShouldRenderFirstSheetByIndex0()
     {
-        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             workbook.AddWorksheet("First").Cell("A1").Value = "FirstSheet";
             workbook.AddWorksheet("Second").Cell("A1").Value = "SecondSheet";
@@ -76,13 +76,13 @@ public sealed partial class FeatureTests
         stream.Position = 0;
         using var workbook = new TemplateWorkbook(stream);
 
-        var pdfBytes = PdfTestHelper.GenerateSheetPdfAndSave(
+        var pdfBytes = TestHelper.GenerateSheetPdfAndSave(
             nameof(SingleSheetOutputShouldRenderFirstSheetByIndex0),
             workbook.Sheets[0]);
 
-        Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
-        Assert.Equal(1, PdfTestHelper.GetPageCount(pdfBytes));
-        var text = PdfTestHelper.ExtractAllText(pdfBytes);
+        Assert.True(TestHelper.IsValidPdf(pdfBytes));
+        Assert.Equal(1, TestHelper.GetPageCount(pdfBytes));
+        var text = TestHelper.ExtractAllText(pdfBytes);
         Assert.Contains("FirstSheet", text, StringComparison.Ordinal);
         Assert.DoesNotContain("SecondSheet", text, StringComparison.Ordinal);
     }
@@ -90,7 +90,7 @@ public sealed partial class FeatureTests
     [Fact]
     public void SingleSheetOutputShouldIsolateReplacementsToTargetSheet()
     {
-        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             workbook.AddWorksheet("Cover").Cell("A1").Value = "{{Title}}";
             workbook.AddWorksheet("Body").Cell("A1").Value = "{{Content}}";
@@ -101,11 +101,11 @@ public sealed partial class FeatureTests
         var coverSheet = workbook.GetSheet("Cover");
         coverSheet.ReplacePlaceholder("Title", "ReplacedTitle");
 
-        var pdfBytes = PdfTestHelper.GenerateSheetPdfAndSave(
+        var pdfBytes = TestHelper.GenerateSheetPdfAndSave(
             nameof(SingleSheetOutputShouldIsolateReplacementsToTargetSheet),
             coverSheet);
 
-        Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
-        Assert.Contains("ReplacedTitle", PdfTestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
+        Assert.True(TestHelper.IsValidPdf(pdfBytes));
+        Assert.Contains("ReplacedTitle", TestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
     }
 }

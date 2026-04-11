@@ -19,7 +19,7 @@ public sealed class ExcelReaderTests
     [Fact]
     public void ReadShouldPopulateWorkbookModel()
     {
-        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
             sheet.Cell("A1").Value = "Title";
@@ -45,7 +45,7 @@ public sealed class ExcelReaderTests
     [Fact]
     public void ReadShouldPreserveGeneralAlignmentForNumericCells()
     {
-        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Alignment");
             sheet.Cell("A1").Value = 123;
@@ -61,7 +61,7 @@ public sealed class ExcelReaderTests
     [Fact]
     public void ReadShouldResolveThemeColorsWithoutThrowing()
     {
-        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Theme");
             var cell = sheet.Cell("A1");
@@ -84,7 +84,7 @@ public sealed class ExcelReaderTests
     [Fact]
     public void ReadShouldSupportFreeFloatingPicturesWithoutBottomRightCell()
     {
-        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Pictures");
             sheet.Cell("A1").Value = "Picture";
@@ -108,7 +108,7 @@ public sealed class ExcelReaderTests
     [Fact]
     public void ReadShouldConvertPageMarginsToPoints()
     {
-        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Margins");
             sheet.Cell("A1").Value = "Margin";
@@ -134,7 +134,7 @@ public sealed class ExcelReaderTests
     [Fact]
     public void ReadShouldApplyTableStripeFillFromExcelTableTheme()
     {
-        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Table");
             sheet.Cell("A1").Value = "No.";

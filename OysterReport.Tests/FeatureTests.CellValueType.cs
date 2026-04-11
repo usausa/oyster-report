@@ -14,22 +14,22 @@ public sealed partial class FeatureTests
     [Fact]
     public void CellValueTypeShouldRenderNumericValue()
     {
-        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
             sheet.Cell("A1").Value = 12345;
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(CellValueTypeShouldRenderNumericValue), stream);
+        var pdfBytes = TestHelper.GeneratePdfAndSave(nameof(CellValueTypeShouldRenderNumericValue), stream);
 
-        Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
-        Assert.Contains("12345", PdfTestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
+        Assert.True(TestHelper.IsValidPdf(pdfBytes));
+        Assert.Contains("12345", TestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
     }
 
     [Fact]
     public void CellValueTypeShouldRenderDateValue()
     {
-        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
             var cell = sheet.Cell("A1");
@@ -37,16 +37,16 @@ public sealed partial class FeatureTests
             cell.Style.DateFormat.Format = "yyyy/MM/dd";
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(CellValueTypeShouldRenderDateValue), stream);
+        var pdfBytes = TestHelper.GeneratePdfAndSave(nameof(CellValueTypeShouldRenderDateValue), stream);
 
-        Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
-        Assert.Contains("2025", PdfTestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
+        Assert.True(TestHelper.IsValidPdf(pdfBytes));
+        Assert.Contains("2025", TestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
     }
 
     [Fact]
     public void CellValueTypeShouldRenderFormulaValue()
     {
-        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
             sheet.Cell("A1").Value = 10;
@@ -54,8 +54,8 @@ public sealed partial class FeatureTests
             sheet.Cell("A3").FormulaA1 = "=A1+A2";
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(CellValueTypeShouldRenderFormulaValue), stream);
+        var pdfBytes = TestHelper.GeneratePdfAndSave(nameof(CellValueTypeShouldRenderFormulaValue), stream);
 
-        Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
+        Assert.True(TestHelper.IsValidPdf(pdfBytes));
     }
 }

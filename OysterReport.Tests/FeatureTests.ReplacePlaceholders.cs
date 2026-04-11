@@ -14,7 +14,7 @@ public sealed partial class FeatureTests
     [Fact]
     public void ReplacePlaceholdersShouldReplaceMultipleOnRow()
     {
-        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
             sheet.Cell("A1").Value = "name:{{PersonName}} dept:{{PersonDept}} city:{{PersonCity}}";
@@ -30,12 +30,12 @@ public sealed partial class FeatureTests
             ["PersonCity"] = "tokyo"
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
+        var pdfBytes = TestHelper.GeneratePdfAndSave(
             nameof(ReplacePlaceholdersShouldReplaceMultipleOnRow),
             workbook);
 
-        Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
-        var text = PdfTestHelper.ExtractAllText(pdfBytes);
+        Assert.True(TestHelper.IsValidPdf(pdfBytes));
+        var text = TestHelper.ExtractAllText(pdfBytes);
         Assert.Contains("tanaka", text, StringComparison.Ordinal);
         Assert.Contains("sales", text, StringComparison.Ordinal);
         Assert.Contains("tokyo", text, StringComparison.Ordinal);
@@ -44,7 +44,7 @@ public sealed partial class FeatureTests
     [Fact]
     public void ReplacePlaceholdersShouldTreatNullValueAsEmpty()
     {
-        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
             sheet.Cell("A1").Value = "Name: {{Name}}";
@@ -59,12 +59,12 @@ public sealed partial class FeatureTests
             ["Memo"] = null
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
+        var pdfBytes = TestHelper.GeneratePdfAndSave(
             nameof(ReplacePlaceholdersShouldTreatNullValueAsEmpty),
             workbook);
 
-        Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
-        var text = PdfTestHelper.ExtractAllText(pdfBytes);
+        Assert.True(TestHelper.IsValidPdf(pdfBytes));
+        var text = TestHelper.ExtractAllText(pdfBytes);
         Assert.Contains("Alice", text, StringComparison.Ordinal);
         Assert.DoesNotContain("{{Memo}}", text, StringComparison.Ordinal);
     }
@@ -72,7 +72,7 @@ public sealed partial class FeatureTests
     [Fact]
     public void ReplacePlaceholdersShouldReplaceMultipleOnRowRange()
     {
-        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
             sheet.Cell("A1").Value = "Item: {{ItemName}}";
@@ -89,12 +89,12 @@ public sealed partial class FeatureTests
             ["Qty"] = "5"
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
+        var pdfBytes = TestHelper.GeneratePdfAndSave(
             nameof(ReplacePlaceholdersShouldReplaceMultipleOnRowRange),
             workbook);
 
-        Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
-        var text = PdfTestHelper.ExtractAllText(pdfBytes);
+        Assert.True(TestHelper.IsValidPdf(pdfBytes));
+        var text = TestHelper.ExtractAllText(pdfBytes);
         Assert.Contains("Widget", text, StringComparison.Ordinal);
         Assert.Contains("980", text, StringComparison.Ordinal);
         Assert.Contains("5", text, StringComparison.Ordinal);
@@ -103,7 +103,7 @@ public sealed partial class FeatureTests
     [Fact]
     public void ReplacePlaceholdersShouldReplaceAcrossAllSheets()
     {
-        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             workbook.AddWorksheet("Cover").Cell("A1").Value = "{{DocTitle}}";
             workbook.AddWorksheet("Body").Cell("A1").Value = "Author: {{Author}}";
@@ -118,12 +118,12 @@ public sealed partial class FeatureTests
             ["Author"] = "Smith"
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
+        var pdfBytes = TestHelper.GeneratePdfAndSave(
             nameof(ReplacePlaceholdersShouldReplaceAcrossAllSheets),
             workbook);
 
-        Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
-        var text = PdfTestHelper.ExtractAllText(pdfBytes);
+        Assert.True(TestHelper.IsValidPdf(pdfBytes));
+        var text = TestHelper.ExtractAllText(pdfBytes);
         Assert.Contains("AnnualReport", text, StringComparison.Ordinal);
         Assert.Contains("Smith", text, StringComparison.Ordinal);
         Assert.DoesNotContain("{{DocTitle}}", text, StringComparison.Ordinal);
@@ -133,7 +133,7 @@ public sealed partial class FeatureTests
     [Fact]
     public void ReplacePlaceholdersShouldWorkWithExpandedRowsInLoop()
     {
-        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
             sheet.Cell("A1").Value = "HEADER";
@@ -164,12 +164,12 @@ public sealed partial class FeatureTests
 
         template.Delete();
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
+        var pdfBytes = TestHelper.GeneratePdfAndSave(
             nameof(ReplacePlaceholdersShouldWorkWithExpandedRowsInLoop),
             workbook);
 
-        Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
-        var text = PdfTestHelper.ExtractAllText(pdfBytes);
+        Assert.True(TestHelper.IsValidPdf(pdfBytes));
+        var text = TestHelper.ExtractAllText(pdfBytes);
         Assert.Contains("001", text, StringComparison.Ordinal);
         Assert.Contains("Alpha", text, StringComparison.Ordinal);
         Assert.Contains("002", text, StringComparison.Ordinal);

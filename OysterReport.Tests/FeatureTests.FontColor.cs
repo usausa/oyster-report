@@ -19,7 +19,7 @@ public sealed partial class FeatureTests
     [InlineData("GreenText", 0, 128, 0)]
     public void FontColorShouldRenderColoredText(string cellValue, int r, int g, int b)
     {
-        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
             var cell = sheet.Cell("A1");
@@ -27,18 +27,18 @@ public sealed partial class FeatureTests
             cell.Style.Font.FontColor = XLColor.FromArgb(r, g, b);
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
+        var pdfBytes = TestHelper.GeneratePdfAndSave(
             $"{nameof(FontColorShouldRenderColoredText)}_{cellValue}",
             stream);
 
-        Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
-        Assert.Contains(cellValue, PdfTestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
+        Assert.True(TestHelper.IsValidPdf(pdfBytes));
+        Assert.Contains(cellValue, TestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
     }
 
     [Fact]
     public void FontColorShouldRenderThemeColorText()
     {
-        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
             var cell = sheet.Cell("A1");
@@ -46,9 +46,9 @@ public sealed partial class FeatureTests
             cell.Style.Font.FontColor = XLColor.FromTheme(XLThemeColor.Accent1, 0.4);
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(FontColorShouldRenderThemeColorText), stream);
+        var pdfBytes = TestHelper.GeneratePdfAndSave(nameof(FontColorShouldRenderThemeColorText), stream);
 
-        Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
-        Assert.Contains("ThemeColorText", PdfTestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
+        Assert.True(TestHelper.IsValidPdf(pdfBytes));
+        Assert.Contains("ThemeColorText", TestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
     }
 }

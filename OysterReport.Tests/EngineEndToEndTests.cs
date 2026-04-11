@@ -22,7 +22,7 @@ public sealed class EngineEndToEndTests
     [Fact]
     public void GeneratePdfFromFileBasedWorkbookShouldSucceed()
     {
-        using var input = WorkbookTestFactory.CreateWorkbook(workbook =>
+        using var input = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
             sheet.Cell("A1").Value = "{{Name}}";
@@ -44,7 +44,7 @@ public sealed class EngineEndToEndTests
             using var output = new MemoryStream();
             engine.GeneratePdf(workbook, output);
 
-            Assert.True(PdfTestHelper.IsValidPdf(output.ToArray()));
+            Assert.True(TestHelper.IsValidPdf(output.ToArray()));
         }
         finally
         {
@@ -59,7 +59,7 @@ public sealed class EngineEndToEndTests
     [Fact]
     public void GeneratePdfSingleSheetOverloadShouldSucceed()
     {
-        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             workbook.AddWorksheet("Page1").Cell("A1").Value = "FirstPage";
             workbook.AddWorksheet("Page2").Cell("A1").Value = "SecondPage";
@@ -72,6 +72,6 @@ public sealed class EngineEndToEndTests
         using var output = new MemoryStream();
         engine.GeneratePdf(workbook.Sheets[1], output);
 
-        Assert.True(PdfTestHelper.IsValidPdf(output.ToArray()));
+        Assert.True(TestHelper.IsValidPdf(output.ToArray()));
     }
 }

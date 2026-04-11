@@ -19,7 +19,7 @@ public sealed partial class FeatureTests
     [InlineData(XLAlignmentHorizontalValues.Right, "RightAligned")]
     public void TextAlignmentShouldRenderHorizontalAlignment(XLAlignmentHorizontalValues alignment, string cellValue)
     {
-        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
             var cell = sheet.Cell("A1");
@@ -28,12 +28,12 @@ public sealed partial class FeatureTests
             sheet.Column(1).Width = 30d;
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
+        var pdfBytes = TestHelper.GeneratePdfAndSave(
             $"{nameof(TextAlignmentShouldRenderHorizontalAlignment)}_{alignment}",
             stream);
 
-        Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
-        Assert.Contains(cellValue, PdfTestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
+        Assert.True(TestHelper.IsValidPdf(pdfBytes));
+        Assert.Contains(cellValue, TestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
     }
 
     [Theory]
@@ -42,7 +42,7 @@ public sealed partial class FeatureTests
     [InlineData(XLAlignmentVerticalValues.Bottom, "BottomAligned")]
     public void TextAlignmentShouldRenderVerticalAlignment(XLAlignmentVerticalValues alignment, string cellValue)
     {
-        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
             var cell = sheet.Cell("A1");
@@ -51,18 +51,18 @@ public sealed partial class FeatureTests
             sheet.Row(1).Height = 40d;
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
+        var pdfBytes = TestHelper.GeneratePdfAndSave(
             $"{nameof(TextAlignmentShouldRenderVerticalAlignment)}_{alignment}",
             stream);
 
-        Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
-        Assert.Contains(cellValue, PdfTestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
+        Assert.True(TestHelper.IsValidPdf(pdfBytes));
+        Assert.Contains(cellValue, TestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
     }
 
     [Fact]
     public void TextAlignmentShouldRenderWrappedText()
     {
-        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
             var cell = sheet.Cell("A1");
@@ -72,8 +72,8 @@ public sealed partial class FeatureTests
             sheet.Row(1).Height = 50d;
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(TextAlignmentShouldRenderWrappedText), stream);
+        var pdfBytes = TestHelper.GeneratePdfAndSave(nameof(TextAlignmentShouldRenderWrappedText), stream);
 
-        Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
+        Assert.True(TestHelper.IsValidPdf(pdfBytes));
     }
 }

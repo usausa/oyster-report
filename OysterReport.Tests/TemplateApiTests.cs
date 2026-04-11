@@ -20,7 +20,7 @@ public sealed class TemplateApiTests
     [Fact]
     public void ReplacePlaceholderShouldReturnReplacementCount()
     {
-        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
             sheet.Cell("A1").Value = "{{CustomerName}}";
@@ -45,7 +45,7 @@ public sealed class TemplateApiTests
     [Fact]
     public void TemplateWorkbookShouldLoadFromFilePath()
     {
-        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
             sheet.Cell("A1").Value = "{{Name}}";

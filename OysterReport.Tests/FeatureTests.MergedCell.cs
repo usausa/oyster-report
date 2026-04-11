@@ -14,61 +14,61 @@ public sealed partial class FeatureTests
     [Fact]
     public void MergedCellShouldRenderTextInHorizontalMerge()
     {
-        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
             sheet.Cell("A1").Value = "HorizontalMerge";
             sheet.Range("A1:D1").Merge();
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
+        var pdfBytes = TestHelper.GeneratePdfAndSave(
             nameof(MergedCellShouldRenderTextInHorizontalMerge),
             stream);
 
-        Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
-        Assert.Contains("HorizontalMerge", PdfTestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
+        Assert.True(TestHelper.IsValidPdf(pdfBytes));
+        Assert.Contains("HorizontalMerge", TestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
     }
 
     [Fact]
     public void MergedCellShouldRenderTextInVerticalMerge()
     {
-        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
             sheet.Cell("A1").Value = "VerticalMerge";
             sheet.Range("A1:A4").Merge();
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
+        var pdfBytes = TestHelper.GeneratePdfAndSave(
             nameof(MergedCellShouldRenderTextInVerticalMerge),
             stream);
 
-        Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
-        Assert.Contains("VerticalMerge", PdfTestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
+        Assert.True(TestHelper.IsValidPdf(pdfBytes));
+        Assert.Contains("VerticalMerge", TestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
     }
 
     [Fact]
     public void MergedCellShouldRenderTextInRectangularMerge()
     {
-        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
             sheet.Cell("B2").Value = "RectMerge";
             sheet.Range("B2:D4").Merge();
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
+        var pdfBytes = TestHelper.GeneratePdfAndSave(
             nameof(MergedCellShouldRenderTextInRectangularMerge),
             stream);
 
-        Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
-        Assert.Contains("RectMerge", PdfTestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
+        Assert.True(TestHelper.IsValidPdf(pdfBytes));
+        Assert.Contains("RectMerge", TestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
     }
 
     [Fact]
     public void MergedCellShouldRenderMultipleMergedRanges()
     {
-        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
             sheet.Cell("A1").Value = "Header";
@@ -79,10 +79,10 @@ public sealed partial class FeatureTests
             sheet.Range("B2:C4").Merge();
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(MergedCellShouldRenderMultipleMergedRanges), stream);
+        var pdfBytes = TestHelper.GeneratePdfAndSave(nameof(MergedCellShouldRenderMultipleMergedRanges), stream);
 
-        Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
-        var text = PdfTestHelper.ExtractAllText(pdfBytes);
+        Assert.True(TestHelper.IsValidPdf(pdfBytes));
+        var text = TestHelper.ExtractAllText(pdfBytes);
         Assert.Contains("Header", text, StringComparison.Ordinal);
         Assert.Contains("Left", text, StringComparison.Ordinal);
         Assert.Contains("Right", text, StringComparison.Ordinal);
@@ -91,19 +91,19 @@ public sealed partial class FeatureTests
     [Fact]
     public void MergedCellShouldNotDuplicateTextFromSubCells()
     {
-        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
             sheet.Cell("A1").Value = "MergeOwner";
             sheet.Range("A1:C1").Merge();
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
+        var pdfBytes = TestHelper.GeneratePdfAndSave(
             nameof(MergedCellShouldNotDuplicateTextFromSubCells),
             stream);
 
-        Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
-        var count = CountSubstringOccurrences(PdfTestHelper.ExtractAllText(pdfBytes), "MergeOwner");
+        Assert.True(TestHelper.IsValidPdf(pdfBytes));
+        var count = CountSubstringOccurrences(TestHelper.ExtractAllText(pdfBytes), "MergeOwner");
         Assert.Equal(1, count);
     }
 

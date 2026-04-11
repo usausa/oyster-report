@@ -24,7 +24,7 @@ public sealed class InternalPipelineTests
     [Fact]
     public void WritePdfShouldProduceValidPdfBinary()
     {
-        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
             sheet.Cell("A1").Value = "Hello";
@@ -56,7 +56,7 @@ public sealed class InternalPipelineTests
     [Fact]
     public void GeneratePdfShouldPassBoldAndItalicFlagsToFontResolver()
     {
-        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
 
@@ -88,7 +88,7 @@ public sealed class InternalPipelineTests
     [Fact]
     public void CreateRenderContextShouldKeepLayoutIndependentFromFontResolver()
     {
-        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             workbook.Style.Font.FontName = "Arial";
             workbook.Style.Font.FontSize = 10d;
@@ -126,7 +126,7 @@ public sealed class InternalPipelineTests
     [Fact]
     public void BuildRenderPlanShouldUseConfiguredPageSizeResolver()
     {
-        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
             sheet.Cell("A1").Value = "Hello";
@@ -152,7 +152,7 @@ public sealed class InternalPipelineTests
     [Fact]
     public void BuildRenderPlanShouldPreserveCellHeightForTextLayout()
     {
-        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
             sheet.Row(1).Height = 9.95d;
@@ -176,7 +176,7 @@ public sealed class InternalPipelineTests
     [Fact]
     public void DebugDumperShouldWriteWorkbookAndPdfPreparationAsJson()
     {
-        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
             sheet.Cell("A1").Value = "Hello";
@@ -199,7 +199,7 @@ public sealed class InternalPipelineTests
     }
 
     private static byte[] GetEmbeddedFontBytes() =>
-        File.ReadAllBytes(PdfTestHelper.IpaExGothicFontPath);
+        File.ReadAllBytes(TestHelper.IpaExGothicFontPath);
 
     private sealed class EmbeddedFontResolver : IReportFontResolver
     {

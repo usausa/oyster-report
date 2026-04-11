@@ -22,7 +22,7 @@ public sealed partial class FeatureTests
     [InlineData(XLBorderStyleValues.Dotted, "DottedBorder")]
     public void BorderShouldRenderCellWithBorder(XLBorderStyleValues borderStyle, string cellValue)
     {
-        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
             var cell = sheet.Cell("B2");
@@ -31,18 +31,18 @@ public sealed partial class FeatureTests
             cell.Style.Border.OutsideBorderColor = XLColor.Black;
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
+        var pdfBytes = TestHelper.GeneratePdfAndSave(
             $"{nameof(BorderShouldRenderCellWithBorder)}_{borderStyle}",
             stream);
 
-        Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
-        Assert.Contains(cellValue, PdfTestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
+        Assert.True(TestHelper.IsValidPdf(pdfBytes));
+        Assert.Contains(cellValue, TestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
     }
 
     [Fact]
     public void BorderShouldRenderColoredBorder()
     {
-        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
             var cell = sheet.Cell("B2");
@@ -51,16 +51,16 @@ public sealed partial class FeatureTests
             cell.Style.Border.OutsideBorderColor = XLColor.FromArgb(255, 0, 0);
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(BorderShouldRenderColoredBorder), stream);
+        var pdfBytes = TestHelper.GeneratePdfAndSave(nameof(BorderShouldRenderColoredBorder), stream);
 
-        Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
-        Assert.Contains("ColoredBorder", PdfTestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
+        Assert.True(TestHelper.IsValidPdf(pdfBytes));
+        Assert.Contains("ColoredBorder", TestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
     }
 
     [Fact]
     public void BorderShouldRenderTableWithAllSideBorders()
     {
-        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
             for (var row = 1; row <= 3; row++)
@@ -74,10 +74,10 @@ public sealed partial class FeatureTests
             }
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(BorderShouldRenderTableWithAllSideBorders), stream);
+        var pdfBytes = TestHelper.GeneratePdfAndSave(nameof(BorderShouldRenderTableWithAllSideBorders), stream);
 
-        Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
-        var text = PdfTestHelper.ExtractAllText(pdfBytes);
+        Assert.True(TestHelper.IsValidPdf(pdfBytes));
+        var text = TestHelper.ExtractAllText(pdfBytes);
         Assert.Contains("R1C1", text, StringComparison.Ordinal);
         Assert.Contains("R3C3", text, StringComparison.Ordinal);
     }

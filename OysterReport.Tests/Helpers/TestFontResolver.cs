@@ -10,7 +10,7 @@ using OysterReport;
 /// テスト用の IPAex ゴシックフォントリゾルバー。
 /// ゴシック系日本語フォントを ipaexg.ttf で解決する。
 /// </summary>
-internal sealed class IpaExGothicFontResolver : IReportFontResolver
+internal sealed class TestFontResolver : IReportFontResolver
 {
     private const string EmbeddedFontName = "IPAexGothic";
 
@@ -30,7 +30,7 @@ internal sealed class IpaExGothicFontResolver : IReportFontResolver
 
     private readonly ReadOnlyMemory<byte> fontData;
 
-    public IpaExGothicFontResolver(string fontFilePath)
+    public TestFontResolver(string fontFilePath)
     {
         fontData = File.ReadAllBytes(fontFilePath);
     }

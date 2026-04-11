@@ -14,7 +14,7 @@ public sealed partial class FeatureTests
     [Fact]
     public void PrintAreaShouldExcludeContentOutsidePrintArea()
     {
-        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
             sheet.Cell("A1").Value = "InPrintArea";
@@ -23,10 +23,10 @@ public sealed partial class FeatureTests
             sheet.PageSetup.PrintAreas.Add("A1:B5");
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(PrintAreaShouldExcludeContentOutsidePrintArea), stream);
+        var pdfBytes = TestHelper.GeneratePdfAndSave(nameof(PrintAreaShouldExcludeContentOutsidePrintArea), stream);
 
-        Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
-        var text = PdfTestHelper.ExtractAllText(pdfBytes);
+        Assert.True(TestHelper.IsValidPdf(pdfBytes));
+        var text = TestHelper.ExtractAllText(pdfBytes);
         Assert.Contains("InPrintArea", text, StringComparison.Ordinal);
         Assert.DoesNotContain("OutsidePrintArea", text, StringComparison.Ordinal);
     }

@@ -29,6 +29,9 @@
     <Compile Update="FeatureTests.*.cs">
       <DependentUpon>FeatureTests.cs</DependentUpon>
     </Compile>
+    <Compile Update="ScenarioTests.*.cs">
+      <DependentUpon>ScenarioTests.cs</DependentUpon>
+    </Compile>
   </ItemGroup>
 
   <ItemGroup>

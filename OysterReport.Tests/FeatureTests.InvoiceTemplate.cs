@@ -19,7 +19,7 @@ public sealed partial class FeatureTests
     [Fact]
     public void InvoiceTemplateShouldRenderWithAllFeatures()
     {
-        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Invoice");
             sheet.PageSetup.PaperSize = XLPaperSize.A4Paper;
@@ -82,12 +82,12 @@ public sealed partial class FeatureTests
         templateRow.Delete();
         sheet.ReplacePlaceholder("FooterNote", "上記の通りご請求申し上げます。");
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
+        var pdfBytes = TestHelper.GeneratePdfAndSave(
             nameof(InvoiceTemplateShouldRenderWithAllFeatures),
             workbook);
 
-        Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
-        var text = PdfTestHelper.ExtractAllText(pdfBytes);
+        Assert.True(TestHelper.IsValidPdf(pdfBytes));
+        var text = TestHelper.ExtractAllText(pdfBytes);
         Assert.Contains("2025-01-15", text, StringComparison.Ordinal);
         Assert.Contains("2000", text, StringComparison.Ordinal);
         Assert.Contains("3000", text, StringComparison.Ordinal);
@@ -97,7 +97,7 @@ public sealed partial class FeatureTests
     [Fact]
     public void InvoiceTemplateShouldRenderListReportWithStripedRows()
     {
-        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("List");
             sheet.Cell("A1").Value = "No";
@@ -123,10 +123,10 @@ public sealed partial class FeatureTests
             }
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(InvoiceTemplateShouldRenderListReportWithStripedRows), stream);
+        var pdfBytes = TestHelper.GeneratePdfAndSave(nameof(InvoiceTemplateShouldRenderListReportWithStripedRows), stream);
 
-        Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
-        var text = PdfTestHelper.ExtractAllText(pdfBytes);
+        Assert.True(TestHelper.IsValidPdf(pdfBytes));
+        var text = TestHelper.ExtractAllText(pdfBytes);
         Assert.Contains("Name01", text, StringComparison.Ordinal);
         Assert.Contains("Name10", text, StringComparison.Ordinal);
     }

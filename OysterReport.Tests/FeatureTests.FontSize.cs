@@ -18,7 +18,7 @@ public sealed partial class FeatureTests
     [InlineData(24d, "HugeText")]
     public void FontSizeShouldRenderVariousSizes(double fontSize, string cellValue)
     {
-        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
             var cell = sheet.Cell("A1");
@@ -26,18 +26,18 @@ public sealed partial class FeatureTests
             cell.Style.Font.FontSize = fontSize;
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
+        var pdfBytes = TestHelper.GeneratePdfAndSave(
             $"{nameof(FontSizeShouldRenderVariousSizes)}_{fontSize}pt",
             stream);
 
-        Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
-        Assert.Contains(cellValue, PdfTestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
+        Assert.True(TestHelper.IsValidPdf(pdfBytes));
+        Assert.Contains(cellValue, TestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
     }
 
     [Fact]
     public void FontSizeShouldRenderMultipleSizesOnOnePage()
     {
-        using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
             sheet.Cell("A1").Value = "Size8";
@@ -48,12 +48,12 @@ public sealed partial class FeatureTests
             sheet.Cell("A3").Style.Font.FontSize = 16d;
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
+        var pdfBytes = TestHelper.GeneratePdfAndSave(
             nameof(FontSizeShouldRenderMultipleSizesOnOnePage),
             stream);
 
-        Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
-        var text = PdfTestHelper.ExtractAllText(pdfBytes);
+        Assert.True(TestHelper.IsValidPdf(pdfBytes));
+        var text = TestHelper.ExtractAllText(pdfBytes);
         Assert.Contains("Size8", text, StringComparison.Ordinal);
         Assert.Contains("Size12", text, StringComparison.Ordinal);
         Assert.Contains("Size16", text, StringComparison.Ordinal);

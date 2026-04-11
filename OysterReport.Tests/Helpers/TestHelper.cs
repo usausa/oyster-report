@@ -11,7 +11,7 @@ using UglyToad.PdfPig.DocumentLayoutAnalysis.WordExtractor;
 /// <summary>
 /// テスト用PDFヘルパー: PDF生成・保存・テキスト抽出を提供する。
 /// </summary>
-internal static class PdfTestHelper
+internal static class TestHelper
 {
     private static readonly string TestOutputDirectory =
         Path.Combine(AppContext.BaseDirectory, "TestOutput");
