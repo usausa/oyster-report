@@ -94,18 +94,24 @@ internal sealed class ReportFontResolverAdapter : IFontResolver
 
     private static string BuildFaceName(string familyName, bool bold, bool italic)
     {
-        var name = familyName;
+        if (!bold && !italic)
+        {
+            return familyName;
+        }
+
+        using var sb = new ValueStringBuilder(stackalloc char[64]);
+        sb.Append(familyName);
         if (bold)
         {
-            name += "#b";
+            sb.Append("#b");
         }
 
         if (italic)
         {
-            name += "#i";
+            sb.Append("#i");
         }
 
-        return name;
+        return sb.ToString();
     }
 
     private static string ExtractFamilyName(string faceName) =>

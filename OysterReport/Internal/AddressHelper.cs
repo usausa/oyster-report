@@ -7,18 +7,17 @@ internal static class AddressHelper
     public static string ToAddress(int row, int column)
     {
         Span<char> colBuffer = stackalloc char[8];
-        var colLen = 0;
+        var colStart = colBuffer.Length;
         var current = column;
         while (current > 0)
         {
             current--;
-            colBuffer[colLen++] = (char)('A' + (current % 26));
+            colBuffer[--colStart] = (char)('A' + (current % 26));
             current /= 26;
         }
-        colBuffer[..colLen].Reverse();
 
         using var sb = new ValueStringBuilder(stackalloc char[16]);
-        sb.Append(colBuffer[..colLen]);
+        sb.Append(colBuffer[colStart..]);
         sb.Append(row.ToString(CultureInfo.InvariantCulture));
         return sb.ToString();
     }

@@ -1,7 +1,6 @@
 namespace OysterReport.Internal;
 
 using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
 
 [ExcludeFromCodeCoverage]
 internal readonly record struct ReportOffset
@@ -81,8 +80,15 @@ internal readonly record struct ReportRange
     {
         var startAddress = AddressHelper.ToAddress(StartRow, StartColumn);
         var endAddress = AddressHelper.ToAddress(EndRow, EndColumn);
-        return startAddress == endAddress
-            ? startAddress
-            : String.Create(CultureInfo.InvariantCulture, $"{startAddress}:{endAddress}");
+        if (startAddress == endAddress)
+        {
+            return startAddress;
+        }
+
+        using var sb = new ValueStringBuilder(stackalloc char[32]);
+        sb.Append(startAddress);
+        sb.Append(':');
+        sb.Append(endAddress);
+        return sb.ToString();
     }
 }

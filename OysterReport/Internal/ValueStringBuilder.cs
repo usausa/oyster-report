@@ -68,11 +68,6 @@ public ref struct ValueStringBuilder
         span = arrayFromPool.AsSpan(0, newSize);
     }
 
-    public readonly string ToTrimString()
-    {
-        return new string(span[..pos].Trim().ToArray());
-    }
-
     public override readonly string ToString()
     {
         return new string(span[..pos].ToArray());

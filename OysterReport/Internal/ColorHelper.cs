@@ -15,7 +15,7 @@ internal static class ColorHelper
         }
 
         var trimmed = argb.Trim();
-        if (trimmed.Length > 0 && trimmed[0] == '#')
+        if ((trimmed.Length > 0) && (trimmed[0] == '#'))
         {
             return trimmed.ToUpperInvariant();
         }
