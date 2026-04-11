@@ -2,10 +2,19 @@ namespace OysterReport;
 
 using ClosedXML.Excel;
 
-// シート上の連続行範囲を表すハンドル。1 明細が複数行にまたがるテンプレートで使用する。
 public sealed class TemplateRowRange
 {
     private readonly IXLWorksheet worksheet;
+
+    public int StartRow { get; }
+
+    public int EndRow { get; }
+
+    public int RowCount => EndRow - StartRow + 1;
+
+    //--------------------------------------------------------------------------------
+    // Constructor
+    //--------------------------------------------------------------------------------
 
     internal TemplateRowRange(IXLWorksheet ws, int startRow, int endRow)
     {
@@ -14,24 +23,15 @@ public sealed class TemplateRowRange
         EndRow = endRow;
     }
 
-    // 開始行番号 (1-based)。
-    public int StartRow { get; }
+    //--------------------------------------------------------------------------------
+    // Edit
+    //--------------------------------------------------------------------------------
 
-    // 終了行番号 (1-based, inclusive)。
-    public int EndRow { get; }
-
-    // 行数。
-    public int RowCount => EndRow - StartRow + 1;
-
-    // この行範囲のコピーを直下に挿入し、挿入された新しい行範囲を返す。
-    // フロー B で使用する。
     public TemplateRowRange InsertCopyBelow()
     {
         return InsertCopyAfter(this);
     }
 
-    // この行範囲の内容をコピーし、afterRange の直下に挿入する。挿入された新しい行範囲を返す。
-    // コピー元は this、挿入位置は afterRange の直下。フロー A で使用する。
     public TemplateRowRange InsertCopyAfter(TemplateRowRange afterRange)
     {
         var newStartRow = afterRange.EndRow + 1;
@@ -60,7 +60,11 @@ public sealed class TemplateRowRange
         return new TemplateRowRange(worksheet, newStartRow, newStartRow + RowCount - 1);
     }
 
-    // この行範囲内のプレースホルダを置換する。
+    public void Delete()
+    {
+        worksheet.Rows(StartRow, EndRow).Delete();
+    }
+
     public int ReplacePlaceholder(string markerName, string value)
     {
         var placeholder = "{{" + markerName + "}}";
@@ -84,7 +88,6 @@ public sealed class TemplateRowRange
         return count;
     }
 
-    // この行範囲内のプレースホルダを辞書で一括置換する。
     public int ReplacePlaceholders(IReadOnlyDictionary<string, string?> values)
     {
         var count = 0;
@@ -93,11 +96,5 @@ public sealed class TemplateRowRange
             count += ReplacePlaceholder(key, value ?? string.Empty);
         }
         return count;
-    }
-
-    // この行範囲を削除する。後続行は自動的に上にシフトされる。
-    public void Delete()
-    {
-        worksheet.Rows(StartRow, EndRow).Delete();
     }
 }

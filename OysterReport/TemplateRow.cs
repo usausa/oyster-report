@@ -2,10 +2,15 @@ namespace OysterReport;
 
 using ClosedXML.Excel;
 
-// シート上の 1 行を表す軽量ハンドル。コピー挿入・プレースホルダ置換・削除を提供する。
 public sealed class TemplateRow
 {
     private readonly IXLWorksheet worksheet;
+
+    public int RowNumber { get; }
+
+    //--------------------------------------------------------------------------------
+    // Constructor
+    //--------------------------------------------------------------------------------
 
     internal TemplateRow(IXLWorksheet ws, int rowNumber)
     {
@@ -13,18 +18,15 @@ public sealed class TemplateRow
         RowNumber = rowNumber;
     }
 
-    // この行の行番号 (1-based)。
-    public int RowNumber { get; }
+    //--------------------------------------------------------------------------------
+    // Edit
+    //--------------------------------------------------------------------------------
 
-    // この行のコピーを直下に挿入し、挿入された新しい行を返す。
-    // フロー B（行番号を進めながら処理する方式）で使用する。
     public TemplateRow InsertCopyBelow()
     {
         return InsertCopyAfter(this);
     }
 
-    // この行の内容をコピーし、afterRow の直下に挿入する。挿入された新しい行を返す。
-    // コピー元は this、挿入位置は afterRow の直下。フロー A（テンプレートのコピーを追加していく方式）で使用する。
     public TemplateRow InsertCopyAfter(TemplateRow afterRow)
     {
         var newRowNumber = afterRow.RowNumber + 1;
@@ -49,7 +51,11 @@ public sealed class TemplateRow
         return new TemplateRow(worksheet, newRowNumber);
     }
 
-    // この行内のプレースホルダを置換する。
+    public void Delete()
+    {
+        worksheet.Row(RowNumber).Delete();
+    }
+
     public int ReplacePlaceholder(string markerName, string value)
     {
         var placeholder = "{{" + markerName + "}}";
@@ -79,11 +85,5 @@ public sealed class TemplateRow
             count += ReplacePlaceholder(key, value ?? string.Empty);
         }
         return count;
-    }
-
-    // この行を削除する。後続行は自動的に上にシフトされる。
-    public void Delete()
-    {
-        worksheet.Row(RowNumber).Delete();
     }
 }

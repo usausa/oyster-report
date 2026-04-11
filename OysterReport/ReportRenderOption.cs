@@ -4,13 +4,10 @@ using System.Diagnostics.CodeAnalysis;
 
 using ClosedXML.Excel;
 
-// PDF 描画時の調整値をまとめたオプション。
-// 既定値は Excel に近い見た目になるように調整されている。
 [ExcludeFromCodeCoverage]
 public sealed record ReportRenderOption
 {
     // 用紙サイズからページ幅・高さ (pt) を解決する関数。
-    [CLSCompliant(false)]
     public Func<XLPaperSize, (double Width, double Height)> PageSizeResolver { get; set; } = ResolveDefaultPageSize;
 
     // セル内テキストの左右余白 (pt)。
