@@ -2,10 +2,9 @@
 
 A .NET library that converts Excel (.xlsx) templates to PDF.  
 
-<p>
-<img width="40%" src="Document/excel.png" />
-<img width="40%" src="Document/pdf.png" />
-</p>
+| Excel |  | PDF |
+| :--- | :---: | ---: |
+| <img width="40%" src="Document/excel.png" /> | → | <img width="40%" src="Document/pdf.png" /> |
 
 # Quick Start
 
