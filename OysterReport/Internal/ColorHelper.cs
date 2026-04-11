@@ -15,7 +15,15 @@ internal static class ColorHelper
         }
 
         var trimmed = argb.Trim();
-        return trimmed.Length > 0 && trimmed[0] == '#' ? trimmed.ToUpperInvariant() : $"#{trimmed.ToUpperInvariant()}";
+        if (trimmed.Length > 0 && trimmed[0] == '#')
+        {
+            return trimmed.ToUpperInvariant();
+        }
+
+        using var sb = new ValueStringBuilder(stackalloc char[12]);
+        sb.Append('#');
+        sb.Append(trimmed.ToUpperInvariant());
+        return sb.ToString();
     }
 
     public static string ToHex(Color color) =>

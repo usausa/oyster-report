@@ -6,46 +6,54 @@ internal static class AddressHelper
 {
     public static string ToAddress(int row, int column)
     {
+        Span<char> colBuffer = stackalloc char[8];
+        var colLen = 0;
         var current = column;
-        var result = string.Empty;
         while (current > 0)
         {
             current--;
-            result = String.Concat((char)('A' + (current % 26)), result);
+            colBuffer[colLen++] = (char)('A' + (current % 26));
             current /= 26;
         }
+        colBuffer[..colLen].Reverse();
 
-        return String.Create(CultureInfo.InvariantCulture, $"{result}{row}");
+        using var sb = new ValueStringBuilder(stackalloc char[16]);
+        sb.Append(colBuffer[..colLen]);
+        sb.Append(row.ToString(CultureInfo.InvariantCulture));
+        return sb.ToString();
     }
 
     public static (int Row, int Column) ParseAddress(string address)
     {
-        var letters = string.Empty;
-        var digits = string.Empty;
+        using var letters = new ValueStringBuilder(stackalloc char[16]);
+        using var digits = new ValueStringBuilder(stackalloc char[8]);
 
         foreach (var character in address.Trim().ToUpperInvariant())
         {
             if (Char.IsLetter(character))
             {
-                letters += character;
+                letters.Append(character);
             }
             else if (Char.IsDigit(character))
             {
-                digits += character;
+                digits.Append(character);
             }
         }
 
-        if (String.IsNullOrEmpty(letters) || String.IsNullOrEmpty(digits))
+        var lettersStr = letters.ToString();
+        var digitsStr = digits.ToString();
+
+        if (String.IsNullOrEmpty(lettersStr) || String.IsNullOrEmpty(digitsStr))
         {
             throw new FormatException(String.Create(CultureInfo.InvariantCulture, $"Invalid cell address '{address}'."));
         }
 
         var column = 0;
-        foreach (var character in letters)
+        foreach (var character in lettersStr)
         {
             column = (column * 26) + (character - 'A' + 1);
         }
 
-        return (Int32.Parse(digits, CultureInfo.InvariantCulture), column);
+        return (Int32.Parse(digitsStr, CultureInfo.InvariantCulture), column);
     }
 }
