@@ -64,6 +64,7 @@ public sealed class InvoiceCommand : ICommandHandler
         ];
 
         var templateRow = sheet.FindRow("No");
+        var bottomRowNumber = sheet.FindRow("SubTotal").RowNumber - 1;
         var row = templateRow;
         foreach (var (no, itemName, qty, price) in items)
         {
@@ -73,6 +74,7 @@ public sealed class InvoiceCommand : ICommandHandler
             row.ReplacePlaceholder("Qty", qty.ToString("N0", CultureInfo.InvariantCulture));
             row.ReplacePlaceholder("Price", price.ToString("N0", CultureInfo.InvariantCulture));
             row.ReplacePlaceholder("Amount", (qty * price).ToString("N0", CultureInfo.InvariantCulture));
+            sheet.DeleteRows(bottomRowNumber, bottomRowNumber);
         }
 
         templateRow.Delete();
