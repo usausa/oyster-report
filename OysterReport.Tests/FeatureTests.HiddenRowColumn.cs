@@ -9,6 +9,7 @@ public sealed partial class FeatureTests
     [Fact]
     public void HiddenRowColumnShouldExcludeHiddenRow()
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
@@ -18,8 +19,10 @@ public sealed partial class FeatureTests
             sheet.Cell("A3").Value = "VisibleRow2";
         });
 
+        // Act
         var pdfBytes = TestHelper.GeneratePdfAndSave(nameof(HiddenRowColumnShouldExcludeHiddenRow), stream);
 
+        // Assert
         Assert.True(TestHelper.IsValidPdf(pdfBytes));
         var text = TestHelper.ExtractAllText(pdfBytes);
         Assert.Contains("VisibleRow", text, StringComparison.Ordinal);
@@ -29,6 +32,7 @@ public sealed partial class FeatureTests
     [Fact]
     public void HiddenRowColumnShouldExcludeHiddenColumn()
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
@@ -38,8 +42,10 @@ public sealed partial class FeatureTests
             sheet.Cell("C1").Value = "VisibleCol2";
         });
 
+        // Act
         var pdfBytes = TestHelper.GeneratePdfAndSave(nameof(HiddenRowColumnShouldExcludeHiddenColumn), stream);
 
+        // Assert
         Assert.True(TestHelper.IsValidPdf(pdfBytes));
         var text = TestHelper.ExtractAllText(pdfBytes);
         Assert.Contains("VisibleCol", text, StringComparison.Ordinal);

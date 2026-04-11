@@ -14,6 +14,7 @@ public sealed partial class FeatureTests
     [InlineData(XLAlignmentHorizontalValues.Right, "RightAligned")]
     public void TextAlignmentShouldRenderHorizontalAlignment(XLAlignmentHorizontalValues alignment, string cellValue)
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
@@ -23,10 +24,12 @@ public sealed partial class FeatureTests
             sheet.Column(1).Width = 30d;
         });
 
+        // Act
         var pdfBytes = TestHelper.GeneratePdfAndSave(
             $"{nameof(TextAlignmentShouldRenderHorizontalAlignment)}_{alignment}",
             stream);
 
+        // Assert
         Assert.True(TestHelper.IsValidPdf(pdfBytes));
         Assert.Contains(cellValue, TestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
     }
@@ -37,6 +40,7 @@ public sealed partial class FeatureTests
     [InlineData(XLAlignmentVerticalValues.Bottom, "BottomAligned")]
     public void TextAlignmentShouldRenderVerticalAlignment(XLAlignmentVerticalValues alignment, string cellValue)
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
@@ -46,10 +50,12 @@ public sealed partial class FeatureTests
             sheet.Row(1).Height = 40d;
         });
 
+        // Act
         var pdfBytes = TestHelper.GeneratePdfAndSave(
             $"{nameof(TextAlignmentShouldRenderVerticalAlignment)}_{alignment}",
             stream);
 
+        // Assert
         Assert.True(TestHelper.IsValidPdf(pdfBytes));
         Assert.Contains(cellValue, TestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
     }
@@ -57,6 +63,7 @@ public sealed partial class FeatureTests
     [Fact]
     public void TextAlignmentShouldRenderWrappedText()
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
@@ -67,8 +74,10 @@ public sealed partial class FeatureTests
             sheet.Row(1).Height = 50d;
         });
 
+        // Act
         var pdfBytes = TestHelper.GeneratePdfAndSave(nameof(TextAlignmentShouldRenderWrappedText), stream);
 
+        // Assert
         Assert.True(TestHelper.IsValidPdf(pdfBytes));
     }
 }

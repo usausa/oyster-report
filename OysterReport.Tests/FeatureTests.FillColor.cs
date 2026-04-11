@@ -14,6 +14,7 @@ public sealed partial class FeatureTests
     [InlineData("GrayBg", 192, 192, 192)]
     public void FillColorShouldRenderTextOnColoredBackground(string cellValue, int r, int g, int b)
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
@@ -22,10 +23,12 @@ public sealed partial class FeatureTests
             cell.Style.Fill.BackgroundColor = XLColor.FromArgb(r, g, b);
         });
 
+        // Act
         var pdfBytes = TestHelper.GeneratePdfAndSave(
             $"{nameof(FillColorShouldRenderTextOnColoredBackground)}_{cellValue}",
             stream);
 
+        // Assert
         Assert.True(TestHelper.IsValidPdf(pdfBytes));
         Assert.Contains(cellValue, TestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
     }
@@ -33,6 +36,7 @@ public sealed partial class FeatureTests
     [Fact]
     public void FillColorShouldRenderMultipleDifferentBackgroundColors()
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
@@ -47,10 +51,12 @@ public sealed partial class FeatureTests
             blueCell.Style.Fill.BackgroundColor = XLColor.FromArgb(200, 200, 255);
         });
 
+        // Act
         var pdfBytes = TestHelper.GeneratePdfAndSave(
             nameof(FillColorShouldRenderMultipleDifferentBackgroundColors),
             stream);
 
+        // Assert
         Assert.True(TestHelper.IsValidPdf(pdfBytes));
         var text = TestHelper.ExtractAllText(pdfBytes);
         Assert.Contains("RedBg", text, StringComparison.Ordinal);
@@ -61,6 +67,7 @@ public sealed partial class FeatureTests
     [Fact]
     public void FillColorShouldRenderThemeBackgroundColor()
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
@@ -69,8 +76,10 @@ public sealed partial class FeatureTests
             cell.Style.Fill.BackgroundColor = XLColor.FromTheme(XLThemeColor.Accent2, -0.25);
         });
 
+        // Act
         var pdfBytes = TestHelper.GeneratePdfAndSave(nameof(FillColorShouldRenderThemeBackgroundColor), stream);
 
+        // Assert
         Assert.True(TestHelper.IsValidPdf(pdfBytes));
         Assert.Contains("ThemeBg", TestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
     }

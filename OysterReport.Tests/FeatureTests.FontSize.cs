@@ -13,6 +13,7 @@ public sealed partial class FeatureTests
     [InlineData(24d, "HugeText")]
     public void FontSizeShouldRenderVariousSizes(double fontSize, string cellValue)
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
@@ -21,10 +22,12 @@ public sealed partial class FeatureTests
             cell.Style.Font.FontSize = fontSize;
         });
 
+        // Act
         var pdfBytes = TestHelper.GeneratePdfAndSave(
             $"{nameof(FontSizeShouldRenderVariousSizes)}_{fontSize}pt",
             stream);
 
+        // Assert
         Assert.True(TestHelper.IsValidPdf(pdfBytes));
         Assert.Contains(cellValue, TestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
     }
@@ -32,6 +35,7 @@ public sealed partial class FeatureTests
     [Fact]
     public void FontSizeShouldRenderMultipleSizesOnOnePage()
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
@@ -43,10 +47,12 @@ public sealed partial class FeatureTests
             sheet.Cell("A3").Style.Font.FontSize = 16d;
         });
 
+        // Act
         var pdfBytes = TestHelper.GeneratePdfAndSave(
             nameof(FontSizeShouldRenderMultipleSizesOnOnePage),
             stream);
 
+        // Assert
         Assert.True(TestHelper.IsValidPdf(pdfBytes));
         var text = TestHelper.ExtractAllText(pdfBytes);
         Assert.Contains("Size8", text, StringComparison.Ordinal);

@@ -11,6 +11,7 @@ public sealed partial class FeatureTests
     [Fact]
     public void HeaderFooterShouldRenderHeaderText()
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
@@ -18,8 +19,10 @@ public sealed partial class FeatureTests
             sheet.PageSetup.Header.Left.AddText("LeftHeader", XLHFOccurrence.OddPages);
         });
 
+        // Act
         var pdfBytes = TestHelper.GeneratePdfAndSave(nameof(HeaderFooterShouldRenderHeaderText), stream);
 
+        // Assert
         Assert.True(TestHelper.IsValidPdf(pdfBytes));
         Assert.Contains("BodyContent", TestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
     }
@@ -27,6 +30,7 @@ public sealed partial class FeatureTests
     [Fact]
     public void HeaderFooterShouldRenderFooterText()
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
@@ -34,8 +38,10 @@ public sealed partial class FeatureTests
             sheet.PageSetup.Footer.Right.AddText("RightFooter", XLHFOccurrence.OddPages);
         });
 
+        // Act
         var pdfBytes = TestHelper.GeneratePdfAndSave(nameof(HeaderFooterShouldRenderFooterText), stream);
 
+        // Assert
         Assert.True(TestHelper.IsValidPdf(pdfBytes));
         Assert.True(TestHelper.IsValidPdf(pdfBytes));
     }
@@ -43,6 +49,7 @@ public sealed partial class FeatureTests
     [Fact]
     public void HeaderFooterShouldRenderBothHeaderAndFooter()
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
@@ -51,8 +58,10 @@ public sealed partial class FeatureTests
             sheet.PageSetup.Footer.Center.AddText("BottomCenter", XLHFOccurrence.OddPages);
         });
 
+        // Act
         var pdfBytes = TestHelper.GeneratePdfAndSave(nameof(HeaderFooterShouldRenderBothHeaderAndFooter), stream);
 
+        // Assert
         Assert.True(TestHelper.IsValidPdf(pdfBytes));
     }
 }

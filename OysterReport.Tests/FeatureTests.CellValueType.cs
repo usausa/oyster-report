@@ -9,14 +9,17 @@ public sealed partial class FeatureTests
     [Fact]
     public void CellValueTypeShouldRenderNumericValue()
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
             sheet.Cell("A1").Value = 12345;
         });
 
+        // Act
         var pdfBytes = TestHelper.GeneratePdfAndSave(nameof(CellValueTypeShouldRenderNumericValue), stream);
 
+        // Assert
         Assert.True(TestHelper.IsValidPdf(pdfBytes));
         Assert.Contains("12345", TestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
     }
@@ -24,6 +27,7 @@ public sealed partial class FeatureTests
     [Fact]
     public void CellValueTypeShouldRenderDateValue()
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
@@ -32,8 +36,10 @@ public sealed partial class FeatureTests
             cell.Style.DateFormat.Format = "yyyy/MM/dd";
         });
 
+        // Act
         var pdfBytes = TestHelper.GeneratePdfAndSave(nameof(CellValueTypeShouldRenderDateValue), stream);
 
+        // Assert
         Assert.True(TestHelper.IsValidPdf(pdfBytes));
         Assert.Contains("2025", TestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
     }
@@ -41,6 +47,7 @@ public sealed partial class FeatureTests
     [Fact]
     public void CellValueTypeShouldRenderFormulaValue()
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
@@ -49,8 +56,10 @@ public sealed partial class FeatureTests
             sheet.Cell("A3").FormulaA1 = "=A1+A2";
         });
 
+        // Act
         var pdfBytes = TestHelper.GeneratePdfAndSave(nameof(CellValueTypeShouldRenderFormulaValue), stream);
 
+        // Assert
         Assert.True(TestHelper.IsValidPdf(pdfBytes));
     }
 }

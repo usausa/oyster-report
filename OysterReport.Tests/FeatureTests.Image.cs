@@ -14,6 +14,7 @@ public sealed partial class FeatureTests
     [Fact]
     public void ImageShouldEmbedSingleImage()
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
@@ -24,8 +25,10 @@ public sealed partial class FeatureTests
                 .WithSize(60, 40);
         });
 
+        // Act
         var pdfBytes = TestHelper.GeneratePdfAndSave(nameof(ImageShouldEmbedSingleImage), stream);
 
+        // Assert
         Assert.True(TestHelper.IsValidPdf(pdfBytes));
         Assert.Contains("WithImage", TestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
         Assert.True(pdfBytes.Length > 1000);
@@ -34,6 +37,7 @@ public sealed partial class FeatureTests
     [Fact]
     public void ImageShouldEmbedMultipleImages()
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
@@ -48,8 +52,10 @@ public sealed partial class FeatureTests
                 .WithSize(40, 30);
         });
 
+        // Act
         var pdfBytes = TestHelper.GeneratePdfAndSave(nameof(ImageShouldEmbedMultipleImages), stream);
 
+        // Assert
         Assert.True(TestHelper.IsValidPdf(pdfBytes));
         Assert.True(pdfBytes.Length > 1000);
     }
@@ -57,6 +63,7 @@ public sealed partial class FeatureTests
     [Fact]
     public void ImageShouldHandleFreeFloatingImage()
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
@@ -68,8 +75,10 @@ public sealed partial class FeatureTests
                 .WithSize(50, 30);
         });
 
+        // Act
         var pdfBytes = TestHelper.GeneratePdfAndSave(nameof(ImageShouldHandleFreeFloatingImage), stream);
 
+        // Assert
         Assert.True(TestHelper.IsValidPdf(pdfBytes));
         Assert.Contains("FreeFloat", TestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
     }

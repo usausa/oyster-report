@@ -9,6 +9,7 @@ public sealed partial class FeatureTests
     [Fact]
     public void EmbeddedFontShouldEmbedIpaExGothicForJapanese()
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
@@ -17,13 +18,15 @@ public sealed partial class FeatureTests
             cell.Style.Font.FontName = "ＭＳ Ｐゴシック";
             cell.Style.Font.FontSize = 12d;
         });
-
         var resolver = new TestFontResolver(TestHelper.IpaExGothicFontPath);
+
+        // Act
         var pdfBytes = TestHelper.GeneratePdfAndSave(
             nameof(EmbeddedFontShouldEmbedIpaExGothicForJapanese),
             stream,
             resolver);
 
+        // Assert
         Assert.True(TestHelper.IsValidPdf(pdfBytes));
         var letters = TestHelper.GetLetters(pdfBytes);
         Assert.Contains(
@@ -34,6 +37,7 @@ public sealed partial class FeatureTests
     [Fact]
     public void EmbeddedFontShouldRenderMultipleJapaneseCells()
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
@@ -50,19 +54,22 @@ public sealed partial class FeatureTests
                 cell.Style.Font.FontSize = 11d;
             }
         });
-
         var resolver = new TestFontResolver(TestHelper.IpaExGothicFontPath);
+
+        // Act
         var pdfBytes = TestHelper.GeneratePdfAndSave(
             nameof(EmbeddedFontShouldRenderMultipleJapaneseCells),
             stream,
             resolver);
 
+        // Assert
         Assert.True(TestHelper.IsValidPdf(pdfBytes));
     }
 
     [Fact]
     public void EmbeddedFontShouldRenderJapaneseBold()
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
@@ -72,19 +79,22 @@ public sealed partial class FeatureTests
             cell.Style.Font.Bold = true;
             cell.Style.Font.FontSize = 14d;
         });
-
         var resolver = new TestFontResolver(TestHelper.IpaExGothicFontPath);
+
+        // Act
         var pdfBytes = TestHelper.GeneratePdfAndSave(
             nameof(EmbeddedFontShouldRenderJapaneseBold),
             stream,
             resolver);
 
+        // Assert
         Assert.True(TestHelper.IsValidPdf(pdfBytes));
     }
 
     [Fact]
     public void EmbeddedFontShouldRenderMixedJapaneseAndAscii()
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
@@ -96,13 +106,15 @@ public sealed partial class FeatureTests
             cell2.Value = "EnglishText";
             cell2.Style.Font.FontSize = 11d;
         });
-
         var resolver = new TestFontResolver(TestHelper.IpaExGothicFontPath);
+
+        // Act
         var pdfBytes = TestHelper.GeneratePdfAndSave(
             nameof(EmbeddedFontShouldRenderMixedJapaneseAndAscii),
             stream,
             resolver);
 
+        // Assert
         Assert.True(TestHelper.IsValidPdf(pdfBytes));
         Assert.Contains("EnglishText", TestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
     }
@@ -110,6 +122,7 @@ public sealed partial class FeatureTests
     [Fact]
     public void EmbeddedFontShouldLoadFontFromPath()
     {
+        // Arrange
         Assert.True(
             File.Exists(TestHelper.IpaExGothicFontPath),
             $"ipaexg.ttf not found at: {TestHelper.IpaExGothicFontPath}");
@@ -121,13 +134,15 @@ public sealed partial class FeatureTests
             cell.Value = "フォントファイル確認";
             cell.Style.Font.FontName = "メイリオ";
         });
-
         var resolver = new TestFontResolver(TestHelper.IpaExGothicFontPath);
+
+        // Act
         var pdfBytes = TestHelper.GeneratePdfAndSave(
             nameof(EmbeddedFontShouldLoadFontFromPath),
             stream,
             resolver);
 
+        // Assert
         Assert.True(TestHelper.IsValidPdf(pdfBytes));
     }
 }

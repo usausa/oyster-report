@@ -9,6 +9,7 @@ public sealed partial class FeatureTests
     [Fact]
     public void PlaceholderShouldRenderReplacedValue()
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
@@ -18,10 +19,12 @@ public sealed partial class FeatureTests
         using var workbook = new TemplateWorkbook(stream);
         Assert.Single(workbook.Sheets).ReplacePlaceholder("CustomerName", "AcmeCorp");
 
+        // Act
         var pdfBytes = TestHelper.GeneratePdfAndSave(
             nameof(PlaceholderShouldRenderReplacedValue),
             workbook);
 
+        // Assert
         Assert.True(TestHelper.IsValidPdf(pdfBytes));
         Assert.Contains("AcmeCorp", TestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
     }
@@ -29,6 +32,7 @@ public sealed partial class FeatureTests
     [Fact]
     public void PlaceholderShouldReplaceAllPlaceholders()
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
@@ -45,10 +49,12 @@ public sealed partial class FeatureTests
             ["Date"] = "2025-01-01"
         });
 
+        // Act
         var pdfBytes = TestHelper.GeneratePdfAndSave(
             nameof(PlaceholderShouldReplaceAllPlaceholders),
             workbook);
 
+        // Assert
         Assert.True(TestHelper.IsValidPdf(pdfBytes));
         var text = TestHelper.ExtractAllText(pdfBytes);
         Assert.Contains("Invoice", text, StringComparison.Ordinal);
@@ -59,6 +65,7 @@ public sealed partial class FeatureTests
     [Fact]
     public void PlaceholderShouldPreserveUnreplacedPlaceholder()
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
@@ -69,10 +76,12 @@ public sealed partial class FeatureTests
         using var workbook = new TemplateWorkbook(stream);
         Assert.Single(workbook.Sheets).ReplacePlaceholder("ReplaceMe", "Replaced");
 
+        // Act
         var pdfBytes = TestHelper.GeneratePdfAndSave(
             nameof(PlaceholderShouldPreserveUnreplacedPlaceholder),
             workbook);
 
+        // Assert
         Assert.True(TestHelper.IsValidPdf(pdfBytes));
         Assert.Contains("Replaced", TestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
     }
@@ -80,6 +89,7 @@ public sealed partial class FeatureTests
     [Fact]
     public void PlaceholderShouldReplaceInMergedCell()
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
@@ -90,10 +100,12 @@ public sealed partial class FeatureTests
         using var workbook = new TemplateWorkbook(stream);
         Assert.Single(workbook.Sheets).ReplacePlaceholder("MergedTitle", "MergedValue");
 
+        // Act
         var pdfBytes = TestHelper.GeneratePdfAndSave(
             nameof(PlaceholderShouldReplaceInMergedCell),
             workbook);
 
+        // Assert
         Assert.True(TestHelper.IsValidPdf(pdfBytes));
         Assert.Contains("MergedValue", TestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
     }

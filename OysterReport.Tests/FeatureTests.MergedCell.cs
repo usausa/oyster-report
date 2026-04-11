@@ -9,6 +9,7 @@ public sealed partial class FeatureTests
     [Fact]
     public void MergedCellShouldRenderTextInHorizontalMerge()
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
@@ -16,10 +17,12 @@ public sealed partial class FeatureTests
             sheet.Range("A1:D1").Merge();
         });
 
+        // Act
         var pdfBytes = TestHelper.GeneratePdfAndSave(
             nameof(MergedCellShouldRenderTextInHorizontalMerge),
             stream);
 
+        // Assert
         Assert.True(TestHelper.IsValidPdf(pdfBytes));
         Assert.Contains("HorizontalMerge", TestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
     }
@@ -27,6 +30,7 @@ public sealed partial class FeatureTests
     [Fact]
     public void MergedCellShouldRenderTextInVerticalMerge()
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
@@ -34,10 +38,12 @@ public sealed partial class FeatureTests
             sheet.Range("A1:A4").Merge();
         });
 
+        // Act
         var pdfBytes = TestHelper.GeneratePdfAndSave(
             nameof(MergedCellShouldRenderTextInVerticalMerge),
             stream);
 
+        // Assert
         Assert.True(TestHelper.IsValidPdf(pdfBytes));
         Assert.Contains("VerticalMerge", TestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
     }
@@ -45,6 +51,7 @@ public sealed partial class FeatureTests
     [Fact]
     public void MergedCellShouldRenderTextInRectangularMerge()
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
@@ -52,10 +59,12 @@ public sealed partial class FeatureTests
             sheet.Range("B2:D4").Merge();
         });
 
+        // Act
         var pdfBytes = TestHelper.GeneratePdfAndSave(
             nameof(MergedCellShouldRenderTextInRectangularMerge),
             stream);
 
+        // Assert
         Assert.True(TestHelper.IsValidPdf(pdfBytes));
         Assert.Contains("RectMerge", TestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
     }
@@ -63,6 +72,7 @@ public sealed partial class FeatureTests
     [Fact]
     public void MergedCellShouldRenderMultipleMergedRanges()
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
@@ -74,8 +84,10 @@ public sealed partial class FeatureTests
             sheet.Range("B2:C4").Merge();
         });
 
+        // Act
         var pdfBytes = TestHelper.GeneratePdfAndSave(nameof(MergedCellShouldRenderMultipleMergedRanges), stream);
 
+        // Assert
         Assert.True(TestHelper.IsValidPdf(pdfBytes));
         var text = TestHelper.ExtractAllText(pdfBytes);
         Assert.Contains("Header", text, StringComparison.Ordinal);
@@ -86,6 +98,7 @@ public sealed partial class FeatureTests
     [Fact]
     public void MergedCellShouldNotDuplicateTextFromSubCells()
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");
@@ -93,10 +106,12 @@ public sealed partial class FeatureTests
             sheet.Range("A1:C1").Merge();
         });
 
+        // Act
         var pdfBytes = TestHelper.GeneratePdfAndSave(
             nameof(MergedCellShouldNotDuplicateTextFromSubCells),
             stream);
 
+        // Assert
         Assert.True(TestHelper.IsValidPdf(pdfBytes));
         var count = CountSubstringOccurrences(TestHelper.ExtractAllText(pdfBytes), "MergeOwner");
         Assert.Equal(1, count);

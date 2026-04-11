@@ -9,6 +9,7 @@ public sealed partial class FeatureTests
     [Fact]
     public void SingleSheetOutputShouldRenderTargetSheetByIndex()
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             workbook.AddWorksheet("Sheet1").Cell("A1").Value = "Sheet1Content";
@@ -19,10 +20,12 @@ public sealed partial class FeatureTests
         stream.Position = 0;
         using var workbook = new TemplateWorkbook(stream);
 
+        // Act
         var pdfBytes = TestHelper.GenerateSheetPdfAndSave(
             nameof(SingleSheetOutputShouldRenderTargetSheetByIndex),
             workbook.Sheets[1]);
 
+        // Assert
         Assert.True(TestHelper.IsValidPdf(pdfBytes));
         Assert.Equal(1, TestHelper.GetPageCount(pdfBytes));
         var text = TestHelper.ExtractAllText(pdfBytes);
@@ -34,6 +37,7 @@ public sealed partial class FeatureTests
     [Fact]
     public void SingleSheetOutputShouldRenderTargetSheetByName()
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             workbook.AddWorksheet("Summary").Cell("A1").Value = "SummaryContent";
@@ -44,10 +48,12 @@ public sealed partial class FeatureTests
         stream.Position = 0;
         using var workbook = new TemplateWorkbook(stream);
 
+        // Act
         var pdfBytes = TestHelper.GenerateSheetPdfAndSave(
             nameof(SingleSheetOutputShouldRenderTargetSheetByName),
             workbook.GetSheet("Detail"));
 
+        // Assert
         Assert.True(TestHelper.IsValidPdf(pdfBytes));
         Assert.Equal(1, TestHelper.GetPageCount(pdfBytes));
         var text = TestHelper.ExtractAllText(pdfBytes);
@@ -59,6 +65,7 @@ public sealed partial class FeatureTests
     [Fact]
     public void SingleSheetOutputShouldRenderFirstSheetByIndex0()
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             workbook.AddWorksheet("First").Cell("A1").Value = "FirstSheet";
@@ -68,10 +75,12 @@ public sealed partial class FeatureTests
         stream.Position = 0;
         using var workbook = new TemplateWorkbook(stream);
 
+        // Act
         var pdfBytes = TestHelper.GenerateSheetPdfAndSave(
             nameof(SingleSheetOutputShouldRenderFirstSheetByIndex0),
             workbook.Sheets[0]);
 
+        // Assert
         Assert.True(TestHelper.IsValidPdf(pdfBytes));
         Assert.Equal(1, TestHelper.GetPageCount(pdfBytes));
         var text = TestHelper.ExtractAllText(pdfBytes);
@@ -82,6 +91,7 @@ public sealed partial class FeatureTests
     [Fact]
     public void SingleSheetOutputShouldIsolateReplacementsToTargetSheet()
     {
+        // Arrange
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             workbook.AddWorksheet("Cover").Cell("A1").Value = "{{Title}}";
@@ -93,10 +103,12 @@ public sealed partial class FeatureTests
         var coverSheet = workbook.GetSheet("Cover");
         coverSheet.ReplacePlaceholder("Title", "ReplacedTitle");
 
+        // Act
         var pdfBytes = TestHelper.GenerateSheetPdfAndSave(
             nameof(SingleSheetOutputShouldIsolateReplacementsToTargetSheet),
             coverSheet);
 
+        // Assert
         Assert.True(TestHelper.IsValidPdf(pdfBytes));
         Assert.Contains("ReplacedTitle", TestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
     }
