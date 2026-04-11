@@ -112,7 +112,7 @@ internal sealed class WindowsFontResolver : IFontResolver
         }
 
         var ttf = new byte[totalSize];
-        Array.Copy(ttc, faceOffset, ttf, 0, 12);
+        ttc.AsSpan(faceOffset, 12).CopyTo(ttf);
 
         for (var i = 0; i < numTables; i++)
         {
@@ -121,7 +121,7 @@ internal sealed class WindowsFontResolver : IFontResolver
             BinaryPrimitives.WriteUInt32BigEndian(ttf.AsSpan(ttfEntryOffset + 4, sizeof(uint)), tables[i].CheckSum);
             BinaryPrimitives.WriteUInt32BigEndian(ttf.AsSpan(ttfEntryOffset + 8, sizeof(uint)), (uint)tableOffsets[i]);
             BinaryPrimitives.WriteUInt32BigEndian(ttf.AsSpan(ttfEntryOffset + 12, sizeof(uint)), (uint)tables[i].Length);
-            Array.Copy(ttc, tables[i].SrcOffset, ttf, tableOffsets[i], tables[i].Length);
+            ttc.AsSpan(tables[i].SrcOffset, tables[i].Length).CopyTo(ttf.AsSpan(tableOffsets[i], tables[i].Length));
         }
 
         return ttf;
