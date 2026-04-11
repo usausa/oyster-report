@@ -79,12 +79,10 @@ internal static class PdfRenderPlanner
 
     private static PdfRenderSheetPlan BuildSheetPlan(ReportSheet sheet, int sheetNumber, ReportRenderOption renderOption)
     {
-        // ページサイズ・向きからページ境界領域を決定する。
-        // Determine the page bounding rectangle from paper size and orientation.
+        // Resolve page bounding rectangle from paper size and orientation
         var pageBounds = ResolvePageBounds(sheet.PageSetup, renderOption);
 
-        // 余白を差し引いた印刷可能領域を算出する。
-        // Compute the printable area by subtracting margins from the page bounds.
+        // Compute the printable area by subtracting margins from the page bounds
         var printableBounds = new ReportRect
         {
             X = sheet.PageSetup.Margins.Left,
@@ -93,12 +91,10 @@ internal static class PdfRenderPlanner
             Height = pageBounds.Height - sheet.PageSetup.Margins.Top - sheet.PageSetup.Margins.Bottom
         };
 
-        // 描画対象範囲を印刷範囲または使用ている範囲から决定する。
-        // Resolve the render range from the print area or the used cell range.
+        // Resolve the render range from print area or used cell range
         var renderRange = sheet.PrintArea?.Range ?? sheet.UsedRange;
 
-        // 描画範囲内の表示行・列をフィルタリングしてインデックス順に準備する。
-        // Filter visible rows and columns within the render range, sorted by index.
+        // Filter visible rows and columns within the render range, sorted by index
         var visibleRows = sheet.Rows
             .Where(x => !x.IsHidden && (x.Index >= renderRange.StartRow) && (x.Index <= renderRange.EndRow))
             .OrderBy(static x => x.Index)
@@ -108,8 +104,7 @@ internal static class PdfRenderPlanner
             .OrderBy(static x => x.Index)
             .ToList();
 
-        // 水平・垂直中央揃え用のコンテンツオフセットを計算する。
-        // Calculate content offsets for horizontal and vertical centering.
+        // Calculate content offsets for horizontal and vertical centering
         var contentWidth = visibleColumns.Sum(static x => x.WidthPoint);
         var contentOffsetX = sheet.PageSetup.CenterHorizontally
             ? Math.Max(0d, (printableBounds.Width - contentWidth) / 2d)
@@ -119,8 +114,7 @@ internal static class PdfRenderPlanner
             ? Math.Max(0d, (printableBounds.Height - centeringHeight) / 2d)
             : 0d;
 
-        // 行インデックス → Y 座標（pt）のオフセット辞書を構築する。
-        // Build the row-index to Y-offset (pt) dictionary.
+        // Build the row-index to Y-offset (pt) dictionary
         var rowOffsets = new Dictionary<int, double>();
         var currentTop = printableBounds.Y + contentOffsetY;
         foreach (var row in visibleRows)
@@ -129,8 +123,7 @@ internal static class PdfRenderPlanner
             currentTop += row.HeightPoint;
         }
 
-        // 列インデックス → X 座標（pt）のオフセット辞書を構築する。
-        // Build the column-index to X-offset (pt) dictionary.
+        // Build the column-index to X-offset (pt) dictionary
         var columnOffsets = new Dictionary<int, double>();
         var currentLeft = printableBounds.X + contentOffsetX;
         foreach (var column in visibleColumns)
@@ -139,15 +132,13 @@ internal static class PdfRenderPlanner
             currentLeft += column.WidthPoint;
         }
 
-        // マージ範囲・セル・列のルックアップ用辞書を一括構築する。
-        // Build lookup dictionaries for merged ranges, cells, and columns.
+        // Build lookup dictionaries for merged ranges, cells, and columns
         var mergedRanges = sheet.MergedRanges.ToDictionary(range => range.OwnerCellAddress, range => range);
         var cellsByRowCol = sheet.Cells.ToDictionary(c => (c.Row, c.Column));
         var columnByIndex = visibleColumns.ToDictionary(c => c.Index);
         var mergedRangeByCell = BuildMergedRangeByCell(sheet.MergedRanges);
 
-        // 表示対象セルの境界領域を計算し、PdfCellRenderInfo リストを構築する。
-        // Compute bounding rectangles for each visible cell and build the PdfCellRenderInfo list.
+        // Compute bounding rectangles for each visible cell and build the PdfCellRenderInfo list
         var pageCells = new List<PdfCellRenderInfo>();
         foreach (var cell in sheet.Cells.Where(x => rowOffsets.ContainsKey(x.Row) && columnOffsets.ContainsKey(x.Column)))
         {
@@ -211,10 +202,9 @@ internal static class PdfRenderPlanner
     // Page bounds
     //--------------------------------------------------------------------------------
 
-    // 用紙サイズと向きからページ境界領域 (pt) を決定する。
-    // Determines the page bounding rectangle (pt) from paper size and orientation.
     private static ReportRect ResolvePageBounds(ReportPageSetup pageSetup, ReportRenderOption renderOption)
     {
+        // Determines the page bounding rectangle (pt) from paper size and orientation.
         var (width, height) = renderOption.PageSizeResolver(pageSetup.PaperSize);
         return pageSetup.Orientation == XLPageOrientation.Landscape
             ? new ReportRect { X = 0, Y = 0, Width = height, Height = width }
@@ -225,8 +215,6 @@ internal static class PdfRenderPlanner
     // Merged cell
     //--------------------------------------------------------------------------------
 
-    // マージセルの外接領域を行・列のオフセットから計算する。
-    // Computes the outer bounding rectangle of a merged cell from row and column offsets.
     private static ReportRect BuildMergedBounds(
         ReportMergedRange mergedRange,
         IEnumerable<ReportRow> visibleRows,
@@ -234,6 +222,7 @@ internal static class PdfRenderPlanner
         Dictionary<int, double> rowOffsets,
         Dictionary<int, double> columnOffsets)
     {
+        // Computes the outer bounding rectangle of a merged cell from row and column offsets
         var targetRows = visibleRows.Where(x => (x.Index >= mergedRange.Range.StartRow) && (x.Index <= mergedRange.Range.EndRow)).ToList();
         var targetColumns = visibleColumns.Where(x => (x.Index >= mergedRange.Range.StartColumn) && (x.Index <= mergedRange.Range.EndColumn)).ToList();
         if ((targetRows.Count == 0) || (targetColumns.Count == 0))

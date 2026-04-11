@@ -12,7 +12,7 @@ using PdfSharp.Pdf;
 
 internal static class PdfGenerator
 {
-    private const double BoldSimulationOffsetPoints = 0.35d;
+    private const double BoldSimulationOffset = 0.35d;
 
     private static int fontPlatformConfigured;
 
@@ -27,10 +27,6 @@ internal static class PdfGenerator
     // Write
     //--------------------------------------------------------------------------------
 
-    // レンダリングコンテキストをもとに PDF ドキュメントを生成し、出力ストリームへ書き込む。
-    // PDFSharp のフォント設定を初期化し、全シート・全ページを順に描画する。
-    // Generates a PDF document from the rendering context and writes it to the output stream.
-    // Initializes PDFSharp font settings and renders each sheet and page in sequence.
     internal static void WritePdf(ReportRenderContext context, Stream output)
     {
         EnsurePdfSharpFontConfiguration();
@@ -68,9 +64,6 @@ internal static class PdfGenerator
     // Setup
     //--------------------------------------------------------------------------------
 
-    // PDFSharp のフォントリゾルバーが未設定の場合に
-    // ReportFontResolverAdapter を登録する (初回のみ実行)。
-    // Registers ReportFontResolverAdapter with PDFSharp if no font resolver is set (runs once only).
     private static void EnsurePdfSharpFontConfiguration()
     {
         if (Interlocked.Exchange(ref fontPlatformConfigured, 1) == 1)
@@ -516,7 +509,7 @@ internal static class PdfGenerator
         {
             var passRect = pass == 0
                 ? textRect
-                : new XRect(textRect.X + BoldSimulationOffsetPoints, textRect.Y, textRect.Width, textRect.Height);
+                : new XRect(textRect.X + BoldSimulationOffset, textRect.Y, textRect.Width, textRect.Height);
 
             var state = graphics.Save();
             try
@@ -754,8 +747,8 @@ internal static class PdfGenerator
     // Draws a double-line border as two parallel solid lines.
     private static void DrawDoubleBorder(XGraphics graphics, XColor color, double width, ReportLine line)
     {
-        var gap = Math.Max(RenderConstants.MinimumDoubleBorderGapPoints, width * RenderConstants.DoubleBorderGapWidthMultiplier);
-        if (Math.Abs(line.Y1 - line.Y2) < RenderConstants.StraightLineTolerancePoints)
+        var gap = Math.Max(RenderConstants.MinimumDoubleBorderGap, width * RenderConstants.DoubleBorderGapWidthMultiplier);
+        if (Math.Abs(line.Y1 - line.Y2) < RenderConstants.StraightLineTolerance)
         {
             DrawSolidBorder(graphics, color, width, line with { Y1 = line.Y1 - (gap / 2d), Y2 = line.Y2 - (gap / 2d) });
             DrawSolidBorder(graphics, color, width, line with { Y1 = line.Y1 + (gap / 2d), Y2 = line.Y2 + (gap / 2d) });
@@ -826,7 +819,7 @@ internal static class PdfGenerator
     private static void DrawSolidBorder(XGraphics graphics, XColor color, double width, ReportLine line)
     {
         var brush = new XSolidBrush(color);
-        if (Math.Abs(line.Y1 - line.Y2) < RenderConstants.StraightLineTolerancePoints)
+        if (Math.Abs(line.Y1 - line.Y2) < RenderConstants.StraightLineTolerance)
         {
             var left = Math.Min(line.X1, line.X2);
             var top = line.Y1 - (width / 2d);
