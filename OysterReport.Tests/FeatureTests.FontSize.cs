@@ -16,7 +16,7 @@ public sealed partial class FeatureTests
     [InlineData(11d, "NormalText")]
     [InlineData(18d, "LargeText")]
     [InlineData(24d, "HugeText")]
-    public void PdfShouldContainTextWithVariousFontSizes(double fontSize, string cellValue)
+    public void FontSizeShouldRenderVariousSizes(double fontSize, string cellValue)
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -27,7 +27,7 @@ public sealed partial class FeatureTests
         });
 
         var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
-            $"{nameof(PdfShouldContainTextWithVariousFontSizes)}_{fontSize}pt",
+            $"{nameof(FontSizeShouldRenderVariousSizes)}_{fontSize}pt",
             stream);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
@@ -35,7 +35,7 @@ public sealed partial class FeatureTests
     }
 
     [Fact]
-    public void PdfShouldRenderMultipleFontSizesOnOnePage()
+    public void FontSizeShouldRenderMultipleSizesOnOnePage()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -49,7 +49,7 @@ public sealed partial class FeatureTests
         });
 
         var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
-            nameof(PdfShouldRenderMultipleFontSizesOnOnePage),
+            nameof(FontSizeShouldRenderMultipleSizesOnOnePage),
             stream);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));

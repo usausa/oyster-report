@@ -12,7 +12,7 @@ using Xunit;
 public sealed partial class FeatureTests
 {
     [Fact]
-    public void PdfShouldNotContainHiddenRowText()
+    public void HiddenRowColumnShouldExcludeHiddenRow()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -23,7 +23,7 @@ public sealed partial class FeatureTests
             sheet.Cell("A3").Value = "VisibleRow2";
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(PdfShouldNotContainHiddenRowText), stream);
+        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(HiddenRowColumnShouldExcludeHiddenRow), stream);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
         var text = PdfTestHelper.ExtractAllText(pdfBytes);
@@ -32,7 +32,7 @@ public sealed partial class FeatureTests
     }
 
     [Fact]
-    public void PdfShouldNotContainHiddenColumnText()
+    public void HiddenRowColumnShouldExcludeHiddenColumn()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -43,7 +43,7 @@ public sealed partial class FeatureTests
             sheet.Cell("C1").Value = "VisibleCol2";
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(PdfShouldNotContainHiddenColumnText), stream);
+        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(HiddenRowColumnShouldExcludeHiddenColumn), stream);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
         var text = PdfTestHelper.ExtractAllText(pdfBytes);

@@ -155,7 +155,6 @@ internal static class ColorHelper
         {
             t += 1d;
         }
-
         if (t > 1d)
         {
             t -= 1d;
@@ -165,12 +164,10 @@ internal static class ColorHelper
         {
             return p + ((q - p) * 6d * t);
         }
-
         if (t < 0.5d)
         {
             return q;
         }
-
         if (t < (2d / 3d))
         {
             return p + ((q - p) * ((2d / 3d) - t) * 6d);

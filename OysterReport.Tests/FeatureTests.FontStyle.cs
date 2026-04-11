@@ -14,7 +14,7 @@ using Xunit;
 public sealed partial class FeatureTests
 {
     [Fact]
-    public void PdfShouldContainBoldText()
+    public void FontStyleShouldRenderBoldText()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -24,14 +24,14 @@ public sealed partial class FeatureTests
             cell.Style.Font.Bold = true;
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(PdfShouldContainBoldText), stream);
+        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(FontStyleShouldRenderBoldText), stream);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
         Assert.Contains("BoldText", PdfTestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
     }
 
     [Fact]
-    public void PdfShouldContainItalicText()
+    public void FontStyleShouldRenderItalicText()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -41,14 +41,14 @@ public sealed partial class FeatureTests
             cell.Style.Font.Italic = true;
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(PdfShouldContainItalicText), stream);
+        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(FontStyleShouldRenderItalicText), stream);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
         Assert.Contains("ItalicText", PdfTestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
     }
 
     [Fact]
-    public void PdfShouldContainBoldItalicText()
+    public void FontStyleShouldRenderBoldItalicText()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -59,14 +59,14 @@ public sealed partial class FeatureTests
             cell.Style.Font.Italic = true;
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(PdfShouldContainBoldItalicText), stream);
+        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(FontStyleShouldRenderBoldItalicText), stream);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
         Assert.Contains("BoldItalic", PdfTestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
     }
 
     [Fact]
-    public void PdfShouldRenderMixedNormalBoldItalicOnSamePage()
+    public void FontStyleShouldRenderMixedStylesOnSamePage()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -81,7 +81,7 @@ public sealed partial class FeatureTests
         });
 
         var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
-            nameof(PdfShouldRenderMixedNormalBoldItalicOnSamePage),
+            nameof(FontStyleShouldRenderMixedStylesOnSamePage),
             stream);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
@@ -92,7 +92,7 @@ public sealed partial class FeatureTests
     }
 
     [Fact]
-    public void PdfShouldContainUnderlinedText()
+    public void FontStyleShouldRenderUnderlinedText()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -102,14 +102,14 @@ public sealed partial class FeatureTests
             cell.Style.Font.Underline = XLFontUnderlineValues.Single;
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(PdfShouldContainUnderlinedText), stream);
+        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(FontStyleShouldRenderUnderlinedText), stream);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
         Assert.Contains("UnderlinedText", PdfTestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
     }
 
     [Fact]
-    public void PdfShouldContainStrikethroughText()
+    public void FontStyleShouldRenderStrikethroughText()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -119,14 +119,14 @@ public sealed partial class FeatureTests
             cell.Style.Font.Strikethrough = true;
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(PdfShouldContainStrikethroughText), stream);
+        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(FontStyleShouldRenderStrikethroughText), stream);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
         Assert.Contains("StrikethroughText", PdfTestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
     }
 
     [Fact]
-    public void PdfShouldContainTextWithAllDecorations()
+    public void FontStyleShouldRenderAllDecorationsOnSameCell()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -139,7 +139,7 @@ public sealed partial class FeatureTests
             cell.Style.Font.Strikethrough = true;
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(PdfShouldContainTextWithAllDecorations), stream);
+        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(FontStyleShouldRenderAllDecorationsOnSameCell), stream);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
         Assert.Contains("AllDecorations", PdfTestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);

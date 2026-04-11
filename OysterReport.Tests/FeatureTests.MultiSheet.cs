@@ -12,7 +12,7 @@ using Xunit;
 public sealed partial class FeatureTests
 {
     [Fact]
-    public void PdfShouldHaveOnePagePerSheet()
+    public void MultiSheetShouldRenderOnePagePerSheet()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -21,14 +21,14 @@ public sealed partial class FeatureTests
             workbook.AddWorksheet("Sheet3").Cell("A1").Value = "ContentSheet3";
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(PdfShouldHaveOnePagePerSheet), stream);
+        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(MultiSheetShouldRenderOnePagePerSheet), stream);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
         Assert.True(PdfTestHelper.GetPageCount(pdfBytes) >= 3);
     }
 
     [Fact]
-    public void PdfShouldContainTextFromAllSheets()
+    public void MultiSheetShouldContainTextFromAllSheets()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -36,7 +36,7 @@ public sealed partial class FeatureTests
             workbook.AddWorksheet("Beta").Cell("A1").Value = "BetaSheet";
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(PdfShouldContainTextFromAllSheets), stream);
+        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(MultiSheetShouldContainTextFromAllSheets), stream);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
         var text = PdfTestHelper.ExtractAllText(pdfBytes);

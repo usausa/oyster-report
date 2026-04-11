@@ -7,8 +7,7 @@ using ClosedXML.Excel.Drawings;
 
 internal static class ExcelReader
 {
-    // Excel の列幅計算に使用する定数 (Excel 仕様に基づくピクセル変換パラメータ)
-    // Constants used for Excel column width calculation (pixel conversion parameters per Excel spec)
+    // Excel column width calculation (pixel conversion parameters per Excel spec)
     private const double DefaultMaxDigitWidth = 7d;
     private const double ExcelColumnPaddingMultiplier = 2d;
     private const double ExcelColumnPaddingDivisor = 4d;
@@ -22,26 +21,21 @@ internal static class ExcelReader
     // Read
     //--------------------------------------------------------------------------------
 
-    // ClosedXML ワークブックオブジェクトから ReportWorkbook を生成する。
-    // Generates a ReportWorkbook from a ClosedXML workbook object.
     public static ReportWorkbook Read(IXLWorkbook workbook, ReportRenderOption? renderOption = null)
     {
+        //Generate ReportWorkbook from a ClosedXML workbook
         var effectiveOptions = renderOption ?? new ReportRenderOption();
         var measurementProfile = CreateMeasurementProfile(workbook, effectiveOptions);
         var metadata = new ReportMetadata { TemplateName = workbook.Properties.Title ?? "Workbook" };
         return ReadInternal(workbook, measurementProfile, metadata);
     }
 
-    // ストリームから Excel を読み込み ReportWorkbook を生成する。
-    // Reads an Excel file from a stream and generates a ReportWorkbook.
     public static ReportWorkbook Read(Stream stream, ReportRenderOption? renderOption = null)
     {
         using var workbook = new XLWorkbook(stream);
         return Read(workbook, renderOption);
     }
 
-    // 単一ワークシートから 1 シートのみ含む ReportWorkbook を生成する。
-    // Generates a ReportWorkbook containing only the specified worksheet.
     public static ReportWorkbook Read(IXLWorksheet worksheet, ReportRenderOption? renderOption = null)
     {
         var effectiveOptions = renderOption ?? new ReportRenderOption();
@@ -57,11 +51,9 @@ internal static class ExcelReader
     }
 
     //--------------------------------------------------------------------------------
-    // Read (internal)
+    // Read internal
     //--------------------------------------------------------------------------------
 
-    // ワークブック全体を読み込み、シートを列挙して ReportWorkbook を構築する。
-    // Reads the full workbook and builds a ReportWorkbook by iterating over all worksheets.
     private static ReportWorkbook ReadInternal(IXLWorkbook workbook, ReportMeasurementProfile measurementProfile, ReportMetadata metadata)
     {
         var reportWorkbook = new ReportWorkbook
@@ -78,19 +70,17 @@ internal static class ExcelReader
         return reportWorkbook;
     }
 
-    // ワークブックの既定フォント情報から列幅計算用プロファイルを作成する。
-    // Creates a column width measurement profile from the workbook's default font settings.
-    private static ReportMeasurementProfile CreateMeasurementProfile(
-        IXLWorkbook workbook,
-        ReportRenderOption renderOption) =>
-        new()
+    private static ReportMeasurementProfile CreateMeasurementProfile(IXLWorkbook workbook, ReportRenderOption renderOption)
+    {
+        // Creates a column width measurement profile from workbook default font settings.
+        return new()
         {
             MaxDigitWidth = ResolveMaxDigitWidth(workbook.Style.Font.FontName, workbook.Style.Font.FontSize, renderOption),
             ColumnWidthAdjustment = renderOption.ColumnWidthAdjustment
         };
 
-    // ワークシートを読み込み、行・列・セル・画像等を ReportSheet に変換する。
-    // Reads a worksheet and converts rows, columns, cells, images, and other elements to a ReportSheet.
+    }
+
     private static ReportSheet ReadSheet(IXLWorksheet worksheet, ReportMeasurementProfile measurementProfile)
     {
         var reportSheet = new ReportSheet { Name = worksheet.Name };
@@ -106,6 +96,7 @@ internal static class ExcelReader
         reportSheet.PrintArea = printArea;
         reportSheet.ShowGridLines = worksheet.PageSetup.ShowGridlines;
 
+        // Row
         for (var rowIndex = range.StartRow; rowIndex <= range.EndRow; rowIndex++)
         {
             var row = worksheet.Row(rowIndex);
@@ -118,6 +109,7 @@ internal static class ExcelReader
             });
         }
 
+        // Column
         for (var columnIndex = range.StartColumn; columnIndex <= range.EndColumn; columnIndex++)
         {
             var column = worksheet.Column(columnIndex);
@@ -131,6 +123,7 @@ internal static class ExcelReader
             });
         }
 
+        // Merged
         foreach (var mergedRange in worksheet.MergedRanges)
         {
             reportSheet.AddMergedRange(new ReportMergedRange
@@ -145,6 +138,7 @@ internal static class ExcelReader
             });
         }
 
+        // Cell
         for (var rowIndex = range.StartRow; rowIndex <= range.EndRow; rowIndex++)
         {
             for (var columnIndex = range.StartColumn; columnIndex <= range.EndColumn; columnIndex++)
@@ -161,6 +155,7 @@ internal static class ExcelReader
             }
         }
 
+        // Page break
         foreach (var pageBreak in worksheet.PageSetup.RowBreaks)
         {
             reportSheet.AddHorizontalPageBreak(new ReportPageBreak { Index = pageBreak });
@@ -171,6 +166,7 @@ internal static class ExcelReader
             reportSheet.AddVerticalPageBreak(new ReportPageBreak { Index = pageBreak });
         }
 
+        // Picture
         foreach (var picture in worksheet.Pictures)
         {
             reportSheet.AddImage(ReadImage(picture));
@@ -179,6 +175,7 @@ internal static class ExcelReader
         reportSheet.RecalculateLayout();
         ApplyMergedRanges(reportSheet);
         ApplyTableStyles(reportSheet, worksheet);
+
         return reportSheet;
     }
 

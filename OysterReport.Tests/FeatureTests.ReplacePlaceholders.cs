@@ -12,7 +12,7 @@ using Xunit;
 public sealed partial class FeatureTests
 {
     [Fact]
-    public void TemplateRowShouldReplaceMultiplePlaceholdersAtOnce()
+    public void ReplacePlaceholdersShouldReplaceMultipleOnRow()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -31,7 +31,7 @@ public sealed partial class FeatureTests
         });
 
         var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
-            nameof(TemplateRowShouldReplaceMultiplePlaceholdersAtOnce),
+            nameof(ReplacePlaceholdersShouldReplaceMultipleOnRow),
             workbook);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
@@ -42,7 +42,7 @@ public sealed partial class FeatureTests
     }
 
     [Fact]
-    public void TemplateRowShouldTreatNullValueAsEmptyStringInReplacePlaceholders()
+    public void ReplacePlaceholdersShouldTreatNullValueAsEmpty()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -60,7 +60,7 @@ public sealed partial class FeatureTests
         });
 
         var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
-            nameof(TemplateRowShouldTreatNullValueAsEmptyStringInReplacePlaceholders),
+            nameof(ReplacePlaceholdersShouldTreatNullValueAsEmpty),
             workbook);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
@@ -70,7 +70,7 @@ public sealed partial class FeatureTests
     }
 
     [Fact]
-    public void TemplateRowRangeShouldReplaceMultiplePlaceholdersAtOnce()
+    public void ReplacePlaceholdersShouldReplaceMultipleOnRowRange()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -90,7 +90,7 @@ public sealed partial class FeatureTests
         });
 
         var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
-            nameof(TemplateRowRangeShouldReplaceMultiplePlaceholdersAtOnce),
+            nameof(ReplacePlaceholdersShouldReplaceMultipleOnRowRange),
             workbook);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
@@ -101,7 +101,7 @@ public sealed partial class FeatureTests
     }
 
     [Fact]
-    public void TemplateWorkbookShouldReplaceAllPlaceholdersAcrossAllSheets()
+    public void ReplacePlaceholdersShouldReplaceAcrossAllSheets()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -119,7 +119,7 @@ public sealed partial class FeatureTests
         });
 
         var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
-            nameof(TemplateWorkbookShouldReplaceAllPlaceholdersAcrossAllSheets),
+            nameof(ReplacePlaceholdersShouldReplaceAcrossAllSheets),
             workbook);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
@@ -131,7 +131,7 @@ public sealed partial class FeatureTests
     }
 
     [Fact]
-    public void ExpandedRowsShouldBeReplacedWithReplacePlaceholdersInLoop()
+    public void ReplacePlaceholdersShouldWorkWithExpandedRowsInLoop()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -165,7 +165,7 @@ public sealed partial class FeatureTests
         template.Delete();
 
         var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
-            nameof(ExpandedRowsShouldBeReplacedWithReplacePlaceholdersInLoop),
+            nameof(ReplacePlaceholdersShouldWorkWithExpandedRowsInLoop),
             workbook);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));

@@ -20,7 +20,7 @@ public sealed partial class FeatureTests
     [InlineData(XLBorderStyleValues.Double, "DoubleBorder")]
     [InlineData(XLBorderStyleValues.Dashed, "DashedBorder")]
     [InlineData(XLBorderStyleValues.Dotted, "DottedBorder")]
-    public void PdfShouldContainCellWithBorder(XLBorderStyleValues borderStyle, string cellValue)
+    public void BorderShouldRenderCellWithBorder(XLBorderStyleValues borderStyle, string cellValue)
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -32,7 +32,7 @@ public sealed partial class FeatureTests
         });
 
         var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
-            $"{nameof(PdfShouldContainCellWithBorder)}_{borderStyle}",
+            $"{nameof(BorderShouldRenderCellWithBorder)}_{borderStyle}",
             stream);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
@@ -40,7 +40,7 @@ public sealed partial class FeatureTests
     }
 
     [Fact]
-    public void PdfShouldRenderColoredBorder()
+    public void BorderShouldRenderColoredBorder()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -51,14 +51,14 @@ public sealed partial class FeatureTests
             cell.Style.Border.OutsideBorderColor = XLColor.FromArgb(255, 0, 0);
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(PdfShouldRenderColoredBorder), stream);
+        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(BorderShouldRenderColoredBorder), stream);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
         Assert.Contains("ColoredBorder", PdfTestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
     }
 
     [Fact]
-    public void PdfShouldRenderTableWithAllSideBorders()
+    public void BorderShouldRenderTableWithAllSideBorders()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -74,7 +74,7 @@ public sealed partial class FeatureTests
             }
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(PdfShouldRenderTableWithAllSideBorders), stream);
+        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(BorderShouldRenderTableWithAllSideBorders), stream);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
         var text = PdfTestHelper.ExtractAllText(pdfBytes);

@@ -17,7 +17,7 @@ public sealed partial class FeatureTests
     [InlineData(XLAlignmentHorizontalValues.Left, "LeftAligned")]
     [InlineData(XLAlignmentHorizontalValues.Center, "CenterAligned")]
     [InlineData(XLAlignmentHorizontalValues.Right, "RightAligned")]
-    public void PdfShouldContainHorizontallyAlignedText(XLAlignmentHorizontalValues alignment, string cellValue)
+    public void TextAlignmentShouldRenderHorizontalAlignment(XLAlignmentHorizontalValues alignment, string cellValue)
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -29,7 +29,7 @@ public sealed partial class FeatureTests
         });
 
         var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
-            $"{nameof(PdfShouldContainHorizontallyAlignedText)}_{alignment}",
+            $"{nameof(TextAlignmentShouldRenderHorizontalAlignment)}_{alignment}",
             stream);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
@@ -40,7 +40,7 @@ public sealed partial class FeatureTests
     [InlineData(XLAlignmentVerticalValues.Top, "TopAligned")]
     [InlineData(XLAlignmentVerticalValues.Center, "MiddleAligned")]
     [InlineData(XLAlignmentVerticalValues.Bottom, "BottomAligned")]
-    public void PdfShouldContainVerticallyAlignedText(XLAlignmentVerticalValues alignment, string cellValue)
+    public void TextAlignmentShouldRenderVerticalAlignment(XLAlignmentVerticalValues alignment, string cellValue)
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -52,7 +52,7 @@ public sealed partial class FeatureTests
         });
 
         var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
-            $"{nameof(PdfShouldContainVerticallyAlignedText)}_{alignment}",
+            $"{nameof(TextAlignmentShouldRenderVerticalAlignment)}_{alignment}",
             stream);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
@@ -60,7 +60,7 @@ public sealed partial class FeatureTests
     }
 
     [Fact]
-    public void PdfShouldContainWrappedText()
+    public void TextAlignmentShouldRenderWrappedText()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -72,7 +72,7 @@ public sealed partial class FeatureTests
             sheet.Row(1).Height = 50d;
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(PdfShouldContainWrappedText), stream);
+        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(TextAlignmentShouldRenderWrappedText), stream);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
     }

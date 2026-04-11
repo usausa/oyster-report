@@ -14,7 +14,7 @@ using Xunit;
 public sealed partial class FeatureTests
 {
     [Fact]
-    public void PdfShouldContainAllRowsAddedWithInsertCopyBelow()
+    public void RowAdditionShouldContainRowsFromInsertCopyBelow()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -36,7 +36,7 @@ public sealed partial class FeatureTests
         template.Delete();
 
         var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
-            nameof(PdfShouldContainAllRowsAddedWithInsertCopyBelow),
+            nameof(RowAdditionShouldContainRowsFromInsertCopyBelow),
             workbook);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
@@ -49,7 +49,7 @@ public sealed partial class FeatureTests
     }
 
     [Fact]
-    public void PdfShouldContainAllRowsAddedWithInsertCopyAfter()
+    public void RowAdditionShouldContainRowsFromInsertCopyAfter()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -72,7 +72,7 @@ public sealed partial class FeatureTests
         templateRow.Delete();
 
         var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
-            nameof(PdfShouldContainAllRowsAddedWithInsertCopyAfter),
+            nameof(RowAdditionShouldContainRowsFromInsertCopyAfter),
             workbook);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
@@ -83,7 +83,7 @@ public sealed partial class FeatureTests
     }
 
     [Fact]
-    public void PdfShouldPreserveStyleAfterRowCopy()
+    public void RowAdditionShouldPreserveStyleAfterCopy()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -101,14 +101,14 @@ public sealed partial class FeatureTests
         copy.ReplacePlaceholder("StyledItem", "CopiedRow");
         template.Delete();
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(PdfShouldPreserveStyleAfterRowCopy), workbook);
+        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(RowAdditionShouldPreserveStyleAfterCopy), workbook);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
         Assert.Contains("CopiedRow", PdfTestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
     }
 
     [Fact]
-    public void PdfShouldHandleZeroDetailRows()
+    public void RowAdditionShouldHandleZeroDetailRows()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -122,7 +122,7 @@ public sealed partial class FeatureTests
         var sheet = Assert.Single(workbook.Sheets);
         sheet.FindRow("Item").Delete();
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(PdfShouldHandleZeroDetailRows), workbook);
+        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(RowAdditionShouldHandleZeroDetailRows), workbook);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
         var text = PdfTestHelper.ExtractAllText(pdfBytes);
@@ -131,7 +131,7 @@ public sealed partial class FeatureTests
     }
 
     [Fact]
-    public void PdfShouldContainAllRowsFromMultiRowRangeExpansion()
+    public void RowAdditionShouldContainRowsFromMultiRowRangeExpansion()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -156,7 +156,7 @@ public sealed partial class FeatureTests
         sheet.DeleteRows(templateRange.StartRow, templateRange.EndRow);
 
         var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
-            nameof(PdfShouldContainAllRowsFromMultiRowRangeExpansion),
+            nameof(RowAdditionShouldContainRowsFromMultiRowRangeExpansion),
             workbook);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));

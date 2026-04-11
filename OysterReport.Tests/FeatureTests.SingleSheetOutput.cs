@@ -15,7 +15,7 @@ using Xunit;
 public sealed partial class FeatureTests
 {
     [Fact]
-    public void PdfShouldContainOnlyTargetSheetContentWhenRenderedByIndex()
+    public void SingleSheetOutputShouldRenderTargetSheetByIndex()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -28,7 +28,7 @@ public sealed partial class FeatureTests
         using var workbook = new TemplateWorkbook(stream);
 
         var pdfBytes = PdfTestHelper.GenerateSheetPdfAndSave(
-            nameof(PdfShouldContainOnlyTargetSheetContentWhenRenderedByIndex),
+            nameof(SingleSheetOutputShouldRenderTargetSheetByIndex),
             workbook.Sheets[1]);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
@@ -40,7 +40,7 @@ public sealed partial class FeatureTests
     }
 
     [Fact]
-    public void PdfShouldContainOnlyTargetSheetContentWhenRenderedByName()
+    public void SingleSheetOutputShouldRenderTargetSheetByName()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -53,7 +53,7 @@ public sealed partial class FeatureTests
         using var workbook = new TemplateWorkbook(stream);
 
         var pdfBytes = PdfTestHelper.GenerateSheetPdfAndSave(
-            nameof(PdfShouldContainOnlyTargetSheetContentWhenRenderedByName),
+            nameof(SingleSheetOutputShouldRenderTargetSheetByName),
             workbook.GetSheet("Detail"));
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
@@ -65,7 +65,7 @@ public sealed partial class FeatureTests
     }
 
     [Fact]
-    public void PdfShouldContainOnlyFirstSheetWhenRenderedByIndex0()
+    public void SingleSheetOutputShouldRenderFirstSheetByIndex0()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -77,7 +77,7 @@ public sealed partial class FeatureTests
         using var workbook = new TemplateWorkbook(stream);
 
         var pdfBytes = PdfTestHelper.GenerateSheetPdfAndSave(
-            nameof(PdfShouldContainOnlyFirstSheetWhenRenderedByIndex0),
+            nameof(SingleSheetOutputShouldRenderFirstSheetByIndex0),
             workbook.Sheets[0]);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
@@ -88,7 +88,7 @@ public sealed partial class FeatureTests
     }
 
     [Fact]
-    public void PdfShouldReflectPlaceholderReplacementsOnTargetSheetOnly()
+    public void SingleSheetOutputShouldIsolateReplacementsToTargetSheet()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -102,7 +102,7 @@ public sealed partial class FeatureTests
         coverSheet.ReplacePlaceholder("Title", "ReplacedTitle");
 
         var pdfBytes = PdfTestHelper.GenerateSheetPdfAndSave(
-            nameof(PdfShouldReflectPlaceholderReplacementsOnTargetSheetOnly),
+            nameof(SingleSheetOutputShouldIsolateReplacementsToTargetSheet),
             coverSheet);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));

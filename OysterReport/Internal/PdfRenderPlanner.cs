@@ -64,18 +64,19 @@ internal sealed record PdfRenderSheetPlan
 //--------------------------------------------------------------------------------
 // Planner
 //--------------------------------------------------------------------------------
+
 internal static class PdfRenderPlanner
 {
-    // ワークブック内の全シートに対する PDF プラン一覧を構築する。
-    // Builds the list of PDF rendering plans for all sheets in the workbook.
+    //--------------------------------------------------------------------------------
+    // Build
+    //--------------------------------------------------------------------------------
+
     public static IReadOnlyList<PdfRenderSheetPlan> BuildPlan(ReportWorkbook workbook, ReportRenderOption? renderOption = null)
     {
         var effectiveOptions = renderOption ?? new ReportRenderOption();
         return workbook.Sheets.Select((x, i) => BuildSheetPlan(x, i + 1, effectiveOptions)).ToList();
     }
 
-    // 単一シートのページ境界・印刷可能領域・セル一覧を計算し PdfRenderSheetPlan を構築する。
-    // Computes page bounds, printable area, and cell list for a single sheet and builds a PdfRenderSheetPlan.
     private static PdfRenderSheetPlan BuildSheetPlan(ReportSheet sheet, int sheetNumber, ReportRenderOption renderOption)
     {
         // ページサイズ・向きからページ境界領域を決定する。
@@ -249,11 +250,10 @@ internal static class PdfRenderPlanner
         };
     }
 
-    // セル座標キーでマージ範囲を引き引きできるディクショナリを構築する。
-    // Builds a dictionary for looking up merged ranges by cell coordinate key.
     private static Dictionary<(int Row, int Column), ReportMergedRange> BuildMergedRangeByCell(
         IEnumerable<ReportMergedRange> mergedRanges)
     {
+        // Builds dictionary for looking up merged ranges
         var map = new Dictionary<(int, int), ReportMergedRange>();
         foreach (var mr in mergedRanges)
         {
@@ -273,10 +273,6 @@ internal static class PdfRenderPlanner
     // Text layout
     //--------------------------------------------------------------------------------
 
-    // テキストの溢れ出しを考慮した描画対象領域を計算する。
-    // 折り返し・中央・右寄せ・下隔線などがあればセル内に収まる。
-    // Computes the text drawing bounds taking overflow into account.
-    // Text stays within the cell when wrap, center, right-align, or bottom border is present.
     private static ReportRect ComputeTextOverflowBounds(
         ReportCell cell,
         ReportRect contentBounds,
@@ -288,6 +284,7 @@ internal static class PdfRenderPlanner
         Dictionary<int, double> columnOffsets,
         Dictionary<(int Row, int Column), ReportMergedRange> mergedRangeByCell)
     {
+        // Computes text drawing bounds
         if (cell.Style.WrapText || (cell.DisplayText.Contains('\n', StringComparison.Ordinal)))
         {
             return contentBounds;
@@ -311,7 +308,6 @@ internal static class PdfRenderPlanner
         while (columnOffsets.TryGetValue(nextCol, out var nextColLeft) &&
                columnByIndex.TryGetValue(nextCol, out var nextColInfo))
         {
-            // マージセルはテキストのはみ出しをブロックする (Excel の挙動と一致)
             // Merged cells block text overflow (consistent with Excel's behavior)
             if (mergedRangeByCell.ContainsKey((cell.Row, nextCol)))
             {
@@ -345,8 +341,6 @@ internal static class PdfRenderPlanner
     // Header / Footer
     //--------------------------------------------------------------------------------
 
-    // ページ番号に応じたヘッダー・フッターのテキストと描画領域を決定する。
-    // Determines the header/footer text and drawing area according to the page number.
     private static PdfHeaderFooterRenderInfo BuildHeaderFooter(ReportSheet sheet, ReportRect pageBounds, ReportRect printableBounds, int pageNumber)
     {
         var headerText = sheet.HeaderFooter.DifferentFirst && (pageNumber == 1)
@@ -385,13 +379,12 @@ internal static class PdfRenderPlanner
     // Image
     //--------------------------------------------------------------------------------
 
-    // シート内の画像をセル座標からポイント座標に変換し PdfImageRenderInfo 一覧を構築する。
-    // Converts images in the sheet from cell coordinates to point coordinates and builds the PdfImageRenderInfo list.
     private static List<PdfImageRenderInfo> BuildImageInfos(
         ReportSheet sheet,
         Dictionary<int, double> rowOffsets,
         Dictionary<int, double> columnOffsets)
     {
+        // Converts images in the sheet from cell coordinates to point coordinates and build list
         var results = new List<PdfImageRenderInfo>();
         foreach (var image in sheet.Images)
         {
@@ -418,10 +411,9 @@ internal static class PdfRenderPlanner
         return results;
     }
 
-    // 印刷可能高さに収まる行の合計高を計算する（垂直中央揃え用）。
-    // Computes the total height of rows that fit within the printable height (used for vertical centering).
     private static double ComputeFittingHeight(IEnumerable<ReportRow> rows, double maxHeight)
     {
+        // Compute total height of rows that fit within the printable height (used for vertical centering).
         var height = 0d;
         foreach (var row in rows)
         {

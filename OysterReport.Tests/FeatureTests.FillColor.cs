@@ -17,7 +17,7 @@ public sealed partial class FeatureTests
     [InlineData("YellowBg", 255, 255, 0)]
     [InlineData("LightBlueBg", 173, 216, 230)]
     [InlineData("GrayBg", 192, 192, 192)]
-    public void PdfShouldContainTextOnColoredBackground(string cellValue, int r, int g, int b)
+    public void FillColorShouldRenderTextOnColoredBackground(string cellValue, int r, int g, int b)
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -28,7 +28,7 @@ public sealed partial class FeatureTests
         });
 
         var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
-            $"{nameof(PdfShouldContainTextOnColoredBackground)}_{cellValue}",
+            $"{nameof(FillColorShouldRenderTextOnColoredBackground)}_{cellValue}",
             stream);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
@@ -36,7 +36,7 @@ public sealed partial class FeatureTests
     }
 
     [Fact]
-    public void PdfShouldRenderMultipleCellsWithDifferentBackgroundColors()
+    public void FillColorShouldRenderMultipleDifferentBackgroundColors()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -53,7 +53,7 @@ public sealed partial class FeatureTests
         });
 
         var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
-            nameof(PdfShouldRenderMultipleCellsWithDifferentBackgroundColors),
+            nameof(FillColorShouldRenderMultipleDifferentBackgroundColors),
             stream);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
@@ -64,7 +64,7 @@ public sealed partial class FeatureTests
     }
 
     [Fact]
-    public void PdfShouldRenderThemeBackgroundColor()
+    public void FillColorShouldRenderThemeBackgroundColor()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -74,7 +74,7 @@ public sealed partial class FeatureTests
             cell.Style.Fill.BackgroundColor = XLColor.FromTheme(XLThemeColor.Accent2, -0.25);
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(PdfShouldRenderThemeBackgroundColor), stream);
+        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(FillColorShouldRenderThemeBackgroundColor), stream);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
         Assert.Contains("ThemeBg", PdfTestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);

@@ -34,7 +34,6 @@ public sealed class TemplateRow
         worksheet.Row(newRowNumber).InsertRowsAbove(1);
         var insertedRow = worksheet.Row(newRowNumber);
 
-        // this (コピー元) の行番号を再計算: 挿入位置が this より上なら +1 シフト
         var sourceRowNum = (newRowNumber <= RowNumber) ? RowNumber + 1 : RowNumber;
 
         var lastColumn = worksheet.LastColumnUsed()?.ColumnNumber() ?? 1;
@@ -76,7 +75,6 @@ public sealed class TemplateRow
         return count;
     }
 
-    // この行内のプレースホルダを辞書で一括置換する。
     public int ReplacePlaceholders(IReadOnlyDictionary<string, string?> values)
     {
         var count = 0;

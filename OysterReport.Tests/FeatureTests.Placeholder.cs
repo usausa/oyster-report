@@ -12,7 +12,7 @@ using Xunit;
 public sealed partial class FeatureTests
 {
     [Fact]
-    public void PdfShouldContainReplacedPlaceholderValue()
+    public void PlaceholderShouldRenderReplacedValue()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -24,7 +24,7 @@ public sealed partial class FeatureTests
         Assert.Single(workbook.Sheets).ReplacePlaceholder("CustomerName", "AcmeCorp");
 
         var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
-            nameof(PdfShouldContainReplacedPlaceholderValue),
+            nameof(PlaceholderShouldRenderReplacedValue),
             workbook);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
@@ -32,7 +32,7 @@ public sealed partial class FeatureTests
     }
 
     [Fact]
-    public void PdfShouldContainAllReplacedPlaceholders()
+    public void PlaceholderShouldReplaceAllPlaceholders()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -51,7 +51,7 @@ public sealed partial class FeatureTests
         });
 
         var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
-            nameof(PdfShouldContainAllReplacedPlaceholders),
+            nameof(PlaceholderShouldReplaceAllPlaceholders),
             workbook);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
@@ -62,7 +62,7 @@ public sealed partial class FeatureTests
     }
 
     [Fact]
-    public void PdfShouldPreservePlaceholderNotReplaced()
+    public void PlaceholderShouldPreserveUnreplacedPlaceholder()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -75,7 +75,7 @@ public sealed partial class FeatureTests
         Assert.Single(workbook.Sheets).ReplacePlaceholder("ReplaceMe", "Replaced");
 
         var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
-            nameof(PdfShouldPreservePlaceholderNotReplaced),
+            nameof(PlaceholderShouldPreserveUnreplacedPlaceholder),
             workbook);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
@@ -83,7 +83,7 @@ public sealed partial class FeatureTests
     }
 
     [Fact]
-    public void PdfShouldContainReplacedPlaceholderInMergedCell()
+    public void PlaceholderShouldReplaceInMergedCell()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -96,7 +96,7 @@ public sealed partial class FeatureTests
         Assert.Single(workbook.Sheets).ReplacePlaceholder("MergedTitle", "MergedValue");
 
         var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
-            nameof(PdfShouldContainReplacedPlaceholderInMergedCell),
+            nameof(PlaceholderShouldReplaceInMergedCell),
             workbook);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));

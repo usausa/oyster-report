@@ -12,7 +12,7 @@ using Xunit;
 public sealed partial class FeatureTests
 {
     [Fact]
-    public void PdfShouldContainExactlyThreeDetailRowsAfterExpansion()
+    public void DetailRowExpansionShouldContainExactlyThreeRows()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -38,7 +38,7 @@ public sealed partial class FeatureTests
         template.Delete();
 
         var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
-            nameof(PdfShouldContainExactlyThreeDetailRowsAfterExpansion),
+            nameof(DetailRowExpansionShouldContainExactlyThreeRows),
             workbook);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
@@ -52,7 +52,7 @@ public sealed partial class FeatureTests
     }
 
     [Fact]
-    public void PdfShouldNotContainTemplatePlaceholderAfterDeletion()
+    public void DetailRowExpansionShouldRemovePlaceholderAfterDeletion()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -69,7 +69,7 @@ public sealed partial class FeatureTests
         template.Delete();
 
         var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
-            nameof(PdfShouldNotContainTemplatePlaceholderAfterDeletion),
+            nameof(DetailRowExpansionShouldRemovePlaceholderAfterDeletion),
             workbook);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
@@ -79,7 +79,7 @@ public sealed partial class FeatureTests
     }
 
     [Fact]
-    public void PdfShouldPreserveHeaderAndFooterAroundExpandedDetailRows()
+    public void DetailRowExpansionShouldPreserveHeaderAndFooter()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -102,7 +102,7 @@ public sealed partial class FeatureTests
         template.Delete();
 
         var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
-            nameof(PdfShouldPreserveHeaderAndFooterAroundExpandedDetailRows),
+            nameof(DetailRowExpansionShouldPreserveHeaderAndFooter),
             workbook);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
@@ -114,7 +114,7 @@ public sealed partial class FeatureTests
     }
 
     [Fact]
-    public void PdfShouldContainExactOccurrencesOfDetailLabel()
+    public void DetailRowExpansionShouldCountExactOccurrencesOfLabel()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -139,7 +139,7 @@ public sealed partial class FeatureTests
         template.Delete();
 
         var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
-            nameof(PdfShouldContainExactOccurrencesOfDetailLabel),
+            nameof(DetailRowExpansionShouldCountExactOccurrencesOfLabel),
             workbook);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));

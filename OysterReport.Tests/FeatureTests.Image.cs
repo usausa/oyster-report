@@ -17,7 +17,7 @@ public sealed partial class FeatureTests
         "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+kZs8AAAAASUVORK5CYII=");
 
     [Fact]
-    public void PdfShouldEmbedSingleImage()
+    public void ImageShouldEmbedSingleImage()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -29,7 +29,7 @@ public sealed partial class FeatureTests
                 .WithSize(60, 40);
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(PdfShouldEmbedSingleImage), stream);
+        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(ImageShouldEmbedSingleImage), stream);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
         Assert.Contains("WithImage", PdfTestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
@@ -37,7 +37,7 @@ public sealed partial class FeatureTests
     }
 
     [Fact]
-    public void PdfShouldEmbedMultipleImages()
+    public void ImageShouldEmbedMultipleImages()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -53,14 +53,14 @@ public sealed partial class FeatureTests
                 .WithSize(40, 30);
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(PdfShouldEmbedMultipleImages), stream);
+        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(ImageShouldEmbedMultipleImages), stream);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
         Assert.True(pdfBytes.Length > 1000);
     }
 
     [Fact]
-    public void PdfShouldHandleFreeFloatingImage()
+    public void ImageShouldHandleFreeFloatingImage()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -73,7 +73,7 @@ public sealed partial class FeatureTests
                 .WithSize(50, 30);
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(PdfShouldHandleFreeFloatingImage), stream);
+        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(ImageShouldHandleFreeFloatingImage), stream);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
         Assert.Contains("FreeFloat", PdfTestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);

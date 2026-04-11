@@ -132,7 +132,7 @@ internal sealed record ReportCellStyle
 internal sealed record ReportMergeInfo
 {
     // ExcelReader で設定されるが、レンダリングパイプラインは cell.Address を直接使用するため
-    // TODO 現時点では参照されない。デバッグや非オーナーセルからオーナーを特定する
+    // 現時点では参照されない。デバッグや非オーナーセルからオーナーを特定する
     // 将来機能のために保持している。
     public string OwnerCellAddress { get; init; } = string.Empty;
 
@@ -147,7 +147,7 @@ internal sealed record ReportMergeInfo
 internal sealed record ReportPageBreak
 {
     // 改ページが発生する行または列のインデックス。
-    // TODO 現在の単一ページレンダリングでは参照されないが、
+    // 現在の単一ページレンダリングでは参照されないが、
     // 複数ページ対応を実装する際に HorizontalPageBreaks / VerticalPageBreaks と合わせて使用する。
     public int Index { get; init; }
 }

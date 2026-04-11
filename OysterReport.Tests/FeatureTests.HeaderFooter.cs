@@ -14,7 +14,7 @@ using Xunit;
 public sealed partial class FeatureTests
 {
     [Fact]
-    public void PdfShouldContainHeaderText()
+    public void HeaderFooterShouldRenderHeaderText()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -23,14 +23,14 @@ public sealed partial class FeatureTests
             sheet.PageSetup.Header.Left.AddText("LeftHeader", XLHFOccurrence.OddPages);
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(PdfShouldContainHeaderText), stream);
+        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(HeaderFooterShouldRenderHeaderText), stream);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
         Assert.Contains("BodyContent", PdfTestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
     }
 
     [Fact]
-    public void PdfShouldContainFooterText()
+    public void HeaderFooterShouldRenderFooterText()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -39,14 +39,14 @@ public sealed partial class FeatureTests
             sheet.PageSetup.Footer.Right.AddText("RightFooter", XLHFOccurrence.OddPages);
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(PdfShouldContainFooterText), stream);
+        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(HeaderFooterShouldRenderFooterText), stream);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
     }
 
     [Fact]
-    public void PdfShouldContainBothHeaderAndFooter()
+    public void HeaderFooterShouldRenderBothHeaderAndFooter()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -56,7 +56,7 @@ public sealed partial class FeatureTests
             sheet.PageSetup.Footer.Center.AddText("BottomCenter", XLHFOccurrence.OddPages);
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(PdfShouldContainBothHeaderAndFooter), stream);
+        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(HeaderFooterShouldRenderBothHeaderAndFooter), stream);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
     }

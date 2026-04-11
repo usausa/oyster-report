@@ -12,7 +12,7 @@ using Xunit;
 public sealed partial class FeatureTests
 {
     [Fact]
-    public void PdfShouldRenderNumericCellValue()
+    public void CellValueTypeShouldRenderNumericValue()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -20,14 +20,14 @@ public sealed partial class FeatureTests
             sheet.Cell("A1").Value = 12345;
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(PdfShouldRenderNumericCellValue), stream);
+        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(CellValueTypeShouldRenderNumericValue), stream);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
         Assert.Contains("12345", PdfTestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
     }
 
     [Fact]
-    public void PdfShouldRenderDateCellValue()
+    public void CellValueTypeShouldRenderDateValue()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -37,14 +37,14 @@ public sealed partial class FeatureTests
             cell.Style.DateFormat.Format = "yyyy/MM/dd";
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(PdfShouldRenderDateCellValue), stream);
+        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(CellValueTypeShouldRenderDateValue), stream);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
         Assert.Contains("2025", PdfTestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
     }
 
     [Fact]
-    public void PdfShouldRenderFormulaCellValue()
+    public void CellValueTypeShouldRenderFormulaValue()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -54,7 +54,7 @@ public sealed partial class FeatureTests
             sheet.Cell("A3").FormulaA1 = "=A1+A2";
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(PdfShouldRenderFormulaCellValue), stream);
+        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(CellValueTypeShouldRenderFormulaValue), stream);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
     }

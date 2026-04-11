@@ -606,12 +606,18 @@ internal static class PdfGenerator
         else
         {
             var measuredWidth = graphics.MeasureString(text, font).Width;
-            decorationWidth = Math.Min(measuredWidth, textRect.Width);
+
+            // Math.Min でキャップせず measuredWidth をそのまま使う。
+            // IntersectClip(clipRect) で既にクリップされているため、テキストが隣接セルに
+            // オーバーフローする場合でも装飾線が正しく追従する。
+            // Do NOT cap by textRect.Width; IntersectClip(clipRect) already handles the boundary.
+            // This ensures decorations follow the text even when it overflows into adjacent cells.
+            decorationWidth = measuredWidth;
             var horizontalAlignment = ResolveHorizontalAlignment(sourceCell);
             decorationX = horizontalAlignment switch
             {
-                XLAlignmentHorizontalValues.Center => textRect.X + Math.Max(0, (textRect.Width - decorationWidth) / 2),
-                XLAlignmentHorizontalValues.Right  => textRect.X + Math.Max(0, textRect.Width - decorationWidth),
+                XLAlignmentHorizontalValues.Center => textRect.X + ((textRect.Width - decorationWidth) / 2),
+                XLAlignmentHorizontalValues.Right  => textRect.X + textRect.Width - decorationWidth,
                 _                                  => textRect.X
             };
         }

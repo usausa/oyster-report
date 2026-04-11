@@ -14,7 +14,7 @@ using Xunit;
 public sealed partial class FeatureTests
 {
     [Fact]
-    public void PdfShouldHaveA4PageDimensions()
+    public void PageSetupShouldProduceA4Dimensions()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -24,7 +24,7 @@ public sealed partial class FeatureTests
             sheet.PageSetup.PageOrientation = XLPageOrientation.Portrait;
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(PdfShouldHaveA4PageDimensions), stream);
+        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(PageSetupShouldProduceA4Dimensions), stream);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
         var (width, height) = PdfTestHelper.GetPageSize(pdfBytes);
@@ -33,7 +33,7 @@ public sealed partial class FeatureTests
     }
 
     [Fact]
-    public void PdfShouldHaveA4LandscapePageDimensions()
+    public void PageSetupShouldProduceA4LandscapeDimensions()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -43,7 +43,7 @@ public sealed partial class FeatureTests
             sheet.PageSetup.PageOrientation = XLPageOrientation.Landscape;
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(PdfShouldHaveA4LandscapePageDimensions), stream);
+        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(PageSetupShouldProduceA4LandscapeDimensions), stream);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
         var (width, height) = PdfTestHelper.GetPageSize(pdfBytes);
@@ -52,7 +52,7 @@ public sealed partial class FeatureTests
     }
 
     [Fact]
-    public void PdfShouldRespectCenterHorizontally()
+    public void PageSetupShouldCenterHorizontally()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -61,14 +61,14 @@ public sealed partial class FeatureTests
             sheet.PageSetup.CenterHorizontally = true;
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(PdfShouldRespectCenterHorizontally), stream);
+        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(PageSetupShouldCenterHorizontally), stream);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
         Assert.Contains("Centered", PdfTestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
     }
 
     [Fact]
-    public void PdfShouldGenerateMultiplePagesWhenContentExceedsPageHeight()
+    public void PageSetupShouldGenerateMultiplePagesForOverflow()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -82,7 +82,7 @@ public sealed partial class FeatureTests
         });
 
         var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
-            nameof(PdfShouldGenerateMultiplePagesWhenContentExceedsPageHeight),
+            nameof(PageSetupShouldGenerateMultiplePagesForOverflow),
             stream);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
@@ -92,7 +92,7 @@ public sealed partial class FeatureTests
     }
 
     [Fact]
-    public void PdfShouldApplyManualPageBreak()
+    public void PageSetupShouldApplyManualPageBreak()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -102,7 +102,7 @@ public sealed partial class FeatureTests
             sheet.PageSetup.AddHorizontalPageBreak(1);
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(PdfShouldApplyManualPageBreak), stream);
+        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(PageSetupShouldApplyManualPageBreak), stream);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
         var text = PdfTestHelper.ExtractAllText(pdfBytes);

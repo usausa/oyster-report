@@ -39,7 +39,6 @@ public sealed class TemplateRowRange
 
         worksheet.Row(newStartRow).InsertRowsAbove(RowCount);
 
-        // this (コピー元) の行番号を再計算: 挿入位置が this より上なら RowCount 分シフト
         var sourceStartRow = (newStartRow <= StartRow) ? StartRow + RowCount : StartRow;
 
         for (var offset = 0; offset < RowCount; offset++)

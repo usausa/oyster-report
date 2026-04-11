@@ -17,7 +17,7 @@ using Xunit;
 public sealed partial class FeatureTests
 {
     [Fact]
-    public void PdfShouldRenderInvoiceTemplateWithAllFeatures()
+    public void InvoiceTemplateShouldRenderWithAllFeatures()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -83,7 +83,7 @@ public sealed partial class FeatureTests
         sheet.ReplacePlaceholder("FooterNote", "上記の通りご請求申し上げます。");
 
         var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
-            nameof(PdfShouldRenderInvoiceTemplateWithAllFeatures),
+            nameof(InvoiceTemplateShouldRenderWithAllFeatures),
             workbook);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
@@ -95,7 +95,7 @@ public sealed partial class FeatureTests
     }
 
     [Fact]
-    public void PdfShouldRenderListReportWithStripedRows()
+    public void InvoiceTemplateShouldRenderListReportWithStripedRows()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -123,7 +123,7 @@ public sealed partial class FeatureTests
             }
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(PdfShouldRenderListReportWithStripedRows), stream);
+        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(InvoiceTemplateShouldRenderListReportWithStripedRows), stream);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
         var text = PdfTestHelper.ExtractAllText(pdfBytes);

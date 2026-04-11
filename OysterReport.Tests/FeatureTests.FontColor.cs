@@ -17,7 +17,7 @@ public sealed partial class FeatureTests
     [InlineData("RedText", 255, 0, 0)]
     [InlineData("BlueText", 0, 0, 255)]
     [InlineData("GreenText", 0, 128, 0)]
-    public void PdfShouldContainColoredText(string cellValue, int r, int g, int b)
+    public void FontColorShouldRenderColoredText(string cellValue, int r, int g, int b)
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -28,7 +28,7 @@ public sealed partial class FeatureTests
         });
 
         var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
-            $"{nameof(PdfShouldContainColoredText)}_{cellValue}",
+            $"{nameof(FontColorShouldRenderColoredText)}_{cellValue}",
             stream);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
@@ -36,7 +36,7 @@ public sealed partial class FeatureTests
     }
 
     [Fact]
-    public void PdfShouldContainThemeColorText()
+    public void FontColorShouldRenderThemeColorText()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -46,7 +46,7 @@ public sealed partial class FeatureTests
             cell.Style.Font.FontColor = XLColor.FromTheme(XLThemeColor.Accent1, 0.4);
         });
 
-        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(PdfShouldContainThemeColorText), stream);
+        var pdfBytes = PdfTestHelper.GeneratePdfAndSave(nameof(FontColorShouldRenderThemeColorText), stream);
 
         Assert.True(PdfTestHelper.IsValidPdf(pdfBytes));
         Assert.Contains("ThemeColorText", PdfTestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);

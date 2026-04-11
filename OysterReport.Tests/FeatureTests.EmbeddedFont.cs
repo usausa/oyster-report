@@ -12,7 +12,7 @@ using Xunit;
 public sealed partial class FeatureTests
 {
     [Fact]
-    public void PdfShouldEmbedIpaExGothicFontForJapaneseText()
+    public void EmbeddedFontShouldEmbedIpaExGothicForJapanese()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -25,7 +25,7 @@ public sealed partial class FeatureTests
 
         var resolver = new IpaExGothicFontResolver(PdfTestHelper.IpaExGothicFontPath);
         var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
-            nameof(PdfShouldEmbedIpaExGothicFontForJapaneseText),
+            nameof(EmbeddedFontShouldEmbedIpaExGothicForJapanese),
             stream,
             resolver);
 
@@ -37,7 +37,7 @@ public sealed partial class FeatureTests
     }
 
     [Fact]
-    public void PdfShouldRenderMultipleJapaneseCellsWithEmbeddedFont()
+    public void EmbeddedFontShouldRenderMultipleJapaneseCells()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -58,7 +58,7 @@ public sealed partial class FeatureTests
 
         var resolver = new IpaExGothicFontResolver(PdfTestHelper.IpaExGothicFontPath);
         var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
-            nameof(PdfShouldRenderMultipleJapaneseCellsWithEmbeddedFont),
+            nameof(EmbeddedFontShouldRenderMultipleJapaneseCells),
             stream,
             resolver);
 
@@ -66,7 +66,7 @@ public sealed partial class FeatureTests
     }
 
     [Fact]
-    public void PdfShouldRenderJapaneseBoldWithEmbeddedFont()
+    public void EmbeddedFontShouldRenderJapaneseBold()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -80,7 +80,7 @@ public sealed partial class FeatureTests
 
         var resolver = new IpaExGothicFontResolver(PdfTestHelper.IpaExGothicFontPath);
         var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
-            nameof(PdfShouldRenderJapaneseBoldWithEmbeddedFont),
+            nameof(EmbeddedFontShouldRenderJapaneseBold),
             stream,
             resolver);
 
@@ -88,7 +88,7 @@ public sealed partial class FeatureTests
     }
 
     [Fact]
-    public void PdfShouldRenderMixedJapaneseAndAsciiWithEmbeddedFont()
+    public void EmbeddedFontShouldRenderMixedJapaneseAndAscii()
     {
         using var stream = WorkbookTestFactory.CreateWorkbook(workbook =>
         {
@@ -104,7 +104,7 @@ public sealed partial class FeatureTests
 
         var resolver = new IpaExGothicFontResolver(PdfTestHelper.IpaExGothicFontPath);
         var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
-            nameof(PdfShouldRenderMixedJapaneseAndAsciiWithEmbeddedFont),
+            nameof(EmbeddedFontShouldRenderMixedJapaneseAndAscii),
             stream,
             resolver);
 
@@ -113,7 +113,7 @@ public sealed partial class FeatureTests
     }
 
     [Fact]
-    public void PdfShouldEmbedFontFromIpaExGothicFontPath()
+    public void EmbeddedFontShouldLoadFontFromPath()
     {
         Assert.True(
             File.Exists(PdfTestHelper.IpaExGothicFontPath),
@@ -129,7 +129,7 @@ public sealed partial class FeatureTests
 
         var resolver = new IpaExGothicFontResolver(PdfTestHelper.IpaExGothicFontPath);
         var pdfBytes = PdfTestHelper.GeneratePdfAndSave(
-            nameof(PdfShouldEmbedFontFromIpaExGothicFontPath),
+            nameof(EmbeddedFontShouldLoadFontFromPath),
             stream,
             resolver);
 
