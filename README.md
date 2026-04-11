@@ -1,4 +1,8 @@
-# OysterReport
+# OysterReport - Excel template to PDF converter
+
+[![NuGet](https://img.shields.io/nuget/v/OysterReport.svg)](https://www.nuget.org/packages/OysterReport/)
+
+## What is this?
 
 A .NET library that converts Excel (.xlsx) templates to PDF.
 
@@ -6,7 +10,7 @@ A .NET library that converts Excel (.xlsx) templates to PDF.
 | :---: | :---: | :---: |
 | <img src="Document/excel.png" /> | → | <img src="Document/pdf.png" /> |
 
-# Quick Start
+## Quick Start
 
 ```csharp
 var engine = new OysterReportEngine();
@@ -36,7 +40,7 @@ using var output = File.Create("invoice.pdf");
 engine.GeneratePdf(workbook, output);
 ```
 
-# Supported features
+## Supported features
 
 | Category | Detail |
 |---|---|
@@ -52,7 +56,7 @@ engine.GeneratePdf(workbook, output);
 | **Print area** | Defined print area |
 | **Embedded fonts** | Custom font resolver |
 
-# Dependencies
+## Dependencies
 
 - [ClosedXML](https://github.com/ClosedXML/ClosedXML)
 - [PDFsharp](https://github.com/empira/PDFsharp)
