@@ -5,25 +5,25 @@ using System.Diagnostics.CodeAnalysis;
 using ClosedXML.Excel;
 
 // ReportWorkbook
-// ├── ReportMetadata          (テンプレート名)
-// ├── ReportMeasurementProfile (列幅計算用フォントメトリクス)
+// ├── ReportMetadata                 テンプレート名
+// ├── ReportMeasurementProfile       列幅計算用フォントメトリクス
 // └── ReportSheet[]
-//     ├── ReportRow[]          (行高・表示/非表示・アウトラインレベル)
-//     ├── ReportColumn[]       (列幅・表示/非表示)
+//     ├── ReportRow[]                行高・表示/非表示・アウトラインレベル
+//     ├── ReportColumn[]             列幅・表示/非表示
 //     ├── ReportCell[]
-//     │   ├── ReportCellValue  (型別の値)
+//     │   ├── ReportCellValue       型別の値
 //     │   ├── ReportCellStyle
 //     │   │   ├── ReportFont
 //     │   │   ├── ReportFill
-//     │   │   ├── ReportBorders (Left/Top/Right/Bottom: ReportBorder)
+//     │   │   ├── ReportBorders
 //     │   │   └── ReportAlignment
-//     │   └── ReportMergeInfo? (マージ先情報)
-//     ├── ReportMergedRange[]  (マージセル範囲)
-//     ├── ReportImage[]        (埋め込み画像)
-//     ├── ReportPageSetup      (用紙・余白・中央揃え)
-//     ├── ReportHeaderFooter   (ヘッダー/フッターテキスト)
-//     ├── ReportPrintArea?     (印刷範囲)
-//     └── ReportPageBreak[]    (水平/垂直改ページ)
+//     │   └── ReportMergeInfo?      マージ先情報
+//     ├── ReportMergedRange[]        マージセル範囲
+//     ├── ReportImage[]              埋め込み画像
+//     ├── ReportPageSetup            用紙・余白・中央揃え
+//     ├── ReportHeaderFooter         ヘッダー/フッターテキスト
+//     ├── ReportPrintArea?           印刷範囲
+//     └── ReportPageBreak[]          水平/垂直改ページ
 
 //--------------------------------------------------------------------------------
 // Metadata
@@ -36,7 +36,7 @@ internal sealed record ReportMetadata
 }
 
 //--------------------------------------------------------------------------------
-// ReportMeasurementProfile
+// Measurement profile
 //--------------------------------------------------------------------------------
 
 [ExcludeFromCodeCoverage]
@@ -44,17 +44,11 @@ internal sealed record ReportMeasurementProfile
 {
     public double MaxDigitWidth { get; init; } = 7d;
 
-    // TODO: Reuse the workbook default font metadata when expanding font-dependent measurement diagnostics.
-    public string DefaultFontName { get; init; } = "Arial";
-
-    // TODO: Reuse the workbook default font metadata when expanding font-dependent measurement diagnostics.
-    public double DefaultFontSize { get; init; } = 11d;
-
     public double ColumnWidthAdjustment { get; init; } = 1d;
 }
 
 //--------------------------------------------------------------------------------
-// ---- Cell value and style ----
+// Cell value and style
 //--------------------------------------------------------------------------------
 
 [ExcludeFromCodeCoverage]
@@ -145,7 +139,7 @@ internal sealed record ReportMergeInfo
 }
 
 //--------------------------------------------------------------------------------
-// ---- Page setup ----
+// Page setup
 //--------------------------------------------------------------------------------
 
 [ExcludeFromCodeCoverage]
@@ -199,13 +193,13 @@ internal sealed record ReportPageSetup
 
     public double FooterMarginPoint { get; init; } = 18d;
 
-    // TODO: Apply Excel print scaling when multi-page fit/scaling support is implemented.
+    // TODO: Apply Excel print scaling when multipage fit/scaling support is implemented.
     public int ScalePercent { get; init; } = 100;
 
-    // TODO: Apply Excel fit-to-page width scaling when multi-page fit/scaling support is implemented.
+    // TODO: Apply Excel fit-to-page width scaling when multipage fit/scaling support is implemented.
     public int? FitToPagesWide { get; init; }
 
-    // TODO: Apply Excel fit-to-page height scaling when multi-page fit/scaling support is implemented.
+    // TODO: Apply Excel fit-to-page height scaling when multipage fit/scaling support is implemented.
     public int? FitToPagesTall { get; init; }
 
     public bool CenterHorizontally { get; init; }
@@ -214,7 +208,7 @@ internal sealed record ReportPageSetup
 }
 
 //--------------------------------------------------------------------------------
-// ---- Sheet structure ----
+// Sheet structure
 //--------------------------------------------------------------------------------
 
 [ExcludeFromCodeCoverage]
@@ -345,14 +339,14 @@ internal sealed class ReportSheet
     public void RecalculateLayout()
     {
         var top = 0d;
-        foreach (var row in rows.OrderBy(static row => row.Index))
+        foreach (var row in rows.OrderBy(static x => x.Index))
         {
             row.TopPoint = top;
             top += row.HeightPoint;
         }
 
         var left = 0d;
-        foreach (var column in columns.OrderBy(static column => column.Index))
+        foreach (var column in columns.OrderBy(static x => x.Index))
         {
             column.LeftPoint = left;
             left += column.WidthPoint;

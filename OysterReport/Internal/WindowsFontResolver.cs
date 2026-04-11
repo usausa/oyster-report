@@ -98,7 +98,7 @@ internal sealed class WindowsFontResolver : IFontResolver
         {
             tableOffsets[i] = totalSize;
             totalSize += tables[i].Length;
-            if (totalSize % 4 != 0)
+            if ((totalSize % 4) != 0)
             {
                 totalSize += 4 - (totalSize % 4);
             }
