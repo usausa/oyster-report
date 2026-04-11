@@ -23,8 +23,14 @@ internal static class PdfGenerator
         public bool SimulateBold { get; init; }
     }
 
+    //--------------------------------------------------------------------------------
+    // Write
+    //--------------------------------------------------------------------------------
+
     // レンダリングコンテキストをもとに PDF ドキュメントを生成し、出力ストリームへ書き込む。
     // PDFSharp のフォント設定を初期化し、全シート・全ページを順に描画する。
+    // Generates a PDF document from the rendering context and writes it to the output stream.
+    // Initializes PDFSharp font settings and renders each sheet and page in sequence.
     internal static void WritePdf(ReportRenderContext context, Stream output)
     {
         EnsurePdfSharpFontConfiguration();
@@ -58,8 +64,13 @@ internal static class PdfGenerator
         document.Save(output, closeStream: false);
     }
 
+    //--------------------------------------------------------------------------------
+    // Setup
+    //--------------------------------------------------------------------------------
+
     // PDFSharp のフォントリゾルバーが未設定の場合に
     // ReportFontResolverAdapter を登録する (初回のみ実行)。
+    // Registers ReportFontResolverAdapter with PDFSharp if no font resolver is set (runs once only).
     private static void EnsurePdfSharpFontConfiguration()
     {
         if (Interlocked.Exchange(ref fontPlatformConfigured, 1) == 1)
@@ -82,7 +93,12 @@ internal static class PdfGenerator
         }
     }
 
+    //--------------------------------------------------------------------------------
+    // Drawing
+    //--------------------------------------------------------------------------------
+
     // ページ全体を白い背景矩形で塗りつぶす。
+    // Fills the entire page with a white background rectangle.
     private static void DrawPageBackground(XGraphics graphics, ReportRect pageBounds)
     {
         graphics.DrawRectangle(XBrushes.White, pageBounds.X, pageBounds.Y, pageBounds.Width, pageBounds.Height);
@@ -90,6 +106,8 @@ internal static class PdfGenerator
 
     // セルの背景色とテキストを描画する。
     // 背景は同色のセルをまとめて描画し、テキストは折り返し・中央揃え等に応じて配置する。
+    // Draws cell backgrounds and text.
+    // Backgrounds are batched by color; text is placed according to wrap, alignment, and other settings.
     private static void DrawCells(
         XGraphics graphics,
         ReportSheet sourceSheet,
@@ -185,6 +203,7 @@ internal static class PdfGenerator
     }
 
     // セルの罫線を描画する。重複する辺は優先度の高い罫線スタイルを採用し一度だけ描画する。
+    // Draws cell borders. Duplicate edges adopt the higher-priority border style and are drawn only once.
     private static void DrawBorders(XGraphics graphics, ReportSheet sourceSheet, IEnumerable<PdfCellRenderInfo> cells, ReportRenderOption renderOption)
     {
         var sourceCellsByAddress = sourceSheet.Cells.ToDictionary(static x => x.Address, StringComparer.Ordinal);
@@ -218,7 +237,12 @@ internal static class PdfGenerator
         }
     }
 
+    //--------------------------------------------------------------------------------
+    // Border
+    //--------------------------------------------------------------------------------
+
     // 1 辺の罫線情報を収集する。同一辺に複数スタイルがある場合は優先度の高いほうを残す。
+    // Collects border info for one edge. When multiple styles exist on the same edge, keeps the higher-priority one.
     private static void CollectBorderSide(
         ReportBorder border,
         ReportLine line,
@@ -240,6 +264,7 @@ internal static class PdfGenerator
     }
 
     // 罫線スタイルに応じて実線・破線・二重線を描画する。
+    // Draws a solid, dashed, or double border line according to the border style.
     private static void DrawBorderLine(XGraphics graphics, ReportBorder border, ReportLine line, ReportRenderOption renderOption)
     {
         var borderColor = ToColor(border.ColorHex);
@@ -261,7 +286,12 @@ internal static class PdfGenerator
         graphics.DrawLine(pen, line.X1, line.Y1, line.X2, line.Y2);
     }
 
+    //--------------------------------------------------------------------------------
+    // Image
+    //--------------------------------------------------------------------------------
+
     // シートに埋め込まれた画像をページに描画する。デコード失敗時はスキップする。
+    // Draws images embedded in the sheet onto the page. Skips images that fail to decode.
     private static void DrawImages(XGraphics graphics, IEnumerable<PdfImageRenderInfo> images)
     {
         foreach (var image in images)
@@ -283,7 +313,12 @@ internal static class PdfGenerator
         }
     }
 
+    //--------------------------------------------------------------------------------
+    // Header / Footer
+    //--------------------------------------------------------------------------------
+
     // ヘッダー・フッターのテキストを左・中央・右の各領域に描画する。
+    // Draws header/footer text in the left, center, and right areas.
     private static void DrawHeaderFooter(
         XGraphics graphics,
         PdfHeaderFooterRenderInfo headerFooter,
@@ -300,6 +335,7 @@ internal static class PdfGenerator
     }
 
     // 左・中央・右に分割されたヘッダー/フッター文字列をそれぞれ描画する。
+    // Draws each section of a header/footer string that has been split into left, center, and right parts.
     private static void DrawHeaderFooterSections(
         XGraphics graphics,
         HeaderFooterSections sections,
@@ -323,6 +359,7 @@ internal static class PdfGenerator
     }
 
     // Excel ヘッダー/フッター書式文字列 (&L, &C, &R, &P, &N) を解析し左・中央・右とページ番号に分解する。
+    // Parses the Excel header/footer format string (&L, &C, &R, &P, &N) and splits it into left, center, right, and page number parts.
     private static HeaderFooterSections ResolveHeaderFooterSections(string? text, int pageNumber, int totalPages)
     {
         if (String.IsNullOrWhiteSpace(text))
@@ -362,9 +399,16 @@ internal static class PdfGenerator
             right.ToString().Trim());
     }
 
+    //--------------------------------------------------------------------------------
+    // Font
+    //--------------------------------------------------------------------------------
+
     // ReportFont 属性とフォントリゾルバーから PDFSharp 用 XFont を生成する。
     // リゾルバーが返した名前を XFont に渡すことで PDFSharp のフォントキャッシュを
     // リゾルバーごとに分離し、埋め込みフォントが確実に使われるようにする。
+    // Generates an XFont for PDFSharp from ReportFont attributes and the font resolver.
+    // Passing the resolver-returned face name to XFont isolates PDFSharp's font cache per resolver
+    // and ensures embedded fonts are used reliably.
     private static ResolvedFontRenderInfo ResolveFont(ReportFont font, ReportRenderContext context)
     {
         var fontSize = font.Size <= 0 ? context.RenderingOptions.DefaultCellFontSizePoints : font.Size;
@@ -380,10 +424,14 @@ internal static class PdfGenerator
             {
                 // 埋め込みフォントをアダプタに事前登録する。
                 // 同じバイト列を複数回登録してもべき等であるため問題ない。
+                // Pre-registers the embedded font with the adapter.
+                // Re-registering the same byte array multiple times is idempotent.
                 ReportFontResolverAdapter.RegisterEmbeddedFont(resolvedTypeface.FaceName, fontData);
 
                 // 単一の埋め込みフォント資源を返した場合、Bold は描画時にシミュレーションする。
                 // Italic は ReportFontResolverAdapter が PDFsharp の公式シミュレーションへ委譲する。
+                // When a single embedded font resource is returned, Bold is simulated at draw time.
+                // Italic is delegated to PDFSharp's official simulation by ReportFontResolverAdapter.
                 simulateBold = resolvedTypeface.MustSimulateBold;
             }
 
@@ -407,6 +455,7 @@ internal static class PdfGenerator
         }
 
         // リゾルバーが返した名前で失敗した場合は元の Excel フォント名にフォールバックする。
+        // Falls back to the original Excel font name if the resolver-returned name fails.
         if (!String.Equals(nameToUse, font.Name, StringComparison.OrdinalIgnoreCase) &&
             !String.IsNullOrWhiteSpace(font.Name) &&
             TryCreateFont(font.Name, fontSize, BuildActualFontStyle(font, simulateBold: false), out var fallbackFont))
@@ -485,6 +534,7 @@ internal static class PdfGenerator
     }
 
     // ヘッダー/フッター用のフォールバックフォントを候補一覧から作成する。
+    // Creates a fallback font for header/footer rendering from the candidate list.
     private static XFont CreateFallbackFont(double size, IEnumerable<string> fontNames)
     {
         foreach (var fontName in fontNames)
@@ -499,6 +549,7 @@ internal static class PdfGenerator
     }
 
     // 指定名で XFont の作成を試み、失敗した場合は false を返す。
+    // Attempts to create an XFont by the given name; returns false on failure.
     private static bool TryCreateFont(string fontName, double size, XFontStyleEx style, out XFont font)
     {
         try
@@ -506,13 +557,7 @@ internal static class PdfGenerator
             font = new XFont(fontName, size, style, new XPdfFontOptions(PdfFontEncoding.Unicode, PdfFontEmbedding.TryComputeSubset));
             return true;
         }
-        catch (InvalidOperationException)
-        {
-        }
-        catch (ArgumentException)
-        {
-        }
-        catch (NullReferenceException)
+        catch (Exception ex) when (ex is InvalidOperationException or ArgumentException or NullReferenceException)
         {
         }
 
@@ -520,7 +565,12 @@ internal static class PdfGenerator
         return false;
     }
 
+    //--------------------------------------------------------------------------------
+    // Color / Style helpers
+    //--------------------------------------------------------------------------------
+
     // ARGB 形式のカラー文字列を XColor に変換する。
+    // Converts an ARGB hex color string to an XColor.
     private static XColor ToColor(string colorHex)
     {
         var normalized = ColorHelper.NormalizeHex(colorHex).TrimStart('#');
@@ -537,10 +587,12 @@ internal static class PdfGenerator
     }
 
     // アルファで完全透明な色かどうかを判定する。
+    // Determines whether the color is fully transparent (alpha = 0).
     private static bool IsTransparentColor(string colorHex) =>
         ColorHelper.NormalizeHex(colorHex).StartsWith("#00", StringComparison.Ordinal);
 
     // 罫線スタイルから描画幅 (pt) を決定する。
+    // Determines the drawing width (pt) from the border style.
     private static double ResolveBorderWidth(XLBorderStyleValues style, ReportRenderOption renderOption) =>
         style switch
         {
@@ -552,6 +604,7 @@ internal static class PdfGenerator
         };
 
     // 罫線スタイルに応じた破線パターンを XPen に適用する。
+    // Applies the dash pattern corresponding to the border style to the XPen.
     private static void ApplyBorderStyle(XPen pen, XLBorderStyleValues style)
     {
         pen.DashStyle = style switch
@@ -564,6 +617,7 @@ internal static class PdfGenerator
     }
 
     // 二重線罫線を並列に 2 本の実線で描画する。
+    // Draws a double-line border as two parallel solid lines.
     private static void DrawDoubleBorder(XGraphics graphics, XColor color, double width, ReportLine line)
     {
         var gap = Math.Max(RenderConstants.MinimumDoubleBorderGapPoints, width * RenderConstants.DoubleBorderGapWidthMultiplier);
@@ -578,7 +632,12 @@ internal static class PdfGenerator
         DrawSolidBorder(graphics, color, width, line with { X1 = line.X1 + (gap / 2d), X2 = line.X2 + (gap / 2d) });
     }
 
+    //--------------------------------------------------------------------------------
+    // Cell layout
+    //--------------------------------------------------------------------------------
+
     // セルの水平・垂直配置から XStringFormat を生成する。
+    // Generates an XStringFormat from the cell's horizontal and vertical alignment.
     private static XStringFormat ResolveStringFormat(ReportCell cell)
     {
         var horizontalAlignment = ResolveHorizontalAlignment(cell);
@@ -601,6 +660,7 @@ internal static class PdfGenerator
     }
 
     // セルの水平配置から段落整列エニュムを返す。
+    // Returns the paragraph alignment enum from the cell's horizontal alignment.
     private static XParagraphAlignment ResolveParagraphAlignment(ReportCell cell) =>
         ResolveHorizontalAlignment(cell) switch
         {
@@ -611,6 +671,7 @@ internal static class PdfGenerator
         };
 
     // セルの配置設定から水平整列を決定する。General の場合は値種別の既定値を使う。
+    // Determines horizontal alignment from the cell's alignment setting. General uses the default for the value type.
     private static XLAlignmentHorizontalValues ResolveHorizontalAlignment(ReportCell cell)
     {
         if (cell.Style.Alignment.Horizontal != XLAlignmentHorizontalValues.General)
@@ -626,7 +687,8 @@ internal static class PdfGenerator
         };
     }
 
-    // 実線罫線を矩形塗りつぶしで描画する（血流防止のため DrawLine の代わりに使用）。
+    // 実線罫線を矩形塗りつぶしで描画する（アンチエイリアス防止のため DrawLine の代わりに使用）。
+    // Draws a solid border line as a filled rectangle (used instead of DrawLine to prevent anti-aliasing gaps).
     private static void DrawSolidBorder(XGraphics graphics, XColor color, double width, ReportLine line)
     {
         var brush = new XSolidBrush(color);
@@ -644,10 +706,16 @@ internal static class PdfGenerator
     }
 
     // 実線として矩形描画すべき罫線スタイルかどうかを判定する。
+    // Determines whether the border style should be drawn as a solid filled rectangle.
     private static bool IsSolidBorder(XLBorderStyleValues style) =>
         style is XLBorderStyleValues.Hair or XLBorderStyleValues.Thin or XLBorderStyleValues.Medium or XLBorderStyleValues.Thick;
 
+    //--------------------------------------------------------------------------------
+    // Merged borders
+    //--------------------------------------------------------------------------------
+
     // マージセルの外周罫線をマージ内の各セルから最高優先度で利用するものに解決する。
+    // Resolves the outer borders of a merged cell to the highest-priority border from all cells within the merge.
     private static ReportBorders ResolveMergedBorders(ReportSheet sourceSheet, ReportCell ownerCell)
     {
         var mergeInfo = ownerCell.Merge ?? throw new InvalidOperationException("Merged border resolution requires merge info.");
@@ -702,7 +770,7 @@ internal static class PdfGenerator
         Func<ReportCell, ReportBorder> borderSelector)
     {
         ReportBorder? bestBorder = null;
-        foreach (var cell in mergedCells.Where(cell => fixedSelector(cell) == fixedIndex && rangeSelector(cell) >= rangeStart && rangeSelector(cell) <= rangeEnd))
+        foreach (var cell in mergedCells.Where(cell => (fixedSelector(cell) == fixedIndex) && (rangeSelector(cell) >= rangeStart) && (rangeSelector(cell) <= rangeEnd)))
         {
             var border = borderSelector(cell);
             if (bestBorder is null || GetBorderPriority(border.Style) > GetBorderPriority(bestBorder.Style))

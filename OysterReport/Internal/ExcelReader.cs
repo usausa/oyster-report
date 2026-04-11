@@ -8,6 +8,7 @@ using ClosedXML.Excel.Drawings;
 internal static class ExcelReader
 {
     // Excel の列幅計算に使用する定数 (Excel 仕様に基づくピクセル変換パラメータ)
+    // Constants used for Excel column width calculation (pixel conversion parameters per Excel spec)
     private const double DefaultMaxDigitWidth = 7d;
     private const double ExcelColumnPaddingMultiplier = 2d;
     private const double ExcelColumnPaddingDivisor = 4d;
@@ -17,7 +18,12 @@ internal static class ExcelReader
     private const double PointsPerInch = 72d;
     private const double ScreenDpi = 96d;
 
+    //--------------------------------------------------------------------------------
+    // Read
+    //--------------------------------------------------------------------------------
+
     // ClosedXML ワークブックオブジェクトから ReportWorkbook を生成する。
+    // Generates a ReportWorkbook from a ClosedXML workbook object.
     public static ReportWorkbook Read(IXLWorkbook workbook, ReportRenderOption? renderOption = null)
     {
         var effectiveOptions = renderOption ?? new ReportRenderOption();
@@ -27,6 +33,7 @@ internal static class ExcelReader
     }
 
     // ストリームから Excel を読み込み ReportWorkbook を生成する。
+    // Reads an Excel file from a stream and generates a ReportWorkbook.
     public static ReportWorkbook Read(Stream stream, ReportRenderOption? renderOption = null)
     {
         using var workbook = new XLWorkbook(stream);
@@ -34,6 +41,7 @@ internal static class ExcelReader
     }
 
     // 単一ワークシートから 1 シートのみ含む ReportWorkbook を生成する。
+    // Generates a ReportWorkbook containing only the specified worksheet.
     public static ReportWorkbook Read(IXLWorksheet worksheet, ReportRenderOption? renderOption = null)
     {
         var effectiveOptions = renderOption ?? new ReportRenderOption();
@@ -48,7 +56,12 @@ internal static class ExcelReader
         return reportWorkbook;
     }
 
+    //--------------------------------------------------------------------------------
+    // Read (internal)
+    //--------------------------------------------------------------------------------
+
     // ワークブック全体を読み込み、シートを列挙して ReportWorkbook を構築する。
+    // Reads the full workbook and builds a ReportWorkbook by iterating over all worksheets.
     private static ReportWorkbook ReadInternal(IXLWorkbook workbook, ReportMeasurementProfile measurementProfile, ReportMetadata metadata)
     {
         var reportWorkbook = new ReportWorkbook
@@ -66,18 +79,18 @@ internal static class ExcelReader
     }
 
     // ワークブックの既定フォント情報から列幅計算用プロファイルを作成する。
+    // Creates a column width measurement profile from the workbook's default font settings.
     private static ReportMeasurementProfile CreateMeasurementProfile(
         IXLWorkbook workbook,
         ReportRenderOption renderOption) =>
         new()
         {
-            DefaultFontName = workbook.Style.Font.FontName,
-            DefaultFontSize = workbook.Style.Font.FontSize,
             MaxDigitWidth = ResolveMaxDigitWidth(workbook.Style.Font.FontName, workbook.Style.Font.FontSize, renderOption),
             ColumnWidthAdjustment = renderOption.ColumnWidthAdjustment
         };
 
     // ワークシートを読み込み、行・列・セル・画像等を ReportSheet に変換する。
+    // Reads a worksheet and converts rows, columns, cells, images, and other elements to a ReportSheet.
     private static ReportSheet ReadSheet(IXLWorksheet worksheet, ReportMeasurementProfile measurementProfile)
     {
         var reportSheet = new ReportSheet { Name = worksheet.Name };
@@ -169,7 +182,12 @@ internal static class ExcelReader
         return reportSheet;
     }
 
+    //--------------------------------------------------------------------------------
+    // Cell
+    //--------------------------------------------------------------------------------
+
     // セルの値を種別ごとに取得し ReportCellValue に変換する。
+    // Reads the cell value by type and converts it to a ReportCellValue.
     private static ReportCellValue ReadCellValue(IXLCell cell) =>
         new()
         {
@@ -185,6 +203,7 @@ internal static class ExcelReader
         };
 
     // セルのスタイル（フォント・塗り・罫線・配置）を ReportCellStyle に変換する。
+    // Converts the cell style (font, fill, borders, alignment) to a ReportCellStyle.
     private static ReportCellStyle ReadCellStyle(IXLCell cell)
     {
         var style = cell.Style;
@@ -221,10 +240,11 @@ internal static class ExcelReader
     }
 
     // 罫線スタイルと色を ReportBorder に変換する。透明色は黒に補正する。
+    // Converts a border style and color to a ReportBorder. Transparent colors are corrected to black.
     private static ReportBorder ReadBorder(XLBorderStyleValues styleValue, string colorHex)
     {
         var resolvedColorHex = ColorHelper.NormalizeHex(colorHex);
-        if (styleValue != XLBorderStyleValues.None && resolvedColorHex.StartsWith("#00", StringComparison.Ordinal))
+        if ((styleValue != XLBorderStyleValues.None) && resolvedColorHex.StartsWith("#00", StringComparison.Ordinal))
         {
             resolvedColorHex = "#FF000000";
         }
@@ -237,7 +257,12 @@ internal static class ExcelReader
         };
     }
 
+    //--------------------------------------------------------------------------------
+    // Page setup
+    //--------------------------------------------------------------------------------
+
     // ページ設定（用紙・余白・中央揃え等）を ReportPageSetup に変換する。
+    // Converts page setup (paper size, margins, centering, etc.) to a ReportPageSetup.
     private static ReportPageSetup ReadPageSetup(IXLWorksheet worksheet) =>
         new()
         {
@@ -260,6 +285,7 @@ internal static class ExcelReader
         };
 
     // ヘッダー・フッターのテキストと表示条件を ReportHeaderFooter に変換する。
+    // Converts header/footer text and display conditions to a ReportHeaderFooter.
     private static ReportHeaderFooter ReadHeaderFooter(IXLWorksheet worksheet) =>
         new()
         {
@@ -278,6 +304,7 @@ internal static class ExcelReader
         };
 
     // 印刷範囲が設定されていれば ReportPrintArea に変換する。未設定の場合は null を返す。
+    // Converts the print area to a ReportPrintArea if set. Returns null if not configured.
     private static ReportPrintArea? ReadPrintArea(IXLWorksheet worksheet)
     {
         var printArea = worksheet.PageSetup.PrintAreas.FirstOrDefault();
@@ -298,12 +325,17 @@ internal static class ExcelReader
         };
     }
 
+    //--------------------------------------------------------------------------------
+    // Sheet range
+    //--------------------------------------------------------------------------------
+
     // シートの使用セル範囲・印刷範囲・マージ範囲を統合し、描画対象範囲を決定する。
+    // Merges the used cell range, print area, and merged ranges to determine the rendering range.
     private static bool TryResolveSheetRange(IXLWorksheet worksheet, ReportPrintArea? printArea, out ReportRange range)
     {
         var contentRange = worksheet.RangeUsed();
         var formattedRange = worksheet.RangeUsed(XLCellsUsedOptions.All);
-        if (contentRange is null && formattedRange is null && worksheet.MergedRanges.Count == 0 && printArea is null)
+        if ((contentRange is null) && (formattedRange is null) && (worksheet.MergedRanges.Count == 0) && (printArea is null))
         {
             range = default;
             return false;
@@ -329,7 +361,7 @@ internal static class ExcelReader
             endColumn = Math.Max(endColumn, mergedRange.RangeAddress.LastAddress.ColumnNumber);
         }
 
-        if (startRow == Int32.MaxValue || endRow == Int32.MinValue)
+        if ((startRow == Int32.MaxValue) || (endRow == Int32.MinValue))
         {
             range = default;
             return false;
@@ -360,7 +392,12 @@ internal static class ExcelReader
         }
     }
 
+    //--------------------------------------------------------------------------------
+    // Image
+    //--------------------------------------------------------------------------------
+
     // ClosedXML の画像情報をポイント単位の座標に変換し ReportImage を生成する。
+    // Converts ClosedXML image data to point-based coordinates and produces a ReportImage.
     private static ReportImage ReadImage(IXLPicture picture)
     {
         using var memoryStream = new MemoryStream();
@@ -383,6 +420,7 @@ internal static class ExcelReader
     }
 
     // MoveAndSize 配置の画像のみ右下セルアドレスを取得する。取得できない場合は null を返す。
+    // Returns the bottom-right cell address for MoveAndSize-placed images only. Returns null if unavailable.
     private static string? TryGetBottomRightCellAddress(IXLPicture picture)
     {
         if (picture.Placement != XLPicturePlacement.MoveAndSize)
@@ -400,7 +438,12 @@ internal static class ExcelReader
         }
     }
 
+    //--------------------------------------------------------------------------------
+    // Post-processing
+    //--------------------------------------------------------------------------------
+
     // セル塗りつぶしの背景色を ARGB16 進文字列に変換する。パターン塗りはパターン色を優先する。
+    // Converts the cell fill background color to an ARGB hex string. Pattern fills prioritize the pattern color.
     private static string ResolveFillColorHex(IXLFill fill, IXLWorkbook workbook)
     {
         if (fill.PatternType == XLFillPatternValues.None)
@@ -418,6 +461,7 @@ internal static class ExcelReader
     }
 
     // テーブルスタイル（縞模様等）をセルスタイルに適用する。現在は TableStyleLight4 の奇数行縞に対応。
+    // Applies table styles (striped rows, etc.) to cell styles. Currently supports odd-row stripes for TableStyleLight4.
     private static void ApplyTableStyles(ReportSheet reportSheet, IXLWorksheet worksheet)
     {
         foreach (var table in worksheet.Tables)
@@ -473,6 +517,7 @@ internal static class ExcelReader
     }
 
     // マージセル情報を各セルの Merge プロパティに設定する。
+    // Assigns merged-cell info to the Merge property of each affected cell.
     private static void ApplyMergedRanges(ReportSheet reportSheet)
     {
         foreach (var mergedRange in reportSheet.MergedRanges)
@@ -488,6 +533,10 @@ internal static class ExcelReader
         }
     }
 
+    //--------------------------------------------------------------------------------
+    // Helper
+    //--------------------------------------------------------------------------------
+
     private static double ConvertInchToPoint(double inch) => inch * 72d;
 
     private static bool IsTransparentFill(string colorHex) =>
@@ -495,6 +544,8 @@ internal static class ExcelReader
 
     // Excel 列幅（文字数単位）をポイント値に変換する。
     // Excel の列幅ピクセル計算仕様に従い、最大桁幅と画面 DPI を用いて算出する。
+    // Converts Excel column width (in character units) to points.
+    // Calculated using max digit width and screen DPI per the Excel column width spec.
     private static double ConvertExcelColumnWidthToPoint(double excelWidth, double maxDigitWidth, double adjustment)
     {
         var normalizedWidth = Math.Max(0, excelWidth);
@@ -517,6 +568,9 @@ internal static class ExcelReader
     // ブック既定フォントの最大桁幅を解決する。
     // 列幅は Excel ブック自体の既定フォントに対して定義されるため、
     // 出力用のフォント置換とは独立に元のフォント名だけで計測する。
+    // Resolves the maximum digit width for the workbook's default font.
+    // Column widths are defined relative to the workbook default font, so measurement
+    // is done using the original font name independently of any output font substitution.
     private static double ResolveMaxDigitWidth(
         string? fontName,
         double fontSize,

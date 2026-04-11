@@ -42,10 +42,6 @@ internal sealed record ReportMetadata
 [ExcludeFromCodeCoverage]
 internal sealed record ReportMeasurementProfile
 {
-    public string DefaultFontName { get; init; } = "Calibri";
-
-    public double DefaultFontSize { get; init; } = 11d;
-
     public double MaxDigitWidth { get; init; } = 7d;
 
     public double ColumnWidthAdjustment { get; init; } = 1d;

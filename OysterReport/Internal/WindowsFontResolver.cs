@@ -24,6 +24,10 @@ internal sealed class WindowsFontResolver : IFontResolver
         fontNameToPathAndFace = LoadFontRegistry();
     }
 
+    //--------------------------------------------------------------------------------
+    // IFontResolver
+    //--------------------------------------------------------------------------------
+
     public byte[] GetFont(string faceName)
     {
         if (cache.TryGetValue(faceName, out var fontBytes))
@@ -58,11 +62,19 @@ internal sealed class WindowsFontResolver : IFontResolver
             mustSimulateItalic: isItalic && !hasItalicFace);
     }
 
+    //--------------------------------------------------------------------------------
+    // Bold simulation
+    //--------------------------------------------------------------------------------
+
     internal bool NeedsBoldSimulation(string familyName, bool isItalic)
     {
         ResolveFontMatch(familyName, bold: true, isItalic, out _, out var hasBoldFace, out _);
         return !hasBoldFace;
     }
+
+    //--------------------------------------------------------------------------------
+    // TTC extraction
+    //--------------------------------------------------------------------------------
 
     private static byte[] ExtractTtfFaceFromTtc(byte[] ttc, int faceIndex)
     {
@@ -116,6 +128,10 @@ internal sealed class WindowsFontResolver : IFontResolver
         return ttf;
     }
 
+    //--------------------------------------------------------------------------------
+    // Face name
+    //--------------------------------------------------------------------------------
+
     private static string BuildFaceName(string family, bool bold, bool italic)
     {
         var faceName = family;
@@ -139,6 +155,10 @@ internal sealed class WindowsFontResolver : IFontResolver
             .Replace("#i", string.Empty, StringComparison.OrdinalIgnoreCase)
             .Trim();
     }
+
+    //--------------------------------------------------------------------------------
+    // Registry
+    //--------------------------------------------------------------------------------
 
     private static readonly string[] CompoundNameSeparator = [" & "];
 
@@ -189,6 +209,10 @@ internal sealed class WindowsFontResolver : IFontResolver
 
         return map;
     }
+
+    //--------------------------------------------------------------------------------
+    // Font matching
+    //--------------------------------------------------------------------------------
 
     private bool TryFindFont(
         string family,
