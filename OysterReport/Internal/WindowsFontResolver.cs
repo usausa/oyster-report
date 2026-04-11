@@ -66,29 +66,24 @@ internal sealed class WindowsFontResolver : IFontResolver
 
     private static byte[] ExtractTtfFaceFromTtc(byte[] ttc, int faceIndex)
     {
-        static uint ReadUInt32(byte[] data, int offset) =>
-            BinaryPrimitives.ReadUInt32BigEndian(data.AsSpan(offset, sizeof(uint)));
-        static ushort ReadUInt16(byte[] data, int offset) =>
-            BinaryPrimitives.ReadUInt16BigEndian(data.AsSpan(offset, sizeof(ushort)));
-
-        var numFonts = (int)ReadUInt32(ttc, 8);
+        var numFonts = (int)BinaryPrimitives.ReadUInt32BigEndian(ttc.AsSpan(8, sizeof(uint)));
         if (faceIndex >= numFonts)
         {
             throw new ArgumentOutOfRangeException(nameof(faceIndex), $"TTC has {numFonts} faces, requested index {faceIndex}.");
         }
 
-        var faceOffset = (int)ReadUInt32(ttc, 12 + (4 * faceIndex));
-        var numTables = ReadUInt16(ttc, faceOffset + 4);
+        var faceOffset = (int)BinaryPrimitives.ReadUInt32BigEndian(ttc.AsSpan(12 + (4 * faceIndex), sizeof(uint)));
+        var numTables = BinaryPrimitives.ReadUInt16BigEndian(ttc.AsSpan(faceOffset + 4, sizeof(ushort)));
 
         var tables = new (string Tag, uint CheckSum, int SrcOffset, int Length)[numTables];
         for (var i = 0; i < numTables; i++)
         {
-            var rec = faceOffset + 12 + (i * 16);
+            var ttcTableEntryOffset = faceOffset + 12 + (i * 16);
             tables[i] = (
-                Tag: Encoding.ASCII.GetString(ttc, rec, 4),
-                CheckSum: ReadUInt32(ttc, rec + 4),
-                SrcOffset: (int)ReadUInt32(ttc, rec + 8),
-                Length: (int)ReadUInt32(ttc, rec + 12));
+                Tag: Encoding.ASCII.GetString(ttc, ttcTableEntryOffset, 4),
+                CheckSum: BinaryPrimitives.ReadUInt32BigEndian(ttc.AsSpan(ttcTableEntryOffset + 4, sizeof(uint))),
+                SrcOffset: (int)BinaryPrimitives.ReadUInt32BigEndian(ttc.AsSpan(ttcTableEntryOffset + 8, sizeof(uint))),
+                Length: (int)BinaryPrimitives.ReadUInt32BigEndian(ttc.AsSpan(ttcTableEntryOffset + 12, sizeof(uint))));
         }
 
         var headerSize = 12 + (numTables * 16);
@@ -98,25 +93,23 @@ internal sealed class WindowsFontResolver : IFontResolver
         {
             tableOffsets[i] = totalSize;
             totalSize += tables[i].Length;
-            if ((totalSize % 4) != 0)
+            var paddingNeeded = totalSize % 4;
+            if (paddingNeeded != 0)
             {
-                totalSize += 4 - (totalSize % 4);
+                totalSize += 4 - paddingNeeded;
             }
         }
 
         var ttf = new byte[totalSize];
-        static void WriteUInt32(byte[] data, int offset, uint value) =>
-            BinaryPrimitives.WriteUInt32BigEndian(data.AsSpan(offset, sizeof(uint)), value);
-
         Array.Copy(ttc, faceOffset, ttf, 0, 12);
 
         for (var i = 0; i < numTables; i++)
         {
-            var rec = 12 + (i * 16);
-            Encoding.ASCII.GetBytes(tables[i].Tag, 0, 4, ttf, rec);
-            WriteUInt32(ttf, rec + 4, tables[i].CheckSum);
-            WriteUInt32(ttf, rec + 8, (uint)tableOffsets[i]);
-            WriteUInt32(ttf, rec + 12, (uint)tables[i].Length);
+            var ttfTableEntryOffset = 12 + (i * 16);
+            Encoding.ASCII.GetBytes(tables[i].Tag, 0, 4, ttf, ttfTableEntryOffset);
+            BinaryPrimitives.WriteUInt32BigEndian(ttf.AsSpan(ttfTableEntryOffset + 4, sizeof(uint)), tables[i].CheckSum);
+            BinaryPrimitives.WriteUInt32BigEndian(ttf.AsSpan(ttfTableEntryOffset + 8, sizeof(uint)), (uint)tableOffsets[i]);
+            BinaryPrimitives.WriteUInt32BigEndian(ttf.AsSpan(ttfTableEntryOffset + 12, sizeof(uint)), (uint)tables[i].Length);
             Array.Copy(ttc, tables[i].SrcOffset, ttf, tableOffsets[i], tables[i].Length);
         }
 

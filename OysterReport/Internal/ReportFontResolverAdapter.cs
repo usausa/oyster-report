@@ -70,8 +70,7 @@ internal sealed class ReportFontResolverAdapter : IFontResolver
             return fontBytes;
         }
 
-        // bold/italic バリアント ("familyName#b" 等) が個別登録されていない場合は
-        // ベース名にフォールバックする。
+        // bold/italic バリアント ("familyName#b" 等) が個別登録されていない場合はベース名にフォールバックする。
         var family = ExtractFamilyName(faceName);
         if (!String.Equals(family, faceName, StringComparison.OrdinalIgnoreCase) &&
             EmbeddedFontCache.TryGetValue(family, out fontBytes))
