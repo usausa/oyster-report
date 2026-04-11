@@ -6,7 +6,6 @@ using OysterReport.Tests.Helpers;
 
 using Xunit;
 
-/// <summary>ヘッダー・フッターに関する機能テスト。</summary>
 public sealed partial class FeatureTests
 {
     [Fact]

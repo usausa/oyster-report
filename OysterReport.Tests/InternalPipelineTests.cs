@@ -7,16 +7,8 @@ using OysterReport.Tests.Helpers;
 
 using Xunit;
 
-/// <summary>
-/// Excel 読み込み → レンダープラン構築 → PDF 生成の内部パイプラインを直接テストする。
-/// フォントリゾルバーとのインターフェース契約・レイアウト計算など、
-/// 機能テストが網羅しない内部動作を検証する。
-/// </summary>
 public sealed class InternalPipelineTests
 {
-    /// <summary>
-    /// <see cref="PdfGenerator.WritePdf"/> が有効な PDF バイナリを出力することを確認する。
-    /// </summary>
     [Fact]
     public void WritePdfShouldProduceValidPdfBinary()
     {
@@ -46,9 +38,6 @@ public sealed class InternalPipelineTests
         Assert.StartsWith("%PDF", header, StringComparison.Ordinal);
     }
 
-    /// <summary>
-    /// フォントリゾルバーに Bold/Italic フラグが正しく渡されることを確認する。
-    /// </summary>
     [Fact]
     public void GeneratePdfShouldPassBoldAndItalicFlagsToFontResolver()
     {
@@ -78,9 +67,6 @@ public sealed class InternalPipelineTests
         Assert.Contains(resolver.Requests, request => request.FamilyName == "CustomEmbeddedFont" && request.Italic);
     }
 
-    /// <summary>
-    /// フォントリゾルバーの有無にかかわらず、ページレイアウト (座標・幅) が同一になることを確認する。
-    /// </summary>
     [Fact]
     public void CreateRenderContextShouldKeepLayoutIndependentFromFontResolver()
     {
@@ -116,9 +102,6 @@ public sealed class InternalPipelineTests
         Assert.Equal(baselinePage.Cells[0].OuterBounds.Width, resolvedPage.Cells[0].OuterBounds.Width, 3);
     }
 
-    /// <summary>
-    /// <see cref="ReportRenderOption.PageSizeResolver"/> により任意ページサイズを指定できることを確認する。
-    /// </summary>
     [Fact]
     public void BuildRenderPlanShouldUseConfiguredPageSizeResolver()
     {
@@ -142,9 +125,6 @@ public sealed class InternalPipelineTests
         Assert.Equal(900d, page.PageBounds.Height, 3);
     }
 
-    /// <summary>
-    /// <see cref="PdfRenderPlanner.BuildPlan"/> がセルの高さをコンテンツ領域に正しく反映することを確認する。
-    /// </summary>
     [Fact]
     public void BuildRenderPlanShouldPreserveCellHeightForTextLayout()
     {
@@ -166,9 +146,6 @@ public sealed class InternalPipelineTests
         Assert.Equal(cell.OuterBounds.Height, cell.ContentBounds.Height, 3);
     }
 
-    /// <summary>
-    /// <see cref="ReportDebugDumper"/> がワークブックおよび PDF 準備情報を JSON として出力することを確認する。
-    /// </summary>
     [Fact]
     public void DebugDumperShouldWriteWorkbookAndPdfPreparationAsJson()
     {

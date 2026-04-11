@@ -6,7 +6,6 @@ using OysterReport.Tests.Helpers;
 
 using Xunit;
 
-/// <summary>画像埋め込みに関する機能テスト。</summary>
 public sealed partial class FeatureTests
 {
     private static readonly byte[] OnePxPng = Convert.FromBase64String(

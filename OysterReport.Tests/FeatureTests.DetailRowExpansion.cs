@@ -4,7 +4,6 @@ using OysterReport.Tests.Helpers;
 
 using Xunit;
 
-/// <summary>明細行の複数展開と、テンプレート削除後に余計な行が増えていないことを検証するテスト。</summary>
 public sealed partial class FeatureTests
 {
     [Fact]

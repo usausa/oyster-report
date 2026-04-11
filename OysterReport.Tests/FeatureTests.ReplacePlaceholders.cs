@@ -4,8 +4,6 @@ using OysterReport.Tests.Helpers;
 
 using Xunit;
 
-/// <summary>一括プレースホルダー置換に関する機能テスト。</summary>
-public sealed partial class FeatureTests
 {
     [Fact]
     public void ReplacePlaceholdersShouldReplaceMultipleOnRow()

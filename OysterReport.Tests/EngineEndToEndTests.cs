@@ -4,17 +4,8 @@ using OysterReport.Tests.Helpers;
 
 using Xunit;
 
-/// <summary>
-/// <see cref="OysterReportEngine"/> のエンドツーエンドシナリオを検証する。
-/// FeatureTests がストリームベースであるのに対し、
-/// こちらはファイルパス経由のワークフローを中心にテストする。
-/// </summary>
 public sealed class EngineEndToEndTests
 {
-    /// <summary>
-    /// ファイルパスから <see cref="TemplateWorkbook"/> を開き、プレースホルダーを置換して
-    /// PDF を生成するワークフロー全体が正常に動作することを確認する。
-    /// </summary>
     [Fact]
     public void GeneratePdfFromFileBasedWorkbookShouldSucceed()
     {
@@ -48,10 +39,6 @@ public sealed class EngineEndToEndTests
         }
     }
 
-    /// <summary>
-    /// <see cref="OysterReportEngine.GeneratePdf(TemplateSheet, Stream)"/> で
-    /// 単一シートを PDF として出力できることを確認する。
-    /// </summary>
     [Fact]
     public void GeneratePdfSingleSheetOverloadShouldSucceed()
     {

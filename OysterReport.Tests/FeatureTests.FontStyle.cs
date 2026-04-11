@@ -6,7 +6,6 @@ using OysterReport.Tests.Helpers;
 
 using Xunit;
 
-/// <summary>フォントスタイル (太字・斜体・下線・打ち消し線) に関する機能テスト。</summary>
 public sealed partial class FeatureTests
 {
     [Fact]

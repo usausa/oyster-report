@@ -4,10 +4,6 @@ using OysterReport.Tests.Helpers;
 
 using Xunit;
 
-/// <summary>
-/// 特定シートのみを対象に PDF を生成する機能テスト。
-/// <see cref="OysterReportEngine.GeneratePdf(TemplateSheet, Stream)"/> を使用する。
-/// </summary>
 public sealed partial class FeatureTests
 {
     [Fact]

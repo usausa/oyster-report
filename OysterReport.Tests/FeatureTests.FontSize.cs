@@ -4,7 +4,6 @@ using OysterReport.Tests.Helpers;
 
 using Xunit;
 
-/// <summary>フォントサイズに関する機能テスト。</summary>
 public sealed partial class FeatureTests
 {
     [Theory]

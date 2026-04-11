@@ -2,10 +2,6 @@ namespace OysterReport.Tests.Helpers;
 
 using OysterReport;
 
-/// <summary>
-/// テスト用の IPAex ゴシックフォントリゾルバー。
-/// ゴシック系日本語フォントを ipaexg.ttf で解決する。
-/// </summary>
 internal sealed class TestFontResolver : IReportFontResolver
 {
     private const string EmbeddedFontName = "IPAexGothic";

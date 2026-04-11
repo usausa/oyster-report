@@ -6,7 +6,6 @@ using OysterReport.Tests.Helpers;
 
 using Xunit;
 
-/// <summary>ページサイズ・余白・中央配置などのページ設定に関する機能テスト。</summary>
 public sealed partial class FeatureTests
 {
     [Fact]

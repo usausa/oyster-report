@@ -4,7 +4,6 @@ using OysterReport.Tests.Helpers;
 
 using Xunit;
 
-/// <summary>セルの値型 (文字列・数値・日付・数式) に関する機能テスト。</summary>
 public sealed partial class FeatureTests
 {
     [Fact]

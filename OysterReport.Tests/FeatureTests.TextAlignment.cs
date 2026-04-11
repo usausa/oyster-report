@@ -6,7 +6,6 @@ using OysterReport.Tests.Helpers;
 
 using Xunit;
 
-/// <summary>テキスト配置 (水平・垂直・折り返し) に関する機能テスト。</summary>
 public sealed partial class FeatureTests
 {
     [Theory]

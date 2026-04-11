@@ -6,10 +6,6 @@ using OysterReport.Tests.Helpers;
 
 using Xunit;
 
-/// <summary>
-/// 請求書形式の総合テンプレートに関する機能テスト。
-/// 複数機能を組み合わせた実帳票シナリオを確認する。
-/// </summary>
 public sealed partial class FeatureTests
 {
     [Fact]

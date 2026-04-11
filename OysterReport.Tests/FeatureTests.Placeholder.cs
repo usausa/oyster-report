@@ -4,7 +4,6 @@ using OysterReport.Tests.Helpers;
 
 using Xunit;
 
-/// <summary>プレースホルダー置換に関する機能テスト。</summary>
 public sealed partial class FeatureTests
 {
     [Fact]

@@ -4,15 +4,8 @@ using OysterReport.Tests.Helpers;
 
 using Xunit;
 
-/// <summary>
-/// <see cref="TemplateSheet"/> などテンプレート API の戻り値・副作用を検証する単体テスト。
-/// PDF 出力品質ではなく API の振る舞い (返却値・カウント等) をテストする。
-/// </summary>
 public sealed class TemplateApiTests
 {
-    /// <summary>
-    /// <see cref="TemplateSheet.ReplacePlaceholder"/> が置換した件数を返すことを確認する。
-    /// </summary>
     [Fact]
     public void ReplacePlaceholderShouldReturnReplacementCount()
     {
@@ -35,9 +28,6 @@ public sealed class TemplateApiTests
         Assert.Equal(0, sheet.ReplacePlaceholder("NoSuchKey", "Ignored"));
     }
 
-    /// <summary>
-    /// <see cref="TemplateWorkbook"/> はファイルパスからも開けることを確認する。
-    /// </summary>
     [Fact]
     public void TemplateWorkbookShouldLoadFromFilePath()
     {
