@@ -1,9 +1,5 @@
 namespace OysterReport.Tests;
 
-using OysterReport.Tests.Helpers;
-
-using Xunit;
-
 public sealed class EngineEndToEndTests
 {
     [Fact]

@@ -1,10 +1,5 @@
 namespace OysterReport.Tests.Helpers;
 
-using System.Text;
-using System.Text.Json;
-
-using OysterReport.Internal;
-
 internal enum ReportDumpFormat
 {
     Json,

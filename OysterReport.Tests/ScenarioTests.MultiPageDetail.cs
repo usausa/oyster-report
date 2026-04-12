@@ -1,11 +1,5 @@
 namespace OysterReport.Tests;
 
-using System.Globalization;
-
-using OysterReport.Tests.Helpers;
-
-using Xunit;
-
 public sealed partial class ScenarioTests
 {
     private const string MultiPageDetailTemplateName = "Template";

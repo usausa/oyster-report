@@ -1,7 +1,5 @@
 namespace OysterReport.Tests.Helpers;
 
-using ClosedXML.Excel;
-
 internal static class TestWorkbookFactory
 {
     public static MemoryStream CreateWorkbook(Action<IXLWorkbook> configure)

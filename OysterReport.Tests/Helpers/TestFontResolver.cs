@@ -1,7 +1,5 @@
 namespace OysterReport.Tests.Helpers;
 
-using OysterReport;
-
 internal sealed class TestFontResolver : IReportFontResolver
 {
     private const string EmbeddedFontName = "IPAexGothic";

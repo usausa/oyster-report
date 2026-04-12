@@ -1,11 +1,5 @@
 namespace OysterReport.Tests;
 
-using ClosedXML.Excel.Drawings;
-
-using OysterReport.Tests.Helpers;
-
-using Xunit;
-
 public sealed partial class FeatureTests
 {
     private static readonly byte[] OnePxPng = Convert.FromBase64String(

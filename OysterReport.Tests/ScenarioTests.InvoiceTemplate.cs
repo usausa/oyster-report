@@ -1,11 +1,5 @@
 namespace OysterReport.Tests;
 
-using ClosedXML.Excel;
-
-using OysterReport.Tests.Helpers;
-
-using Xunit;
-
 public sealed partial class ScenarioTests
 {
     [Fact]

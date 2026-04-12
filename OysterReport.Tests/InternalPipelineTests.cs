@@ -1,12 +1,5 @@
 namespace OysterReport.Tests;
 
-using ClosedXML.Excel;
-
-using OysterReport.Internal;
-using OysterReport.Tests.Helpers;
-
-using Xunit;
-
 public sealed class InternalPipelineTests
 {
     [Fact]

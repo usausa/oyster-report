@@ -2,10 +2,6 @@ namespace OysterReport.Tests;
 
 using System.Drawing;
 
-using OysterReport.Internal;
-
-using Xunit;
-
 public sealed class ColorHelperTests
 {
     //--------------------------------------------------------------------------------

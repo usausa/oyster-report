@@ -1,9 +1,5 @@
 namespace OysterReport.Tests;
 
-using OysterReport.Internal;
-
-using Xunit;
-
 public sealed class AddressHelperTests
 {
     //--------------------------------------------------------------------------------
