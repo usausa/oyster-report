@@ -136,6 +136,7 @@ internal static class PdfRenderPlanner
         var mergedRanges = sheet.MergedRanges.ToDictionary(range => range.OwnerCellAddress, range => range);
         var cellsByRowCol = sheet.Cells.ToDictionary(c => (c.Row, c.Column));
         var columnByIndex = visibleColumns.ToDictionary(c => c.Index);
+        var rowByIndex = visibleRows.ToDictionary(r => r.Index);
         var mergedRangeByCell = BuildMergedRangeByCell(sheet.MergedRanges);
 
         // Compute bounding rectangles for each visible cell and build the PdfCellRenderInfo list
@@ -146,8 +147,8 @@ internal static class PdfRenderPlanner
             {
                 X = columnOffsets[cell.Column],
                 Y = rowOffsets[cell.Row],
-                Width = visibleColumns.First(x => x.Index == cell.Column).WidthPoint,
-                Height = visibleRows.First(x => x.Index == cell.Row).HeightPoint
+                Width = columnByIndex[cell.Column].WidthPoint,
+                Height = rowByIndex[cell.Row].HeightPoint
             };
 
             var isMergedOwner = mergedRanges.TryGetValue(cell.Address, out var mergedRange);

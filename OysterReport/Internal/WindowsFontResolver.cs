@@ -252,29 +252,29 @@ internal sealed class WindowsFontResolver : IFontResolver
         hasBoldFace = false;
         hasItalicFace = false;
 
-        if (TryFindFontName(GetCandidateNames(family, bold, italic, includeFallbackFamily: false), out var exactMatch))
+        if (bold && italic && TryFindFontName([family + " Bold Italic"], out var boldItalicMatch))
         {
-            resolvedFamilyName = exactMatch;
-            hasBoldFace = bold;
-            hasItalicFace = italic;
+            resolvedFamilyName = boldItalicMatch;
+            hasBoldFace = true;
+            hasItalicFace = true;
             return;
         }
 
-        if (bold && TryFindFontName(GetCandidateNames(family, bold: true, italic: false, includeFallbackFamily: false), out var boldMatch))
+        if (bold && TryFindFontName([family + " Bold", family + " SemiBold"], out var boldMatch))
         {
             resolvedFamilyName = boldMatch;
             hasBoldFace = true;
             return;
         }
 
-        if (italic && TryFindFontName(GetCandidateNames(family, bold: false, italic: true, includeFallbackFamily: false), out var italicMatch))
+        if (italic && TryFindFontName([family + " Italic"], out var italicMatch))
         {
             resolvedFamilyName = italicMatch;
             hasItalicFace = true;
             return;
         }
 
-        if (TryFindFontName(GetCandidateNames(family, bold: false, italic: false, includeFallbackFamily: true), out var regularMatch))
+        if (TryFindFontName([family], out var regularMatch))
         {
             resolvedFamilyName = regularMatch;
         }
@@ -302,7 +302,7 @@ internal sealed class WindowsFontResolver : IFontResolver
         return false;
     }
 
-    private static IEnumerable<string> GetCandidateNames(string family, bool bold, bool italic, bool includeFallbackFamily = true)
+    private static IEnumerable<string> GetCandidateNames(string family, bool bold, bool italic)
     {
         if (bold && italic)
         {
@@ -318,9 +318,6 @@ internal sealed class WindowsFontResolver : IFontResolver
             yield return family + " Italic";
         }
 
-        if (includeFallbackFamily)
-        {
-            yield return family;
-        }
+        yield return family;
     }
 }

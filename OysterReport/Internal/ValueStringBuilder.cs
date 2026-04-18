@@ -70,6 +70,6 @@ public ref struct ValueStringBuilder
 
     public override readonly string ToString()
     {
-        return new string(span[..pos].ToArray());
+        return new string(span[..pos]);
     }
 }

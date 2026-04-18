@@ -1,13 +1,14 @@
 namespace OysterReport.Internal;
 
+using System.Collections.Concurrent;
 using System.Globalization;
-using System.Reflection;
 using System.Text;
 
 using ClosedXML.Excel;
 
 using PdfSharp.Drawing;
 using PdfSharp.Drawing.Layout;
+using PdfSharp.Fonts;
 using PdfSharp.Pdf;
 
 internal static class PdfGenerator
@@ -15,6 +16,8 @@ internal static class PdfGenerator
     private const double BoldSimulationOffset = 0.35d;
 
     private static int fontPlatformConfigured;
+
+    private static readonly ConcurrentDictionary<string, XColor> ColorCache = new(StringComparer.Ordinal);
 
     private sealed record ResolvedFontRenderInfo
     {
@@ -71,18 +74,9 @@ internal static class PdfGenerator
             return;
         }
 
-        var globalFontSettingsType = typeof(XFont).Assembly.GetType("PdfSharp.Fonts.GlobalFontSettings");
-        if (globalFontSettingsType is null)
+        if (GlobalFontSettings.FontResolver is null && GlobalFontSettings.FallbackFontResolver is null)
         {
-            return;
-        }
-
-        var fontResolverProperty = globalFontSettingsType.GetProperty("FontResolver", BindingFlags.Public | BindingFlags.Static);
-        var fallbackFontResolverProperty = globalFontSettingsType.GetProperty("FallbackFontResolver", BindingFlags.Public | BindingFlags.Static);
-
-        if (fontResolverProperty?.GetValue(null) is null && fallbackFontResolverProperty?.GetValue(null) is null)
-        {
-            fontResolverProperty?.SetValue(null, new ReportFontResolverAdapter());
+            GlobalFontSettings.FontResolver = new ReportFontResolverAdapter();
         }
     }
 
@@ -662,18 +656,21 @@ internal static class PdfGenerator
 
     private static XColor ToColor(string colorHex)
     {
-        // Converts an ARGB hex color string to an XColor
-        var normalized = ColorHelper.NormalizeHex(colorHex).TrimStart('#');
-        if (normalized.Length == 8)
+        // Converts an ARGB hex color string to an XColor (cached by normalized hex)
+        return ColorCache.GetOrAdd(ColorHelper.NormalizeHex(colorHex), static normalized =>
         {
-            return XColor.FromArgb(
-                Convert.ToByte(normalized[..2], 16),
-                Convert.ToByte(normalized.Substring(2, 2), 16),
-                Convert.ToByte(normalized.Substring(4, 2), 16),
-                Convert.ToByte(normalized.Substring(6, 2), 16));
-        }
+            var hex = normalized.AsSpan().TrimStart('#');
+            if (hex.Length == 8)
+            {
+                return XColor.FromArgb(
+                    Byte.Parse(hex[..2], NumberStyles.HexNumber, CultureInfo.InvariantCulture),
+                    Byte.Parse(hex.Slice(2, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture),
+                    Byte.Parse(hex.Slice(4, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture),
+                    Byte.Parse(hex.Slice(6, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture));
+            }
 
-        return XColors.Black;
+            return XColors.Black;
+        });
     }
 
     private static bool IsTransparentColor(string colorHex)
