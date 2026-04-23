@@ -1,14 +1,14 @@
 namespace OysterReport;
 
-using ClosedXML.Excel;
+using OysterReport.Internal;
 
 public sealed class TemplateRowRange
 {
-    private readonly IXLWorksheet worksheet;
+    private readonly ReportSheet sheet;
 
-    public int StartRow { get; }
+    public int StartRow { get; private set; }
 
-    public int EndRow { get; }
+    public int EndRow { get; private set; }
 
     public int RowCount => EndRow - StartRow + 1;
 
@@ -16,9 +16,9 @@ public sealed class TemplateRowRange
     // Constructor
     //--------------------------------------------------------------------------------
 
-    internal TemplateRowRange(IXLWorksheet ws, int startRow, int endRow)
+    internal TemplateRowRange(ReportSheet sheet, int startRow, int endRow)
     {
-        worksheet = ws;
+        this.sheet = sheet;
         StartRow = startRow;
         EndRow = endRow;
     }
@@ -35,52 +35,49 @@ public sealed class TemplateRowRange
     public TemplateRowRange InsertCopyAfter(TemplateRowRange afterRange)
     {
         var newStartRow = afterRange.EndRow + 1;
-        var lastColumn = worksheet.LastColumnUsed()?.ColumnNumber() ?? 1;
+        var rowCount = RowCount;
 
-        worksheet.Row(newStartRow).InsertRowsAbove(RowCount);
+        var sourceStartRow = (newStartRow <= StartRow) ? StartRow + rowCount : StartRow;
 
-        var sourceStartRow = (newStartRow <= StartRow) ? StartRow + RowCount : StartRow;
+        sheet.InsertEmptyRowsAt(newStartRow, rowCount);
 
-        for (var offset = 0; offset < RowCount; offset++)
+        if (newStartRow <= StartRow)
         {
-            var srcRowNum = sourceStartRow + offset;
-            var dstRowNum = newStartRow + offset;
-            worksheet.Row(dstRowNum).Height = worksheet.Row(srcRowNum).Height;
-
-            for (var col = 1; col <= lastColumn; col++)
-            {
-                var srcCell = worksheet.Cell(srcRowNum, col);
-                var dstCell = worksheet.Cell(dstRowNum, col);
-                dstCell.Value = srcCell.Value;
-                dstCell.Style = srcCell.Style;
-            }
+            StartRow += rowCount;
+            EndRow += rowCount;
         }
 
-        return new TemplateRowRange(worksheet, newStartRow, newStartRow + RowCount - 1);
+        for (var offset = 0; offset < rowCount; offset++)
+        {
+            sheet.CopyRowContent(sourceStartRow + offset, newStartRow + offset);
+        }
+
+        return new TemplateRowRange(sheet, newStartRow, newStartRow + rowCount - 1);
     }
 
     public void Delete()
     {
-        worksheet.Rows(StartRow, EndRow).Delete();
+        sheet.DeleteRows(StartRow, EndRow);
     }
 
     public int ReplacePlaceholder(string markerName, string value)
     {
         var placeholder = "{{" + markerName + "}}";
         var count = 0;
-        var lastColumn = worksheet.LastColumnUsed()?.ColumnNumber() ?? 1;
 
-        for (var row = StartRow; row <= EndRow; row++)
+        foreach (var cell in sheet.Cells)
         {
-            for (var col = 1; col <= lastColumn; col++)
+            if (cell.Row < StartRow || cell.Row > EndRow)
             {
-                var cell = worksheet.Cell(row, col);
-                var text = cell.GetString();
-                if (text.Contains(placeholder, StringComparison.Ordinal))
-                {
-                    cell.Value = text.Replace(placeholder, value, StringComparison.Ordinal);
-                    count++;
-                }
+                continue;
+            }
+
+            var text = cell.DisplayText;
+            if (text.Contains(placeholder, StringComparison.Ordinal))
+            {
+                var replaced = text.Replace(placeholder, value, StringComparison.Ordinal);
+                TemplateSheet.SetCellText(cell, replaced);
+                count++;
             }
         }
 

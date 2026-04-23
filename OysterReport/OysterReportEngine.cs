@@ -20,7 +20,7 @@ public sealed class OysterReportEngine
 
     internal ReportRenderContext CreateRenderContext(TemplateWorkbook template)
     {
-        var workbook = ExcelReader.Read(template.UnderlyingWorkbook, RenderingOptions);
+        var workbook = template.ReportWorkbook;
         var sheetPlans = PdfRenderPlanner.BuildPlan(workbook, RenderingOptions);
 
         return new ReportRenderContext
@@ -42,12 +42,18 @@ public sealed class OysterReportEngine
 
     internal ReportRenderContext CreateRenderContext(TemplateSheet template)
     {
-        var workbook = ExcelReader.Read(template.UnderlyingWorksheet, RenderingOptions);
-        var sheetPlans = PdfRenderPlanner.BuildPlan(workbook, RenderingOptions);
+        var singleSheetWorkbook = new ReportWorkbook
+        {
+            Metadata = new ReportMetadata { TemplateName = template.Name },
+            MeasurementProfile = template.WorkbookMeasurementProfile
+        };
+        singleSheetWorkbook.AddSheet(template.UnderlyingSheet);
+
+        var sheetPlans = PdfRenderPlanner.BuildPlan(singleSheetWorkbook, RenderingOptions);
 
         return new ReportRenderContext
         {
-            Workbook = workbook,
+            Workbook = singleSheetWorkbook,
             SheetPlans = sheetPlans,
             FontResolver = FontResolver,
             RenderingOptions = RenderingOptions,

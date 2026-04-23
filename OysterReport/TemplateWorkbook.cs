@@ -1,14 +1,13 @@
 namespace OysterReport;
 
-using ClosedXML.Excel;
+using OysterReport.Internal;
+using OysterReport.Internal.OpenXml;
 
 public sealed class TemplateWorkbook : IDisposable
 {
-    private readonly XLWorkbook workbook;
-
     private readonly List<TemplateSheet> sheets;
 
-    internal IXLWorkbook UnderlyingWorkbook => workbook;
+    internal ReportWorkbook ReportWorkbook { get; }
 
     public IReadOnlyList<TemplateSheet> Sheets => sheets;
 
@@ -18,17 +17,20 @@ public sealed class TemplateWorkbook : IDisposable
 
     public TemplateWorkbook(string filePath)
     {
-        workbook = new XLWorkbook(filePath);
-        sheets = workbook.Worksheets.Select(static x => new TemplateSheet(x)).ToList();
+        ReportWorkbook = OpenXmlLoader.Load(filePath);
+        sheets = ReportWorkbook.Sheets.Select(x => new TemplateSheet(ReportWorkbook, x)).ToList();
     }
 
     public TemplateWorkbook(Stream stream)
     {
-        workbook = new XLWorkbook(stream);
-        sheets = workbook.Worksheets.Select(static x => new TemplateSheet(x)).ToList();
+        ReportWorkbook = OpenXmlLoader.Load(stream);
+        sheets = ReportWorkbook.Sheets.Select(x => new TemplateSheet(ReportWorkbook, x)).ToList();
     }
 
-    public void Dispose() => workbook.Dispose();
+    public void Dispose()
+    {
+        // No unmanaged resources held; keeps IDisposable for API compatibility.
+    }
 
     //--------------------------------------------------------------------------------
     // Sheet
@@ -48,9 +50,10 @@ public sealed class TemplateWorkbook : IDisposable
 
     public TemplateSheet CopySheet(string sourceSheetName, string newSheetName)
     {
-        var sourceWorksheet = workbook.Worksheet(sourceSheetName);
-        var newWorksheet = sourceWorksheet.CopyTo(newSheetName);
-        var newSheet = new TemplateSheet(newWorksheet);
+        var sourceSheet = GetSheet(sourceSheetName);
+        var cloned = sourceSheet.UnderlyingSheet.Clone(newSheetName);
+        ReportWorkbook.AddSheet(cloned);
+        var newSheet = new TemplateSheet(ReportWorkbook, cloned);
         sheets.Add(newSheet);
         return newSheet;
     }
@@ -58,7 +61,7 @@ public sealed class TemplateWorkbook : IDisposable
     public void RemoveSheet(string name)
     {
         var sheet = GetSheet(name);
-        workbook.Worksheet(name).Delete();
+        ReportWorkbook.RemoveSheet(sheet.UnderlyingSheet);
         sheets.Remove(sheet);
     }
 

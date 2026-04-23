@@ -1,20 +1,20 @@
 namespace OysterReport;
 
-using ClosedXML.Excel;
+using OysterReport.Internal;
 
 public sealed class TemplateRow
 {
-    private readonly IXLWorksheet worksheet;
+    private readonly ReportSheet sheet;
 
-    public int RowNumber { get; }
+    public int RowNumber { get; private set; }
 
     //--------------------------------------------------------------------------------
     // Constructor
     //--------------------------------------------------------------------------------
 
-    internal TemplateRow(IXLWorksheet ws, int rowNumber)
+    internal TemplateRow(ReportSheet sheet, int rowNumber)
     {
-        worksheet = ws;
+        this.sheet = sheet;
         RowNumber = rowNumber;
     }
 
@@ -30,44 +30,42 @@ public sealed class TemplateRow
     public TemplateRow InsertCopyAfter(TemplateRow afterRow)
     {
         var newRowNumber = afterRow.RowNumber + 1;
-
-        worksheet.Row(newRowNumber).InsertRowsAbove(1);
-        var insertedRow = worksheet.Row(newRowNumber);
-
         var sourceRowNum = (newRowNumber <= RowNumber) ? RowNumber + 1 : RowNumber;
 
-        var lastColumn = worksheet.LastColumnUsed()?.ColumnNumber() ?? 1;
-        for (var col = 1; col <= lastColumn; col++)
+        sheet.InsertEmptyRowsAt(newRowNumber, 1);
+
+        if (newRowNumber <= RowNumber)
         {
-            var srcCell = worksheet.Cell(sourceRowNum, col);
-            var dstCell = worksheet.Cell(newRowNumber, col);
-            dstCell.Value = srcCell.Value;
-            dstCell.Style = srcCell.Style;
+            RowNumber++;
         }
 
-        insertedRow.Height = worksheet.Row(sourceRowNum).Height;
+        sheet.CopyRowContent(sourceRowNum, newRowNumber);
 
-        return new TemplateRow(worksheet, newRowNumber);
+        return new TemplateRow(sheet, newRowNumber);
     }
 
     public void Delete()
     {
-        worksheet.Row(RowNumber).Delete();
+        sheet.DeleteRows(RowNumber, RowNumber);
     }
 
     public int ReplacePlaceholder(string markerName, string value)
     {
         var placeholder = "{{" + markerName + "}}";
         var count = 0;
-        var lastColumn = worksheet.LastColumnUsed()?.ColumnNumber() ?? 1;
 
-        for (var col = 1; col <= lastColumn; col++)
+        foreach (var cell in sheet.Cells)
         {
-            var cell = worksheet.Cell(RowNumber, col);
-            var text = cell.GetString();
+            if (cell.Row != RowNumber)
+            {
+                continue;
+            }
+
+            var text = cell.DisplayText;
             if (text.Contains(placeholder, StringComparison.Ordinal))
             {
-                cell.Value = text.Replace(placeholder, value, StringComparison.Ordinal);
+                var replaced = text.Replace(placeholder, value, StringComparison.Ordinal);
+                TemplateSheet.SetCellText(cell, replaced);
                 count++;
             }
         }

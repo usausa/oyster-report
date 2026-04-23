@@ -214,9 +214,9 @@ internal sealed record ReportPageSetup
 [ExcludeFromCodeCoverage]
 internal sealed class ReportRow
 {
-    public int Index { get; init; }
+    public int Index { get; set; }
 
-    public double HeightPoint { get; init; }
+    public double HeightPoint { get; set; }
 
     public double TopPoint { get; set; }
 
@@ -228,7 +228,7 @@ internal sealed class ReportRow
 [ExcludeFromCodeCoverage]
 internal sealed class ReportColumn
 {
-    public int Index { get; init; }
+    public int Index { get; set; }
 
     public double WidthPoint { get; init; }
 
@@ -244,7 +244,7 @@ internal sealed class ReportColumn
 [ExcludeFromCodeCoverage]
 internal sealed class ReportMergedRange
 {
-    public ReportRange Range { get; init; }
+    public ReportRange Range { get; set; }
 
     public string OwnerCellAddress => AddressHelper.ToAddress(Range.StartRow, Range.StartColumn);
 }
@@ -254,9 +254,9 @@ internal sealed class ReportImage
 {
     public string Name { get; init; } = string.Empty;
 
-    public string FromCellAddress { get; init; } = string.Empty;
+    public string FromCellAddress { get; set; } = string.Empty;
 
-    public string? ToCellAddress { get; init; }
+    public string? ToCellAddress { get; set; }
 
     public ReportOffset Offset { get; init; }
 
@@ -270,15 +270,15 @@ internal sealed class ReportImage
 [ExcludeFromCodeCoverage]
 internal sealed class ReportCell
 {
-    public int Row { get; init; }
+    public int Row { get; set; }
 
-    public int Column { get; init; }
+    public int Column { get; set; }
 
     public string Address => AddressHelper.ToAddress(Row, Column);
 
-    public ReportCellValue Value { get; init; } = new();
+    public ReportCellValue Value { get; set; } = new();
 
-    public string DisplayText { get; init; } = string.Empty;
+    public string DisplayText { get; set; } = string.Empty;
 
     public ReportCellStyle Style { get; set; } = new();
 
@@ -296,7 +296,7 @@ internal sealed class ReportSheet
     private readonly List<ReportPageBreak> horizontalPageBreaks = [];
     private readonly List<ReportPageBreak> verticalPageBreaks = [];
 
-    public string Name { get; init; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
 
     public ReportRange UsedRange { get; set; } = new() { StartRow = 1, StartColumn = 1, EndRow = 1, EndColumn = 1 };
 
@@ -338,19 +338,546 @@ internal sealed class ReportSheet
 
     public void RecalculateLayout()
     {
+        rows.Sort(static (a, b) => a.Index.CompareTo(b.Index));
+        columns.Sort(static (a, b) => a.Index.CompareTo(b.Index));
+        cells.Sort(static (a, b) =>
+        {
+            var r = a.Row.CompareTo(b.Row);
+            return r != 0 ? r : a.Column.CompareTo(b.Column);
+        });
+
         var top = 0d;
-        foreach (var row in rows.OrderBy(static x => x.Index))
+        foreach (var row in rows)
         {
             row.TopPoint = top;
             top += row.HeightPoint;
         }
 
         var left = 0d;
-        foreach (var column in columns.OrderBy(static x => x.Index))
+        foreach (var column in columns)
         {
             column.LeftPoint = left;
             left += column.WidthPoint;
         }
+    }
+
+    //--------------------------------------------------------------------------------
+    // Mutation APIs for templates
+    //--------------------------------------------------------------------------------
+
+    public ReportRow? GetRowDefinition(int row)
+    {
+        foreach (var r in rows)
+        {
+            if (r.Index == row)
+            {
+                return r;
+            }
+        }
+        return null;
+    }
+
+    public ReportCell? FindCell(int row, int column)
+    {
+        foreach (var cell in cells)
+        {
+            if (cell.Row == row && cell.Column == column)
+            {
+                return cell;
+            }
+        }
+        return null;
+    }
+
+    // Inserts `count` blank rows at `insertAtRow`, shifting existing rows/cells/merges/images/breaks down.
+    public void InsertEmptyRowsAt(int insertAtRow, int count)
+    {
+        if (count <= 0)
+        {
+            return;
+        }
+
+        foreach (var row in rows)
+        {
+            if (row.Index >= insertAtRow)
+            {
+                row.Index += count;
+            }
+        }
+
+        for (var i = 0; i < count; i++)
+        {
+            rows.Add(new ReportRow
+            {
+                Index = insertAtRow + i,
+                HeightPoint = 15d
+            });
+        }
+
+        foreach (var cell in cells)
+        {
+            if (cell.Row >= insertAtRow)
+            {
+                cell.Row += count;
+                if (cell.Merge is not null)
+                {
+                    var mr = cell.Merge.Range;
+                    cell.Merge = new ReportMergeInfo
+                    {
+                        OwnerCellAddress = AddressHelper.ToAddress(mr.StartRow + count, mr.StartColumn),
+                        Range = new ReportRange
+                        {
+                            StartRow = mr.StartRow + count,
+                            StartColumn = mr.StartColumn,
+                            EndRow = mr.EndRow + count,
+                            EndColumn = mr.EndColumn
+                        }
+                    };
+                }
+            }
+            else if (cell.Merge is not null && cell.Merge.Range.EndRow >= insertAtRow)
+            {
+                var mr = cell.Merge.Range;
+                cell.Merge = new ReportMergeInfo
+                {
+                    OwnerCellAddress = cell.Merge.OwnerCellAddress,
+                    Range = new ReportRange
+                    {
+                        StartRow = mr.StartRow,
+                        StartColumn = mr.StartColumn,
+                        EndRow = mr.EndRow + count,
+                        EndColumn = mr.EndColumn
+                    }
+                };
+            }
+        }
+
+        foreach (var mr in mergedRanges)
+        {
+            var r = mr.Range;
+            if (r.StartRow >= insertAtRow)
+            {
+                mr.Range = new ReportRange
+                {
+                    StartRow = r.StartRow + count,
+                    StartColumn = r.StartColumn,
+                    EndRow = r.EndRow + count,
+                    EndColumn = r.EndColumn
+                };
+            }
+            else if (r.EndRow >= insertAtRow)
+            {
+                mr.Range = new ReportRange
+                {
+                    StartRow = r.StartRow,
+                    StartColumn = r.StartColumn,
+                    EndRow = r.EndRow + count,
+                    EndColumn = r.EndColumn
+                };
+            }
+        }
+
+        ShiftImageRows(insertAtRow, count);
+
+        for (var i = 0; i < horizontalPageBreaks.Count; i++)
+        {
+            if (horizontalPageBreaks[i].Index >= insertAtRow)
+            {
+                horizontalPageBreaks[i] = new ReportPageBreak { Index = horizontalPageBreaks[i].Index + count };
+            }
+        }
+
+        if (PrintArea is not null)
+        {
+            var pa = PrintArea.Range;
+            if (pa.StartRow >= insertAtRow)
+            {
+                PrintArea = new ReportPrintArea
+                {
+                    Range = new ReportRange
+                    {
+                        StartRow = pa.StartRow + count,
+                        StartColumn = pa.StartColumn,
+                        EndRow = pa.EndRow + count,
+                        EndColumn = pa.EndColumn
+                    }
+                };
+            }
+            else if (pa.EndRow >= insertAtRow)
+            {
+                PrintArea = new ReportPrintArea
+                {
+                    Range = new ReportRange
+                    {
+                        StartRow = pa.StartRow,
+                        StartColumn = pa.StartColumn,
+                        EndRow = pa.EndRow + count,
+                        EndColumn = pa.EndColumn
+                    }
+                };
+            }
+        }
+
+        if (UsedRange.StartRow >= insertAtRow || UsedRange.EndRow >= insertAtRow)
+        {
+            var u = UsedRange;
+            UsedRange = new ReportRange
+            {
+                StartRow = u.StartRow >= insertAtRow ? u.StartRow + count : u.StartRow,
+                StartColumn = u.StartColumn,
+                EndRow = u.EndRow >= insertAtRow ? u.EndRow + count : u.EndRow,
+                EndColumn = u.EndColumn
+            };
+        }
+
+        RecalculateLayout();
+    }
+
+    // Deletes rows in [startRow, endRow] (inclusive) and shifts everything below up.
+    public void DeleteRows(int startRow, int endRow)
+    {
+        if (endRow < startRow)
+        {
+            return;
+        }
+
+        var count = endRow - startRow + 1;
+
+        rows.RemoveAll(r => r.Index >= startRow && r.Index <= endRow);
+        foreach (var row in rows)
+        {
+            if (row.Index > endRow)
+            {
+                row.Index -= count;
+            }
+        }
+
+        cells.RemoveAll(c => c.Row >= startRow && c.Row <= endRow);
+        foreach (var cell in cells)
+        {
+            if (cell.Row > endRow)
+            {
+                cell.Row -= count;
+                if (cell.Merge is not null)
+                {
+                    var mr = cell.Merge.Range;
+                    cell.Merge = new ReportMergeInfo
+                    {
+                        OwnerCellAddress = AddressHelper.ToAddress(Math.Max(1, mr.StartRow - count), mr.StartColumn),
+                        Range = new ReportRange
+                        {
+                            StartRow = Math.Max(1, mr.StartRow - count),
+                            StartColumn = mr.StartColumn,
+                            EndRow = mr.EndRow - count,
+                            EndColumn = mr.EndColumn
+                        }
+                    };
+                }
+            }
+        }
+
+        for (var i = mergedRanges.Count - 1; i >= 0; i--)
+        {
+            var mr = mergedRanges[i].Range;
+
+            if (mr.EndRow < startRow)
+            {
+                continue;
+            }
+
+            if (mr.StartRow > endRow)
+            {
+                mergedRanges[i].Range = new ReportRange
+                {
+                    StartRow = mr.StartRow - count,
+                    StartColumn = mr.StartColumn,
+                    EndRow = mr.EndRow - count,
+                    EndColumn = mr.EndColumn
+                };
+            }
+            else if (mr.StartRow >= startRow && mr.EndRow <= endRow)
+            {
+                mergedRanges.RemoveAt(i);
+            }
+            else
+            {
+                var overlap = Math.Min(mr.EndRow, endRow) - Math.Max(mr.StartRow, startRow) + 1;
+                var newStartRow = mr.StartRow < startRow ? mr.StartRow : startRow;
+                var newEndRow = mr.EndRow - overlap;
+                if (newEndRow < newStartRow)
+                {
+                    mergedRanges.RemoveAt(i);
+                }
+                else
+                {
+                    mergedRanges[i].Range = new ReportRange
+                    {
+                        StartRow = newStartRow,
+                        StartColumn = mr.StartColumn,
+                        EndRow = newEndRow,
+                        EndColumn = mr.EndColumn
+                    };
+                }
+            }
+        }
+
+        for (var i = images.Count - 1; i >= 0; i--)
+        {
+            var img = images[i];
+            var fromRow = TryParseRow(img.FromCellAddress);
+            if (fromRow is null)
+            {
+                continue;
+            }
+
+            if (fromRow.Value >= startRow && fromRow.Value <= endRow)
+            {
+                images.RemoveAt(i);
+                continue;
+            }
+
+            if (fromRow.Value > endRow)
+            {
+                img.FromCellAddress = ReplaceRow(img.FromCellAddress, fromRow.Value - count);
+                if (img.ToCellAddress is not null)
+                {
+                    var toRow = TryParseRow(img.ToCellAddress);
+                    if (toRow is not null && toRow.Value > endRow)
+                    {
+                        img.ToCellAddress = ReplaceRow(img.ToCellAddress, toRow.Value - count);
+                    }
+                }
+            }
+        }
+
+        for (var i = horizontalPageBreaks.Count - 1; i >= 0; i--)
+        {
+            var idx = horizontalPageBreaks[i].Index;
+            if (idx >= startRow && idx <= endRow)
+            {
+                horizontalPageBreaks.RemoveAt(i);
+            }
+            else if (idx > endRow)
+            {
+                horizontalPageBreaks[i] = new ReportPageBreak { Index = idx - count };
+            }
+        }
+
+        if (PrintArea is not null)
+        {
+            var pa = PrintArea.Range;
+            if (pa.StartRow > endRow)
+            {
+                PrintArea = new ReportPrintArea
+                {
+                    Range = new ReportRange
+                    {
+                        StartRow = pa.StartRow - count,
+                        StartColumn = pa.StartColumn,
+                        EndRow = pa.EndRow - count,
+                        EndColumn = pa.EndColumn
+                    }
+                };
+            }
+            else if (pa.EndRow >= startRow)
+            {
+                var overlap = Math.Min(pa.EndRow, endRow) - Math.Max(pa.StartRow, startRow) + 1;
+                PrintArea = new ReportPrintArea
+                {
+                    Range = new ReportRange
+                    {
+                        StartRow = pa.StartRow,
+                        StartColumn = pa.StartColumn,
+                        EndRow = Math.Max(pa.StartRow, pa.EndRow - overlap),
+                        EndColumn = pa.EndColumn
+                    }
+                };
+            }
+        }
+
+        var u = UsedRange;
+        if (u.StartRow > endRow)
+        {
+            UsedRange = new ReportRange
+            {
+                StartRow = u.StartRow - count,
+                StartColumn = u.StartColumn,
+                EndRow = u.EndRow - count,
+                EndColumn = u.EndColumn
+            };
+        }
+        else if (u.EndRow >= startRow)
+        {
+            var overlap = Math.Min(u.EndRow, endRow) - Math.Max(u.StartRow, startRow) + 1;
+            UsedRange = new ReportRange
+            {
+                StartRow = u.StartRow,
+                StartColumn = u.StartColumn,
+                EndRow = Math.Max(u.StartRow, u.EndRow - overlap),
+                EndColumn = u.EndColumn
+            };
+        }
+
+        RecalculateLayout();
+    }
+
+    // Copies the contents (cells and row height) of sourceRow into destinationRow.
+    public void CopyRowContent(int sourceRow, int destinationRow)
+    {
+        if (sourceRow == destinationRow)
+        {
+            return;
+        }
+
+        cells.RemoveAll(c => c.Row == destinationRow);
+
+        var source = GetRowDefinition(sourceRow);
+        var destination = GetRowDefinition(destinationRow);
+        if (source is not null && destination is not null)
+        {
+            destination.HeightPoint = source.HeightPoint;
+        }
+
+        foreach (var cell in cells.Where(c => c.Row == sourceRow).ToList())
+        {
+            cells.Add(new ReportCell
+            {
+                Row = destinationRow,
+                Column = cell.Column,
+                Value = cell.Value,
+                DisplayText = cell.DisplayText,
+                Style = cell.Style,
+                Merge = cell.Merge
+            });
+        }
+
+        RecalculateLayout();
+    }
+
+    public ReportSheet Clone(string newName)
+    {
+        var copy = new ReportSheet
+        {
+            Name = newName,
+            UsedRange = UsedRange,
+            PageSetup = PageSetup,
+            HeaderFooter = HeaderFooter,
+            PrintArea = PrintArea,
+            ShowGridLines = ShowGridLines
+        };
+
+        foreach (var row in rows)
+        {
+            copy.AddRowDefinition(new ReportRow
+            {
+                Index = row.Index,
+                HeightPoint = row.HeightPoint,
+                IsHidden = row.IsHidden,
+                OutlineLevel = row.OutlineLevel
+            });
+        }
+
+        foreach (var col in columns)
+        {
+            copy.AddColumnDefinition(new ReportColumn
+            {
+                Index = col.Index,
+                WidthPoint = col.WidthPoint,
+                IsHidden = col.IsHidden,
+                OutlineLevel = col.OutlineLevel,
+                OriginalExcelWidth = col.OriginalExcelWidth
+            });
+        }
+
+        foreach (var mr in mergedRanges)
+        {
+            copy.AddMergedRange(new ReportMergedRange { Range = mr.Range });
+        }
+
+        foreach (var cell in cells)
+        {
+            copy.AddCell(new ReportCell
+            {
+                Row = cell.Row,
+                Column = cell.Column,
+                Value = cell.Value,
+                DisplayText = cell.DisplayText,
+                Style = cell.Style,
+                Merge = cell.Merge
+            });
+        }
+
+        foreach (var img in images)
+        {
+            copy.AddImage(new ReportImage
+            {
+                Name = img.Name,
+                FromCellAddress = img.FromCellAddress,
+                ToCellAddress = img.ToCellAddress,
+                Offset = img.Offset,
+                WidthPoint = img.WidthPoint,
+                HeightPoint = img.HeightPoint,
+                ImageBytes = img.ImageBytes
+            });
+        }
+
+        foreach (var pb in horizontalPageBreaks)
+        {
+            copy.AddHorizontalPageBreak(new ReportPageBreak { Index = pb.Index });
+        }
+
+        foreach (var pb in verticalPageBreaks)
+        {
+            copy.AddVerticalPageBreak(new ReportPageBreak { Index = pb.Index });
+        }
+
+        copy.RecalculateLayout();
+        return copy;
+    }
+
+    private void ShiftImageRows(int insertAtRow, int count)
+    {
+        foreach (var img in images)
+        {
+            var fromRow = TryParseRow(img.FromCellAddress);
+            if (fromRow is not null && fromRow.Value >= insertAtRow)
+            {
+                img.FromCellAddress = ReplaceRow(img.FromCellAddress, fromRow.Value + count);
+            }
+
+            if (img.ToCellAddress is not null)
+            {
+                var toRow = TryParseRow(img.ToCellAddress);
+                if (toRow is not null && toRow.Value >= insertAtRow)
+                {
+                    img.ToCellAddress = ReplaceRow(img.ToCellAddress, toRow.Value + count);
+                }
+            }
+        }
+    }
+
+    private static int? TryParseRow(string address)
+    {
+        if (String.IsNullOrEmpty(address))
+        {
+            return null;
+        }
+
+        try
+        {
+            var (row, _) = AddressHelper.ParseAddress(address);
+            return row;
+        }
+        catch (FormatException)
+        {
+            return null;
+        }
+    }
+
+    private static string ReplaceRow(string address, int newRow)
+    {
+        var (_, col) = AddressHelper.ParseAddress(address);
+        return AddressHelper.ToAddress(newRow, col);
     }
 }
 
@@ -366,4 +893,18 @@ internal sealed class ReportWorkbook
     public ReportMeasurementProfile MeasurementProfile { get; init; } = new();
 
     public void AddSheet(ReportSheet sheet) => sheets.Add(sheet);
+
+    public bool RemoveSheet(ReportSheet sheet) => sheets.Remove(sheet);
+
+    public ReportSheet? FindSheet(string name)
+    {
+        foreach (var sheet in sheets)
+        {
+            if (String.Equals(sheet.Name, name, StringComparison.Ordinal))
+            {
+                return sheet;
+            }
+        }
+        return null;
+    }
 }

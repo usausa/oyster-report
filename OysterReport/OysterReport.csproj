@@ -15,6 +15,8 @@
 
   <ItemGroup>
     <PackageReference Include="ClosedXML" Version="0.105.0" />
+    <PackageReference Include="DocumentFormat.OpenXml" Version="3.3.0" />
+    <PackageReference Include="ExcelNumberFormat" Version="1.1.0" />
     <PackageReference Include="PDFsharp" Version="6.2.4" />
     <PackageReference Include="SkiaSharp" Version="3.119.2" />
   </ItemGroup>
