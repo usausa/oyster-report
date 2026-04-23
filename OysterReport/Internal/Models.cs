@@ -2,8 +2,6 @@ namespace OysterReport.Internal;
 
 using System.Diagnostics.CodeAnalysis;
 
-using ClosedXML.Excel;
-
 // ReportWorkbook
 // ├── ReportMetadata                 Template name
 // ├── ReportMeasurementProfile       Font metrics for column width calculation
@@ -54,7 +52,7 @@ internal sealed record ReportMeasurementProfile
 [ExcludeFromCodeCoverage]
 internal sealed record ReportCellValue
 {
-    public XLDataType Kind { get; init; } = XLDataType.Blank;
+    public CellValueKind Kind { get; init; } = CellValueKind.Blank;
 
     // [MEMO]: Use the typed source value when adding value-aware formatting or placeholder features.
     public object? RawValue { get; init; }
@@ -87,7 +85,7 @@ internal sealed record ReportFill
 [ExcludeFromCodeCoverage]
 internal sealed record ReportBorder
 {
-    public XLBorderStyleValues Style { get; init; } = XLBorderStyleValues.None;
+    public BorderLineStyle Style { get; init; } = BorderLineStyle.None;
 
     public string ColorHex { get; init; } = "#FF000000";
 
@@ -109,9 +107,9 @@ internal sealed record ReportBorders
 [ExcludeFromCodeCoverage]
 internal sealed record ReportAlignment
 {
-    public XLAlignmentHorizontalValues Horizontal { get; init; } = XLAlignmentHorizontalValues.General;
+    public HorizontalAlignment Horizontal { get; init; } = HorizontalAlignment.General;
 
-    public XLAlignmentVerticalValues Vertical { get; init; } = XLAlignmentVerticalValues.Top;
+    public VerticalAlignment Vertical { get; init; } = VerticalAlignment.Top;
 }
 
 [ExcludeFromCodeCoverage]
@@ -183,9 +181,9 @@ internal sealed record ReportHeaderFooter
 [ExcludeFromCodeCoverage]
 internal sealed record ReportPageSetup
 {
-    public XLPaperSize PaperSize { get; init; } = XLPaperSize.A4Paper;
+    public PaperSize PaperSize { get; init; } = PaperSize.A4Paper;
 
-    public XLPageOrientation Orientation { get; init; } = XLPageOrientation.Default;
+    public PageOrientation Orientation { get; init; } = PageOrientation.Default;
 
     public ReportThickness Margins { get; init; } = new() { Left = 36d, Top = 36d, Right = 36d, Bottom = 36d };
 

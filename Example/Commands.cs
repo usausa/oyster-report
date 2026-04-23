@@ -2,8 +2,6 @@ namespace Example;
 
 using System.Globalization;
 
-using ClosedXML.Excel;
-
 using OysterReport;
 
 using Smart.CommandLine.Hosting;
@@ -97,7 +95,7 @@ public sealed class EmbeddedCommand : ICommandHandler
 {
     public ValueTask ExecuteAsync(CommandContext context)
     {
-        using var workbook = new TemplateWorkbook(CreateWorkbook());
+        using var workbook = new TemplateWorkbook("Sample.xlsx");
 
         var engine = new OysterReportEngine
         {
@@ -108,34 +106,5 @@ public sealed class EmbeddedCommand : ICommandHandler
         engine.GeneratePdf(workbook, output);
 
         return ValueTask.CompletedTask;
-    }
-
-    private static MemoryStream CreateWorkbook()
-    {
-        const string gothic = "ＭＳ Ｐゴシック";
-
-        using var xb = new XLWorkbook();
-        var sheet = xb.AddWorksheet("Sample");
-        sheet.PageSetup.PaperSize = XLPaperSize.A4Paper;
-        sheet.Column(1).Width = 50;
-        sheet.Row(1).Height = 24;
-        sheet.Row(3).Height = 16;
-
-        sheet.Cell("A1").Value = "埋め込みフォントのサンプル";
-        sheet.Cell("A1").Style.Font.FontName = "メイリオ";
-        sheet.Cell("A1").Style.Font.FontSize = 16;
-        sheet.Cell("A1").Style.Font.Bold = true;
-
-        sheet.Cell("A3").Value = "日本語テキスト（ＭＳ Ｐゴシック）";
-        sheet.Cell("A3").Style.Font.FontName = gothic;
-        sheet.Cell("A3").Style.Font.FontSize = 12;
-
-        sheet.Cell("A4").Value = "ABC abc 1234 あいうえお 漢字テストと長めの説明文";
-        sheet.Cell("A4").Style.Font.FontName = gothic;
-
-        var stream = new MemoryStream();
-        xb.SaveAs(stream);
-        stream.Position = 0;
-        return stream;
     }
 }

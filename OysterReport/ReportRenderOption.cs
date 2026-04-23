@@ -2,13 +2,11 @@ namespace OysterReport;
 
 using System.Diagnostics.CodeAnalysis;
 
-using ClosedXML.Excel;
-
 [ExcludeFromCodeCoverage]
 public sealed record ReportRenderOption
 {
     // Resolves page size (pt) from the paper size
-    public Func<XLPaperSize, (double Width, double Height)> PageSizeResolver { get; set; } = ResolveDefaultPageSize;
+    public Func<PaperSize, (double Width, double Height)> PageSizeResolver { get; set; } = ResolveDefaultPageSize;
 
     // Horizontal padding for cell text (pt)
     public double HorizontalCellTextPadding { get; set; } = 2d;
@@ -53,11 +51,11 @@ public sealed record ReportRenderOption
     // Fallback max digit width for unknown fonts (96-DPI reference pixels)
     public double FallbackMaxDigitWidth { get; set; } = 7d;
 
-    private static (double Width, double Height) ResolveDefaultPageSize(XLPaperSize paperSize) =>
+    private static (double Width, double Height) ResolveDefaultPageSize(PaperSize paperSize) =>
         paperSize switch
         {
-            XLPaperSize.LetterPaper => (612d, 792d),
-            XLPaperSize.LegalPaper => (612d, 1008d),
+            PaperSize.LetterPaper => (612d, 792d),
+            PaperSize.LegalPaper => (612d, 1008d),
             _ => (595.28d, 841.89d)
         };
 }

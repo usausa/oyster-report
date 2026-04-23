@@ -4,8 +4,6 @@ using System.Collections.Concurrent;
 using System.Globalization;
 using System.Text;
 
-using ClosedXML.Excel;
-
 using PdfSharp.Drawing;
 using PdfSharp.Drawing.Layout;
 using PdfSharp.Fonts;
@@ -249,7 +247,7 @@ internal static class PdfGenerator
         Dictionary<string, (ReportLine Line, ReportBorder Border)> collectedLines)
     {
         // Collects border info for one edge. When multiple styles exist on the same edge, keeps the higher-priority one
-        if (border.Style == XLBorderStyleValues.None)
+        if (border.Style == BorderLineStyle.None)
         {
             return;
         }
@@ -271,7 +269,7 @@ internal static class PdfGenerator
         var borderWidth = ResolveBorderWidth(border.Style, renderOption);
         var pen = new XPen(borderColor, borderWidth);
         ApplyBorderStyle(pen, border.Style);
-        if (border.Style == XLBorderStyleValues.Double)
+        if (border.Style == BorderLineStyle.Double)
         {
             DrawDoubleBorder(graphics, borderColor, borderWidth, line);
             return;
@@ -556,8 +554,8 @@ internal static class PdfGenerator
             var lineHeight = font.GetHeight();
             verticalOffset = sourceCell.Style.Alignment.Vertical switch
             {
-                XLAlignmentVerticalValues.Center => Math.Max(0, (textRect.Height - lineHeight) / 2),
-                XLAlignmentVerticalValues.Bottom => Math.Max(0, textRect.Height - lineHeight),
+                VerticalAlignment.Center => Math.Max(0, (textRect.Height - lineHeight) / 2),
+                VerticalAlignment.Bottom => Math.Max(0, textRect.Height - lineHeight),
                 _ => 0
             };
         }
@@ -579,8 +577,8 @@ internal static class PdfGenerator
             var horizontalAlignment = ResolveHorizontalAlignment(sourceCell);
             decorationX = horizontalAlignment switch
             {
-                XLAlignmentHorizontalValues.Center => textRect.X + ((textRect.Width - decorationWidth) / 2),
-                XLAlignmentHorizontalValues.Right => textRect.X + textRect.Width - decorationWidth,
+                HorizontalAlignment.Center => textRect.X + ((textRect.Width - decorationWidth) / 2),
+                HorizontalAlignment.Right => textRect.X + textRect.Width - decorationWidth,
                 _ => textRect.X
             };
         }
@@ -679,27 +677,27 @@ internal static class PdfGenerator
         return ColorHelper.NormalizeHex(colorHex).StartsWith("#00", StringComparison.Ordinal);
     }
 
-    private static double ResolveBorderWidth(XLBorderStyleValues style, ReportRenderOption renderOption)
+    private static double ResolveBorderWidth(BorderLineStyle style, ReportRenderOption renderOption)
     {
         // Determines the drawing width (pt) from the border style
         return style switch
         {
-            XLBorderStyleValues.Thick => renderOption.ThickBorderWidth,
-            XLBorderStyleValues.Medium => renderOption.MediumBorderWidth,
-            XLBorderStyleValues.Double => renderOption.NormalBorderWidth,
-            XLBorderStyleValues.Hair => renderOption.HairBorderWidth,
+            BorderLineStyle.Thick => renderOption.ThickBorderWidth,
+            BorderLineStyle.Medium => renderOption.MediumBorderWidth,
+            BorderLineStyle.Double => renderOption.NormalBorderWidth,
+            BorderLineStyle.Hair => renderOption.HairBorderWidth,
             _ => renderOption.NormalBorderWidth
         };
     }
 
-    private static void ApplyBorderStyle(XPen pen, XLBorderStyleValues style)
+    private static void ApplyBorderStyle(XPen pen, BorderLineStyle style)
     {
         // Applies the dash pattern corresponding to the border style to the XPen
         pen.DashStyle = style switch
         {
-            XLBorderStyleValues.Dashed => XDashStyle.Dash,
-            XLBorderStyleValues.Dotted => XDashStyle.Dot,
-            XLBorderStyleValues.DashDot => XDashStyle.DashDot,
+            BorderLineStyle.Dashed => XDashStyle.Dash,
+            BorderLineStyle.Dotted => XDashStyle.Dot,
+            BorderLineStyle.DashDot => XDashStyle.DashDot,
             _ => pen.DashStyle
         };
     }
@@ -732,14 +730,14 @@ internal static class PdfGenerator
         {
             Alignment = horizontalAlignment switch
             {
-                XLAlignmentHorizontalValues.Center => XStringAlignment.Center,
-                XLAlignmentHorizontalValues.Right => XStringAlignment.Far,
+                HorizontalAlignment.Center => XStringAlignment.Center,
+                HorizontalAlignment.Right => XStringAlignment.Far,
                 _ => XStringAlignment.Near
             },
             LineAlignment = verticalAlignment switch
             {
-                XLAlignmentVerticalValues.Center => XLineAlignment.Center,
-                XLAlignmentVerticalValues.Bottom => XLineAlignment.Far,
+                VerticalAlignment.Center => XLineAlignment.Center,
+                VerticalAlignment.Bottom => XLineAlignment.Far,
                 _ => XLineAlignment.Near
             }
         };
@@ -750,17 +748,17 @@ internal static class PdfGenerator
         // Returns the paragraph alignment enum from the cell's horizontal alignment
         return ResolveHorizontalAlignment(cell) switch
         {
-            XLAlignmentHorizontalValues.Center => XParagraphAlignment.Center,
-            XLAlignmentHorizontalValues.Right => XParagraphAlignment.Right,
-            XLAlignmentHorizontalValues.Justify => XParagraphAlignment.Justify,
+            HorizontalAlignment.Center => XParagraphAlignment.Center,
+            HorizontalAlignment.Right => XParagraphAlignment.Right,
+            HorizontalAlignment.Justify => XParagraphAlignment.Justify,
             _ => XParagraphAlignment.Left
         };
     }
 
-    private static XLAlignmentHorizontalValues ResolveHorizontalAlignment(ReportCell cell)
+    private static HorizontalAlignment ResolveHorizontalAlignment(ReportCell cell)
     {
         // General uses the default for the value type
-        if (cell.Style.Alignment.Horizontal != XLAlignmentHorizontalValues.General)
+        if (cell.Style.Alignment.Horizontal != HorizontalAlignment.General)
         {
             return cell.Style.Alignment.Horizontal;
         }
@@ -768,9 +766,9 @@ internal static class PdfGenerator
         // Determines horizontal alignment from the cell's alignment setting
         return cell.Value.Kind switch
         {
-            XLDataType.Number => XLAlignmentHorizontalValues.Right,
-            XLDataType.DateTime => XLAlignmentHorizontalValues.Right,
-            _ => XLAlignmentHorizontalValues.Left
+            CellValueKind.Number => HorizontalAlignment.Right,
+            CellValueKind.DateTime => HorizontalAlignment.Right,
+            _ => HorizontalAlignment.Left
         };
     }
 
@@ -791,10 +789,10 @@ internal static class PdfGenerator
         graphics.DrawRectangle(brush, leftEdge, topEdge, width, Math.Abs(line.Y2 - line.Y1));
     }
 
-    private static bool IsSolidBorder(XLBorderStyleValues style)
+    private static bool IsSolidBorder(BorderLineStyle style)
     {
         // Determines whether the border style should be drawn as a solid filled rectangle
-        return style is XLBorderStyleValues.Hair or XLBorderStyleValues.Thin or XLBorderStyleValues.Medium or XLBorderStyleValues.Thick;
+        return style is BorderLineStyle.Hair or BorderLineStyle.Thin or BorderLineStyle.Medium or BorderLineStyle.Thick;
     }
 
     //--------------------------------------------------------------------------------
@@ -868,17 +866,17 @@ internal static class PdfGenerator
         return bestBorder ?? new ReportBorder();
     }
 
-    private static int GetBorderPriority(XLBorderStyleValues style) =>
+    private static int GetBorderPriority(BorderLineStyle style) =>
         style switch
         {
-            XLBorderStyleValues.Double => 6,
-            XLBorderStyleValues.Thick => 5,
-            XLBorderStyleValues.Medium => 4,
-            XLBorderStyleValues.Thin => 3,
-            XLBorderStyleValues.DashDot => 2,
-            XLBorderStyleValues.Dashed => 2,
-            XLBorderStyleValues.Dotted => 2,
-            XLBorderStyleValues.Hair => 1,
+            BorderLineStyle.Double => 6,
+            BorderLineStyle.Thick => 5,
+            BorderLineStyle.Medium => 4,
+            BorderLineStyle.Thin => 3,
+            BorderLineStyle.DashDot => 2,
+            BorderLineStyle.Dashed => 2,
+            BorderLineStyle.Dotted => 2,
+            BorderLineStyle.Hair => 1,
             _ => 0
         };
 

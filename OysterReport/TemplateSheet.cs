@@ -1,7 +1,5 @@
 namespace OysterReport;
 
-using ClosedXML.Excel;
-
 using OysterReport.Internal;
 
 public sealed class TemplateSheet
@@ -155,7 +153,7 @@ public sealed class TemplateSheet
     {
         cell.Value = new ReportCellValue
         {
-            Kind = XLDataType.Text,
+            Kind = CellValueKind.Text,
             RawValue = value
         };
         cell.DisplayText = value;

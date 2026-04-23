@@ -31,7 +31,7 @@ public sealed partial class ScenarioTests
         // The footer at row 21 must not have moved on any page; row insertions and deletions must not affect it
         foreach (var sheet in workbook.Sheets)
         {
-            Assert.Equal("Footer", sheet.UnderlyingWorksheet.Cell(21, 1).GetString());
+            Assert.Equal("Footer", sheet.GetCellText(21, 1));
         }
     }
 

@@ -1,126 +1,133 @@
 namespace OysterReport.Internal.OpenXml;
 
-using ClosedXML.Excel;
-
 using DocumentFormat.OpenXml.Spreadsheet;
 
 internal static class EnumMaps
 {
-    public static XLBorderStyleValues ToBorderStyle(BorderStyleValues? style)
+    public static BorderLineStyle ToBorderStyle(BorderStyleValues? style)
     {
         if (style is null)
         {
-            return XLBorderStyleValues.None;
+            return BorderLineStyle.None;
         }
 
         var raw = style.Value;
         return raw switch
         {
-            var v when v == BorderStyleValues.Thin => XLBorderStyleValues.Thin,
-            var v when v == BorderStyleValues.Medium => XLBorderStyleValues.Medium,
-            var v when v == BorderStyleValues.Thick => XLBorderStyleValues.Thick,
-            var v when v == BorderStyleValues.Double => XLBorderStyleValues.Double,
-            var v when v == BorderStyleValues.Hair => XLBorderStyleValues.Hair,
-            var v when v == BorderStyleValues.Dotted => XLBorderStyleValues.Dotted,
-            var v when v == BorderStyleValues.Dashed => XLBorderStyleValues.Dashed,
-            var v when v == BorderStyleValues.DashDot => XLBorderStyleValues.DashDot,
-            var v when v == BorderStyleValues.DashDotDot => XLBorderStyleValues.DashDotDot,
-            var v when v == BorderStyleValues.MediumDashed => XLBorderStyleValues.MediumDashed,
-            var v when v == BorderStyleValues.MediumDashDot => XLBorderStyleValues.MediumDashDot,
-            var v when v == BorderStyleValues.MediumDashDotDot => XLBorderStyleValues.MediumDashDotDot,
-            var v when v == BorderStyleValues.SlantDashDot => XLBorderStyleValues.SlantDashDot,
-            _ => XLBorderStyleValues.None
+            var v when v == BorderStyleValues.Thin => BorderLineStyle.Thin,
+            var v when v == BorderStyleValues.Medium => BorderLineStyle.Medium,
+            var v when v == BorderStyleValues.Thick => BorderLineStyle.Thick,
+            var v when v == BorderStyleValues.Double => BorderLineStyle.Double,
+            var v when v == BorderStyleValues.Hair => BorderLineStyle.Hair,
+            var v when v == BorderStyleValues.Dotted => BorderLineStyle.Dotted,
+            var v when v == BorderStyleValues.Dashed => BorderLineStyle.Dashed,
+            var v when v == BorderStyleValues.DashDot => BorderLineStyle.DashDot,
+            var v when v == BorderStyleValues.DashDotDot => BorderLineStyle.DashDotDot,
+            var v when v == BorderStyleValues.MediumDashed => BorderLineStyle.MediumDashed,
+            var v when v == BorderStyleValues.MediumDashDot => BorderLineStyle.MediumDashDot,
+            var v when v == BorderStyleValues.MediumDashDotDot => BorderLineStyle.MediumDashDotDot,
+            var v when v == BorderStyleValues.SlantDashDot => BorderLineStyle.SlantDashDot,
+            _ => BorderLineStyle.None
         };
     }
 
-    public static XLAlignmentHorizontalValues ToHorizontalAlignment(HorizontalAlignmentValues? value)
+    public static HorizontalAlignment ToHorizontalAlignment(HorizontalAlignmentValues? value)
     {
         if (value is null)
         {
-            return XLAlignmentHorizontalValues.General;
+            return HorizontalAlignment.General;
         }
 
         var raw = value.Value;
         return raw switch
         {
-            var v when v == HorizontalAlignmentValues.Left => XLAlignmentHorizontalValues.Left,
-            var v when v == HorizontalAlignmentValues.Center => XLAlignmentHorizontalValues.Center,
-            var v when v == HorizontalAlignmentValues.Right => XLAlignmentHorizontalValues.Right,
-            var v when v == HorizontalAlignmentValues.Justify => XLAlignmentHorizontalValues.Justify,
-            var v when v == HorizontalAlignmentValues.CenterContinuous => XLAlignmentHorizontalValues.CenterContinuous,
-            var v when v == HorizontalAlignmentValues.Distributed => XLAlignmentHorizontalValues.Distributed,
-            var v when v == HorizontalAlignmentValues.Fill => XLAlignmentHorizontalValues.Fill,
-            _ => XLAlignmentHorizontalValues.General
+            var v when v == HorizontalAlignmentValues.Left => HorizontalAlignment.Left,
+            var v when v == HorizontalAlignmentValues.Center => HorizontalAlignment.Center,
+            var v when v == HorizontalAlignmentValues.Right => HorizontalAlignment.Right,
+            var v when v == HorizontalAlignmentValues.Justify => HorizontalAlignment.Justify,
+            var v when v == HorizontalAlignmentValues.CenterContinuous => HorizontalAlignment.CenterContinuous,
+            var v when v == HorizontalAlignmentValues.Distributed => HorizontalAlignment.Distributed,
+            var v when v == HorizontalAlignmentValues.Fill => HorizontalAlignment.Fill,
+            _ => HorizontalAlignment.General
         };
     }
 
-    public static XLAlignmentVerticalValues ToVerticalAlignment(VerticalAlignmentValues? value)
+    public static VerticalAlignment ToVerticalAlignment(VerticalAlignmentValues? value)
     {
         if (value is null)
         {
-            return XLAlignmentVerticalValues.Bottom;
+            return VerticalAlignment.Bottom;
         }
 
         var raw = value.Value;
         return raw switch
         {
-            var v when v == VerticalAlignmentValues.Top => XLAlignmentVerticalValues.Top,
-            var v when v == VerticalAlignmentValues.Center => XLAlignmentVerticalValues.Center,
-            var v when v == VerticalAlignmentValues.Justify => XLAlignmentVerticalValues.Justify,
-            var v when v == VerticalAlignmentValues.Distributed => XLAlignmentVerticalValues.Distributed,
-            _ => XLAlignmentVerticalValues.Bottom
+            var v when v == VerticalAlignmentValues.Top => VerticalAlignment.Top,
+            var v when v == VerticalAlignmentValues.Center => VerticalAlignment.Center,
+            var v when v == VerticalAlignmentValues.Justify => VerticalAlignment.Justify,
+            var v when v == VerticalAlignmentValues.Distributed => VerticalAlignment.Distributed,
+            _ => VerticalAlignment.Bottom
         };
     }
 
-    public static XLPaperSize ToPaperSize(uint? code) =>
-        code is null ? XLPaperSize.A4Paper : (XLPaperSize)code.Value;
+    public static PaperSize ToPaperSize(uint? code)
+    {
+        if (code is null)
+        {
+            return PaperSize.A4Paper;
+        }
 
-    public static XLPageOrientation ToPageOrientation(OrientationValues? value)
+        return Enum.IsDefined(typeof(PaperSize), (int)code.Value)
+            ? (PaperSize)code.Value
+            : PaperSize.Default;
+    }
+
+    public static PageOrientation ToPageOrientation(OrientationValues? value)
     {
         if (value is null)
         {
-            return XLPageOrientation.Default;
+            return PageOrientation.Default;
         }
 
         var raw = value.Value;
         return raw switch
         {
-            var v when v == OrientationValues.Portrait => XLPageOrientation.Portrait,
-            var v when v == OrientationValues.Landscape => XLPageOrientation.Landscape,
-            _ => XLPageOrientation.Default
+            var v when v == OrientationValues.Portrait => PageOrientation.Portrait,
+            var v when v == OrientationValues.Landscape => PageOrientation.Landscape,
+            _ => PageOrientation.Default
         };
     }
 
-    public static XLFillPatternValues ToFillPattern(PatternValues? value)
+    public static FillPattern ToFillPattern(PatternValues? value)
     {
         if (value is null)
         {
-            return XLFillPatternValues.None;
+            return FillPattern.None;
         }
 
         var raw = value.Value;
         return raw switch
         {
-            var v when v == PatternValues.None => XLFillPatternValues.None,
-            var v when v == PatternValues.Solid => XLFillPatternValues.Solid,
-            var v when v == PatternValues.Gray125 => XLFillPatternValues.Gray125,
-            var v when v == PatternValues.Gray0625 => XLFillPatternValues.Gray0625,
-            var v when v == PatternValues.DarkGray => XLFillPatternValues.DarkGray,
-            var v when v == PatternValues.MediumGray => XLFillPatternValues.MediumGray,
-            var v when v == PatternValues.LightGray => XLFillPatternValues.LightGray,
-            var v when v == PatternValues.DarkHorizontal => XLFillPatternValues.DarkHorizontal,
-            var v when v == PatternValues.DarkVertical => XLFillPatternValues.DarkVertical,
-            var v when v == PatternValues.DarkDown => XLFillPatternValues.DarkDown,
-            var v when v == PatternValues.DarkUp => XLFillPatternValues.DarkUp,
-            var v when v == PatternValues.DarkGrid => XLFillPatternValues.DarkGrid,
-            var v when v == PatternValues.DarkTrellis => XLFillPatternValues.DarkTrellis,
-            var v when v == PatternValues.LightHorizontal => XLFillPatternValues.LightHorizontal,
-            var v when v == PatternValues.LightVertical => XLFillPatternValues.LightVertical,
-            var v when v == PatternValues.LightDown => XLFillPatternValues.LightDown,
-            var v when v == PatternValues.LightUp => XLFillPatternValues.LightUp,
-            var v when v == PatternValues.LightGrid => XLFillPatternValues.LightGrid,
-            var v when v == PatternValues.LightTrellis => XLFillPatternValues.LightTrellis,
-            _ => XLFillPatternValues.None
+            var v when v == PatternValues.None => FillPattern.None,
+            var v when v == PatternValues.Solid => FillPattern.Solid,
+            var v when v == PatternValues.Gray125 => FillPattern.Gray125,
+            var v when v == PatternValues.Gray0625 => FillPattern.Gray0625,
+            var v when v == PatternValues.DarkGray => FillPattern.DarkGray,
+            var v when v == PatternValues.MediumGray => FillPattern.MediumGray,
+            var v when v == PatternValues.LightGray => FillPattern.LightGray,
+            var v when v == PatternValues.DarkHorizontal => FillPattern.DarkHorizontal,
+            var v when v == PatternValues.DarkVertical => FillPattern.DarkVertical,
+            var v when v == PatternValues.DarkDown => FillPattern.DarkDown,
+            var v when v == PatternValues.DarkUp => FillPattern.DarkUp,
+            var v when v == PatternValues.DarkGrid => FillPattern.DarkGrid,
+            var v when v == PatternValues.DarkTrellis => FillPattern.DarkTrellis,
+            var v when v == PatternValues.LightHorizontal => FillPattern.LightHorizontal,
+            var v when v == PatternValues.LightVertical => FillPattern.LightVertical,
+            var v when v == PatternValues.LightDown => FillPattern.LightDown,
+            var v when v == PatternValues.LightUp => FillPattern.LightUp,
+            var v when v == PatternValues.LightGrid => FillPattern.LightGrid,
+            var v when v == PatternValues.LightTrellis => FillPattern.LightTrellis,
+            _ => FillPattern.None
         };
     }
 }

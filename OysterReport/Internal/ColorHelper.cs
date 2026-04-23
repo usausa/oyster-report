@@ -3,8 +3,6 @@ namespace OysterReport.Internal;
 using System.Drawing;
 using System.Globalization;
 
-using ClosedXML.Excel;
-
 internal static class ColorHelper
 {
     public static string NormalizeHex(string? argb)
@@ -29,29 +27,6 @@ internal static class ColorHelper
     public static string ToHex(Color color) =>
         NormalizeHex(color.ToArgb().ToString("X8", CultureInfo.InvariantCulture));
 
-    public static string ResolveHex(XLColor color, IXLWorkbook workbook, string defaultHex)
-    {
-        var fallback = NormalizeHex(defaultHex);
-        if (!color.HasValue)
-        {
-            return fallback;
-        }
-
-        try
-        {
-            return color.ColorType switch
-            {
-                XLColorType.Theme => ResolveThemeHex(color, workbook, fallback),
-                XLColorType.Indexed => ResolveIndexedHex(color, fallback),
-                _ => ToHex(color.Color)
-            };
-        }
-        catch (InvalidOperationException)
-        {
-            return fallback;
-        }
-    }
-
     public static Color ApplyTint(Color color, double tint)
     {
         if (Double.IsNaN(tint))
@@ -70,27 +45,6 @@ internal static class ColorHelper
             ? lightness * (1d + clampedTint)
             : lightness + ((1d - lightness) * clampedTint);
         return HslToColor(hue, saturation, tintedLightness, color.A);
-    }
-
-    private static string ResolveThemeHex(XLColor color, IXLWorkbook workbook, string fallback)
-    {
-        var themeColor = workbook.Theme.ResolveThemeColor(color.ThemeColor);
-        if (!themeColor.HasValue)
-        {
-            return fallback;
-        }
-
-        return ToHex(ApplyTint(themeColor.Color, color.ThemeTint));
-    }
-
-    private static string ResolveIndexedHex(XLColor color, string fallback)
-    {
-        if (XLColor.IndexedColors.TryGetValue(color.Indexed, out var indexedColor) && indexedColor.HasValue)
-        {
-            return ToHex(indexedColor.Color);
-        }
-
-        return fallback;
     }
 
     private static (double Hue, double Saturation, double Lightness) RgbToHsl(Color color)

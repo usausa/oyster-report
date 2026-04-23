@@ -1,7 +1,5 @@
 namespace OysterReport.Internal;
 
-using ClosedXML.Excel;
-
 //--------------------------------------------------------------------------------
 // Pipeline plan
 //--------------------------------------------------------------------------------
@@ -207,7 +205,7 @@ internal static class PdfRenderPlanner
     {
         // Determines the page bounding rectangle (pt) from paper size and orientation.
         var (width, height) = renderOption.PageSizeResolver(pageSetup.PaperSize);
-        return pageSetup.Orientation == XLPageOrientation.Landscape
+        return pageSetup.Orientation == PageOrientation.Landscape
             ? new ReportRect { X = 0, Y = 0, Width = height, Height = width }
             : new ReportRect { X = 0, Y = 0, Width = width, Height = height };
     }
@@ -280,8 +278,8 @@ internal static class PdfRenderPlanner
             return contentBounds;
         }
 
-        if ((cell.Style.Alignment.Horizontal != XLAlignmentHorizontalValues.General) &&
-            (cell.Style.Alignment.Horizontal != XLAlignmentHorizontalValues.Left))
+        if ((cell.Style.Alignment.Horizontal != HorizontalAlignment.General) &&
+            (cell.Style.Alignment.Horizontal != HorizontalAlignment.Left))
         {
             return contentBounds;
         }
@@ -311,7 +309,7 @@ internal static class PdfRenderPlanner
                     break;
                 }
 
-                if (adjacentCell.Style.Borders.Left.Style != XLBorderStyleValues.None)
+                if (adjacentCell.Style.Borders.Left.Style != BorderLineStyle.None)
                 {
                     break;
                 }

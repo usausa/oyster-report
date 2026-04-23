@@ -2,8 +2,6 @@ namespace OysterReport.Internal.OpenXml;
 
 using System.Globalization;
 
-using ClosedXML.Excel;
-
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
@@ -223,7 +221,7 @@ internal sealed class WorksheetLoader
         var type = cell.DataType?.Value;
         string? rawValue = null;
         object? typedValue = null;
-        var kind = XLDataType.Blank;
+        var kind = CellValueKind.Blank;
 
         if (type == CellValues.SharedString)
         {
@@ -232,33 +230,33 @@ internal sealed class WorksheetLoader
             {
                 rawValue = sharedStrings[idx];
                 typedValue = rawValue;
-                kind = XLDataType.Text;
+                kind = CellValueKind.Text;
             }
         }
         else if (type == CellValues.InlineString)
         {
             rawValue = cell.InlineString?.Text?.Text ?? string.Empty;
             typedValue = rawValue;
-            kind = XLDataType.Text;
+            kind = CellValueKind.Text;
         }
         else if (type == CellValues.String)
         {
             rawValue = cell.CellValue?.Text ?? string.Empty;
             typedValue = rawValue;
-            kind = XLDataType.Text;
+            kind = CellValueKind.Text;
         }
         else if (type == CellValues.Boolean)
         {
             var v = cell.CellValue?.Text;
             typedValue = v == "1";
             rawValue = typedValue.ToString();
-            kind = XLDataType.Boolean;
+            kind = CellValueKind.Boolean;
         }
         else if (type == CellValues.Error)
         {
             rawValue = cell.CellValue?.Text ?? string.Empty;
             typedValue = rawValue;
-            kind = XLDataType.Error;
+            kind = CellValueKind.Error;
         }
         else
         {
@@ -271,7 +269,7 @@ internal sealed class WorksheetLoader
                 var fmtCode = styles.ResolveNumberFormat(xf.NumFmtId);
                 if (NumberFormatCategorizer.IsDateTime(fmtCode))
                 {
-                    kind = XLDataType.DateTime;
+                    kind = CellValueKind.DateTime;
                     try
                     {
                         typedValue = DateTime.FromOADate(d);
@@ -279,26 +277,26 @@ internal sealed class WorksheetLoader
                     catch (ArgumentException)
                     {
                         typedValue = d;
-                        kind = XLDataType.Number;
+                        kind = CellValueKind.Number;
                     }
                 }
                 else
                 {
-                    kind = XLDataType.Number;
+                    kind = CellValueKind.Number;
                 }
             }
         }
 
         if (rawValue is null && cell.CellValue is null)
         {
-            return new RawCell(row, col, styleIndex, XLDataType.Blank, string.Empty, string.Empty);
+            return new RawCell(row, col, styleIndex, CellValueKind.Blank, string.Empty, string.Empty);
         }
 
         var displayText = ComputeDisplayText(typedValue, kind, styleIndex);
         return new RawCell(row, col, styleIndex, kind, typedValue, displayText);
     }
 
-    private string ComputeDisplayText(object? value, XLDataType kind, int styleIndex)
+    private string ComputeDisplayText(object? value, CellValueKind kind, int styleIndex)
     {
         if (value is null)
         {
@@ -310,10 +308,10 @@ internal sealed class WorksheetLoader
 
         return kind switch
         {
-            XLDataType.Number when value is double d => NumberFormatCategorizer.FormatValue(d, fmtCode),
-            XLDataType.DateTime when value is DateTime dt => NumberFormatCategorizer.FormatValue(dt.ToOADate(), fmtCode),
-            XLDataType.Boolean when value is bool b => b ? "TRUE" : "FALSE",
-            XLDataType.Text => value.ToString() ?? string.Empty,
+            CellValueKind.Number when value is double d => NumberFormatCategorizer.FormatValue(d, fmtCode),
+            CellValueKind.DateTime when value is DateTime dt => NumberFormatCategorizer.FormatValue(dt.ToOADate(), fmtCode),
+            CellValueKind.Boolean when value is bool b => b ? "TRUE" : "FALSE",
+            CellValueKind.Text => value.ToString() ?? string.Empty,
             _ => value.ToString() ?? string.Empty
         };
     }
@@ -322,7 +320,7 @@ internal sealed class WorksheetLoader
     {
         if ((index < 0) || (index >= styles.CellXfs.Length))
         {
-            return new CellXfEntry(0, 0, 0, 0, false, false, false, null, null, false);
+            return new CellXfEntry(0, 0, 0, 0, false, false, false, HorizontalAlignment.General, VerticalAlignment.Bottom, false);
         }
         return styles.CellXfs[index];
     }
@@ -413,7 +411,7 @@ internal sealed class WorksheetLoader
                     {
                         Row = r,
                         Column = c,
-                        Value = new ReportCellValue { Kind = XLDataType.Blank, RawValue = string.Empty },
+                        Value = new ReportCellValue { Kind = CellValueKind.Blank, RawValue = string.Empty },
                         DisplayText = string.Empty,
                         Style = BuildStyle(columnStyleIndex)
                     });
@@ -454,17 +452,17 @@ internal sealed class WorksheetLoader
             : new FontEntry("Calibri", 11d, false, false, false, false, "#FF000000");
         var fill = (xf.FillId >= 0 && xf.FillId < styles.Fills.Length)
             ? styles.Fills[xf.FillId]
-            : new FillEntry(XLFillPatternValues.None, "#00000000", "#00000000", null, null, 0);
+            : new FillEntry(FillPattern.None, "#00000000", "#00000000", null, null, 0);
         var border = (xf.BorderId >= 0 && xf.BorderId < styles.Borders.Length)
             ? styles.Borders[xf.BorderId]
             : new BorderEntry(
-                XLBorderStyleValues.None,
+                BorderLineStyle.None,
                 null,
-                XLBorderStyleValues.None,
+                BorderLineStyle.None,
                 null,
-                XLBorderStyleValues.None,
+                BorderLineStyle.None,
                 null,
-                XLBorderStyleValues.None,
+                BorderLineStyle.None,
                 null);
 
         return new ReportCellStyle
@@ -492,8 +490,8 @@ internal sealed class WorksheetLoader
             },
             Alignment = new ReportAlignment
             {
-                Horizontal = EnumMaps.ToHorizontalAlignment(xf.Horizontal),
-                Vertical = EnumMaps.ToVerticalAlignment(xf.Vertical)
+                Horizontal = xf.Horizontal,
+                Vertical = xf.Vertical
             },
             WrapText = xf.WrapText
         };
@@ -501,7 +499,7 @@ internal sealed class WorksheetLoader
 
     private string ResolveFillColor(FillEntry fill)
     {
-        if (fill.Pattern == XLFillPatternValues.None)
+        if (fill.Pattern == FillPattern.None)
         {
             return "#00000000";
         }
@@ -514,10 +512,10 @@ internal sealed class WorksheetLoader
         return styles.ColorResolver.Resolve(fill.RawBg, "#00000000");
     }
 
-    private ReportBorder BuildBorder(XLBorderStyleValues style, DocumentFormat.OpenXml.Spreadsheet.ColorType? color)
+    private ReportBorder BuildBorder(BorderLineStyle style, DocumentFormat.OpenXml.Spreadsheet.ColorType? color)
     {
         var colorHex = styles.ColorResolver.Resolve(color, "#FF000000");
-        if ((style != XLBorderStyleValues.None) && colorHex.StartsWith("#00", StringComparison.Ordinal))
+        if ((style != BorderLineStyle.None) && colorHex.StartsWith("#00", StringComparison.Ordinal))
         {
             colorHex = "#FF000000";
         }
@@ -530,11 +528,11 @@ internal sealed class WorksheetLoader
         };
     }
 
-    private static double ResolveBorderWidth(XLBorderStyleValues style) => style switch
+    private static double ResolveBorderWidth(BorderLineStyle style) => style switch
     {
-        XLBorderStyleValues.Thick => 2.25d,
-        XLBorderStyleValues.Medium => 1.5d,
-        XLBorderStyleValues.Hair => 0.25d,
+        BorderLineStyle.Thick => 2.25d,
+        BorderLineStyle.Medium => 1.5d,
+        BorderLineStyle.Hair => 0.25d,
         _ => 0.75d
     };
 
@@ -649,7 +647,7 @@ internal sealed class WorksheetLoader
         return pixelWidth * PointsPerInch / ScreenDpi * adjustment;
     }
 
-    private sealed record RawCell(int Row, int Column, int StyleIndex, XLDataType Kind, object? TypedValue, string DisplayText);
+    private sealed record RawCell(int Row, int Column, int StyleIndex, CellValueKind Kind, object? TypedValue, string DisplayText);
 
     private sealed record RowInfo(int Index, double Height, bool Hidden, int OutlineLevel);
 

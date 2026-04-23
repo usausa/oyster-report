@@ -13,7 +13,8 @@ public sealed class InternalPipelineTests
             sheet.Cell("A2").Value = "World";
         });
 
-        var workbook = ExcelReader.Read(stream);
+        using var template = new TemplateWorkbook(stream);
+        var workbook = template.ReportWorkbook;
         var renderPlan = PdfRenderPlanner.BuildPlan(workbook);
         using var output = new MemoryStream();
 
@@ -116,14 +117,14 @@ public sealed class InternalPipelineTests
             sheet.PageSetup.PaperSize = XLPaperSize.A4Paper;
         });
 
-        var workbook = ExcelReader.Read(stream);
+        using var template = new TemplateWorkbook(stream);
         var options = new ReportRenderOption
         {
-            PageSizeResolver = static paperSize => paperSize == XLPaperSize.A4Paper ? (700d, 900d) : (595.28d, 841.89d)
+            PageSizeResolver = static paperSize => paperSize == PaperSize.A4Paper ? (700d, 900d) : (595.28d, 841.89d)
         };
 
         // Act
-        var renderPlan = PdfRenderPlanner.BuildPlan(workbook, options);
+        var renderPlan = PdfRenderPlanner.BuildPlan(template.ReportWorkbook, options);
         var page = Assert.Single(renderPlan[0].Pages);
 
         // Assert
@@ -147,8 +148,8 @@ public sealed class InternalPipelineTests
         });
 
         // Act
-        var workbook = ExcelReader.Read(stream);
-        var renderPlan = PdfRenderPlanner.BuildPlan(workbook);
+        using var template = new TemplateWorkbook(stream);
+        var renderPlan = PdfRenderPlanner.BuildPlan(template.ReportWorkbook);
         var cell = renderPlan[0].Pages[0].Cells.Single(info => info.CellAddress == "A1");
 
         // Assert

@@ -3,8 +3,6 @@ namespace OysterReport.Internal.OpenXml;
 using System.Globalization;
 using System.Xml.Linq;
 
-using ClosedXML.Excel;
-
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
 
@@ -62,9 +60,9 @@ internal sealed class StyleCatalog
         {
             return new StyleCatalog(
                 [new FontEntry("Calibri", 11, false, false, false, false, "#FF000000")],
-                [new FillEntry(XLFillPatternValues.None, "#00000000", "#00000000", null, null, 0)],
+                [new FillEntry(FillPattern.None, "#00000000", "#00000000", null, null, 0)],
                 [EmptyBorder()],
-                [new CellXfEntry(0, 0, 0, 0, false, false, false, null, null, false)],
+                [new CellXfEntry(0, 0, 0, 0, false, false, false, HorizontalAlignment.General, VerticalAlignment.Bottom, false)],
                 [],
                 resolver,
                 "Calibri",
@@ -125,7 +123,7 @@ internal sealed class StyleCatalog
             var pattern = fill.PatternFill;
             if (pattern is null)
             {
-                yield return new FillEntry(XLFillPatternValues.None, "#00000000", "#00000000", null, null, 0);
+                yield return new FillEntry(FillPattern.None, "#00000000", "#00000000", null, null, 0);
                 continue;
             }
 
@@ -178,8 +176,8 @@ internal sealed class StyleCatalog
                 xf.ApplyFont?.Value ?? false,
                 xf.ApplyFill?.Value ?? false,
                 xf.ApplyBorder?.Value ?? false,
-                xf.Alignment?.Horizontal?.Value,
-                xf.Alignment?.Vertical?.Value,
+                EnumMaps.ToHorizontalAlignment(xf.Alignment?.Horizontal?.Value),
+                EnumMaps.ToVerticalAlignment(xf.Alignment?.Vertical?.Value),
                 xf.Alignment?.WrapText?.Value ?? false);
         }
     }
@@ -206,13 +204,13 @@ internal sealed class StyleCatalog
 
     private static BorderEntry EmptyBorder() =>
         new(
-            XLBorderStyleValues.None,
+            BorderLineStyle.None,
             null,
-            XLBorderStyleValues.None,
+            BorderLineStyle.None,
             null,
-            XLBorderStyleValues.None,
+            BorderLineStyle.None,
             null,
-            XLBorderStyleValues.None,
+            BorderLineStyle.None,
             null);
 
     private static Color[] LoadThemeColors(ThemePart? themePart)
@@ -304,7 +302,7 @@ internal sealed class StyleCatalog
 internal sealed record FontEntry(string Name, double Size, bool Bold, bool Italic, bool Underline, bool Strike, string ColorHex);
 
 internal sealed record FillEntry(
-    XLFillPatternValues Pattern,
+    FillPattern Pattern,
     string ForegroundHex,
     string BackgroundHex,
     DocumentFormat.OpenXml.Spreadsheet.ForegroundColor? RawFg,
@@ -312,16 +310,16 @@ internal sealed record FillEntry(
     int Reserved);
 
 internal sealed record BorderEntry(
-    XLBorderStyleValues LeftStyle, DocumentFormat.OpenXml.Spreadsheet.ColorType? LeftColor,
-    XLBorderStyleValues TopStyle, DocumentFormat.OpenXml.Spreadsheet.ColorType? TopColor,
-    XLBorderStyleValues RightStyle, DocumentFormat.OpenXml.Spreadsheet.ColorType? RightColor,
-    XLBorderStyleValues BottomStyle, DocumentFormat.OpenXml.Spreadsheet.ColorType? BottomColor);
+    BorderLineStyle LeftStyle, DocumentFormat.OpenXml.Spreadsheet.ColorType? LeftColor,
+    BorderLineStyle TopStyle, DocumentFormat.OpenXml.Spreadsheet.ColorType? TopColor,
+    BorderLineStyle RightStyle, DocumentFormat.OpenXml.Spreadsheet.ColorType? RightColor,
+    BorderLineStyle BottomStyle, DocumentFormat.OpenXml.Spreadsheet.ColorType? BottomColor);
 
 internal sealed record CellXfEntry(
     int FontId, int FillId, int BorderId, int NumFmtId,
     bool ApplyFont, bool ApplyFill, bool ApplyBorder,
-    HorizontalAlignmentValues? Horizontal,
-    VerticalAlignmentValues? Vertical,
+    HorizontalAlignment Horizontal,
+    VerticalAlignment Vertical,
     bool WrapText);
 
 internal static class BuiltInNumberFormat
