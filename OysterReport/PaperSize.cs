@@ -1,8 +1,6 @@
 namespace OysterReport;
 
-using System.Diagnostics.CodeAnalysis;
-
-[SuppressMessage("Design", "CA1027:Mark enums with FlagsAttribute", Justification = "Paper size codes follow the OOXML spec and are not flags.")]
+#pragma warning disable CA1027
 public enum PaperSize
 {
     Default = 0,
@@ -73,3 +71,4 @@ public enum PaperSize
     A3TransversePaper = 67,
     A3ExtraTransversePaper = 68
 }
+#pragma warning restore CA1027

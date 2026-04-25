@@ -95,7 +95,7 @@ public sealed class EmbeddedCommand : ICommandHandler
 {
     public ValueTask ExecuteAsync(CommandContext context)
     {
-        using var workbook = new TemplateWorkbook("Sample.xlsx");
+        using var workbook = new TemplateWorkbook("Embedded.xlsx");
 
         var engine = new OysterReportEngine
         {
