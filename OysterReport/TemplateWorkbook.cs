@@ -27,10 +27,22 @@ public sealed class TemplateWorkbook : IDisposable
         sheets = ReportWorkbook.Sheets.Select(x => new TemplateSheet(ReportWorkbook, x)).ToList();
     }
 
+    private TemplateWorkbook(ReportWorkbook reportWorkbook)
+    {
+        ReportWorkbook = reportWorkbook;
+        sheets = ReportWorkbook.Sheets.Select(x => new TemplateSheet(ReportWorkbook, x)).ToList();
+    }
+
     public void Dispose()
     {
         // No unmanaged resources held; keeps IDisposable for API compatibility.
     }
+
+    //--------------------------------------------------------------------------------
+    // Copy
+    //--------------------------------------------------------------------------------
+
+    public TemplateWorkbook Clone() => new(ReportWorkbook.DeepClone());
 
     //--------------------------------------------------------------------------------
     // Sheet

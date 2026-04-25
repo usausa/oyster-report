@@ -31,6 +31,8 @@ using System.Diagnostics.CodeAnalysis;
 internal sealed record ReportMetadata
 {
     public string TemplateName { get; init; } = string.Empty;
+
+    public ReportMetadata DeepClone() => this with { };
 }
 
 //--------------------------------------------------------------------------------
@@ -43,6 +45,8 @@ internal sealed record ReportMeasurementProfile
     public double MaxDigitWidth { get; init; } = 7d;
 
     public double ColumnWidthAdjustment { get; init; } = 1d;
+
+    public ReportMeasurementProfile DeepClone() => this with { };
 }
 
 //--------------------------------------------------------------------------------
@@ -56,6 +60,9 @@ internal sealed record ReportCellValue
 
     // [MEMO]: Use the typed source value when adding value-aware formatting or placeholder features.
     public object? RawValue { get; init; }
+
+    // RawValue is boxed primitive / string / DateTime / TimeSpan — all immutable, so shared reference is safe.
+    public ReportCellValue DeepClone() => this with { };
 }
 
 [ExcludeFromCodeCoverage]
@@ -74,12 +81,16 @@ internal sealed record ReportFont
     public bool Strikeout { get; init; }
 
     public string ColorHex { get; init; } = "#FF000000";
+
+    public ReportFont DeepClone() => this with { };
 }
 
 [ExcludeFromCodeCoverage]
 internal sealed record ReportFill
 {
     public string BackgroundColorHex { get; init; } = "#00000000";
+
+    public ReportFill DeepClone() => this with { };
 }
 
 [ExcludeFromCodeCoverage]
@@ -90,6 +101,8 @@ internal sealed record ReportBorder
     public string ColorHex { get; init; } = "#FF000000";
 
     public double Width { get; init; } = 0.5d;
+
+    public ReportBorder DeepClone() => this with { };
 }
 
 [ExcludeFromCodeCoverage]
@@ -102,6 +115,14 @@ internal sealed record ReportBorders
     public ReportBorder Right { get; init; } = new();
 
     public ReportBorder Bottom { get; init; } = new();
+
+    public ReportBorders DeepClone() => this with
+    {
+        Left = Left.DeepClone(),
+        Top = Top.DeepClone(),
+        Right = Right.DeepClone(),
+        Bottom = Bottom.DeepClone()
+    };
 }
 
 [ExcludeFromCodeCoverage]
@@ -110,6 +131,8 @@ internal sealed record ReportAlignment
     public HorizontalAlignment Horizontal { get; init; } = HorizontalAlignment.General;
 
     public VerticalAlignment Vertical { get; init; } = VerticalAlignment.Top;
+
+    public ReportAlignment DeepClone() => this with { };
 }
 
 [ExcludeFromCodeCoverage]
@@ -124,6 +147,14 @@ internal sealed record ReportCellStyle
     public ReportAlignment Alignment { get; init; } = new();
 
     public bool WrapText { get; init; }
+
+    public ReportCellStyle DeepClone() => this with
+    {
+        Font = Font.DeepClone(),
+        Fill = Fill.DeepClone(),
+        Borders = Borders.DeepClone(),
+        Alignment = Alignment.DeepClone()
+    };
 }
 
 [ExcludeFromCodeCoverage]
@@ -133,6 +164,8 @@ internal sealed record ReportMergeInfo
     public string OwnerCellAddress { get; init; } = string.Empty;
 
     public ReportRange Range { get; init; }
+
+    public ReportMergeInfo DeepClone() => this with { };
 }
 
 //--------------------------------------------------------------------------------
@@ -144,12 +177,16 @@ internal sealed record ReportPageBreak
 {
     // [MEMO] Not used by the current single-page rendering flow, but kept for future multipage support together with HorizontalPageBreaks / VerticalPageBreaks.
     public int Index { get; init; }
+
+    public ReportPageBreak DeepClone() => this with { };
 }
 
 [ExcludeFromCodeCoverage]
 internal sealed record ReportPrintArea
 {
     public ReportRange Range { get; init; }
+
+    public ReportPrintArea DeepClone() => this with { };
 }
 
 [ExcludeFromCodeCoverage]
@@ -176,6 +213,8 @@ internal sealed record ReportHeaderFooter
     public string? FirstHeader { get; init; }
 
     public string? FirstFooter { get; init; }
+
+    public ReportHeaderFooter DeepClone() => this with { };
 }
 
 [ExcludeFromCodeCoverage]
@@ -203,6 +242,8 @@ internal sealed record ReportPageSetup
     public bool CenterHorizontally { get; init; }
 
     public bool CenterVertically { get; init; }
+
+    public ReportPageSetup DeepClone() => this with { };
 }
 
 //--------------------------------------------------------------------------------
@@ -752,15 +793,19 @@ internal sealed class ReportSheet
         RecalculateLayout();
     }
 
-    public ReportSheet Clone(string newName)
+    public ReportSheet Clone(string newName) => CloneCore(newName);
+
+    public ReportSheet DeepClone() => CloneCore(Name);
+
+    private ReportSheet CloneCore(string targetName)
     {
         var copy = new ReportSheet
         {
-            Name = newName,
+            Name = targetName,
             UsedRange = UsedRange,
-            PageSetup = PageSetup,
-            HeaderFooter = HeaderFooter,
-            PrintArea = PrintArea,
+            PageSetup = PageSetup.DeepClone(),
+            HeaderFooter = HeaderFooter.DeepClone(),
+            PrintArea = PrintArea?.DeepClone(),
             ShowGridLines = ShowGridLines
         };
 
@@ -798,10 +843,10 @@ internal sealed class ReportSheet
             {
                 Row = cell.Row,
                 Column = cell.Column,
-                Value = cell.Value,
+                Value = cell.Value.DeepClone(),
                 DisplayText = cell.DisplayText,
-                Style = cell.Style,
-                Merge = cell.Merge
+                Style = cell.Style.DeepClone(),
+                Merge = cell.Merge?.DeepClone()
             });
         }
 
@@ -821,12 +866,12 @@ internal sealed class ReportSheet
 
         foreach (var pb in horizontalPageBreaks)
         {
-            copy.AddHorizontalPageBreak(new ReportPageBreak { Index = pb.Index });
+            copy.AddHorizontalPageBreak(pb.DeepClone());
         }
 
         foreach (var pb in verticalPageBreaks)
         {
-            copy.AddVerticalPageBreak(new ReportPageBreak { Index = pb.Index });
+            copy.AddVerticalPageBreak(pb.DeepClone());
         }
 
         copy.RecalculateLayout();
@@ -904,5 +949,21 @@ internal sealed class ReportWorkbook
             }
         }
         return null;
+    }
+
+    public ReportWorkbook DeepClone()
+    {
+        var copy = new ReportWorkbook
+        {
+            Metadata = Metadata.DeepClone(),
+            MeasurementProfile = MeasurementProfile.DeepClone()
+        };
+
+        foreach (var sheet in sheets)
+        {
+            copy.AddSheet(sheet.DeepClone());
+        }
+
+        return copy;
     }
 }
