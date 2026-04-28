@@ -95,7 +95,7 @@ internal static class DrawingLoader
 
             var fromCell = EmuAnchorToCellAddress(from);
             var toCell = EmuAnchorToCellAddress(to);
-            var (offsetX, offsetY) = ReadCellOffset(from);
+            ReadCellOffset(from, out var offsetX, out var offsetY);
             var ext = pic.Element(Xdr + "spPr")?.Element(A + "xfrm")?.Element(A + "ext");
             var widthEmu = ReadLong(ext, "cx");
             var heightEmu = ReadLong(ext, "cy");
@@ -124,7 +124,7 @@ internal static class DrawingLoader
             }
 
             var fromCell = EmuAnchorToCellAddress(from);
-            var (offsetX, offsetY) = ReadCellOffset(from);
+            ReadCellOffset(from, out var offsetX, out var offsetY);
             var ext = anchor.Element(Xdr + "ext");
             var widthEmu = ReadLong(ext, "cx");
             var heightEmu = ReadLong(ext, "cy");
@@ -151,11 +151,10 @@ internal static class DrawingLoader
         return AddressHelper.ToAddress(row + 1, col + 1);
     }
 
-    private static (long X, long Y) ReadCellOffset(XElement anchorSide)
+    private static void ReadCellOffset(XElement anchorSide, out long x, out long y)
     {
-        var x = Int64.Parse(anchorSide.Element(Xdr + "colOff")?.Value ?? "0", CultureInfo.InvariantCulture);
-        var y = Int64.Parse(anchorSide.Element(Xdr + "rowOff")?.Value ?? "0", CultureInfo.InvariantCulture);
-        return (x, y);
+        x = Int64.Parse(anchorSide.Element(Xdr + "colOff")?.Value ?? "0", CultureInfo.InvariantCulture);
+        y = Int64.Parse(anchorSide.Element(Xdr + "rowOff")?.Value ?? "0", CultureInfo.InvariantCulture);
     }
 
     private static long ReadLong(XElement? element, string attr)

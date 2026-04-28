@@ -36,7 +36,7 @@ internal static class SharedStringCatalog
     {
         if (item.Text is not null)
         {
-            return item.Text.Text ?? string.Empty;
+            return item.Text.Text;
         }
 
         var sb = new StringBuilder();
@@ -44,14 +44,14 @@ internal static class SharedStringCatalog
         {
             if (child is Run run)
             {
-                if (run.Text is not null)
+                if (run.Text?.Text is { } runText)
                 {
-                    sb.Append(run.Text.Text);
+                    sb.Append(runText);
                 }
             }
-            else if (child is Text t)
+            else if (child is Text t && t.Text is { } textValue)
             {
-                sb.Append(t.Text);
+                sb.Append(textValue);
             }
         }
 

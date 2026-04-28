@@ -216,7 +216,7 @@ internal sealed class WorksheetLoader
             return null;
         }
 
-        var (row, col) = AddressHelper.ParseAddress(addr);
+        AddressHelper.ParseAddress(addr, out var row, out var col);
         var styleIndex = cell.StyleIndex?.Value is { } s ? (int)s : ResolveColumnStyleIndex(columnInfos, col);
         var type = cell.DataType?.Value;
         string? rawValue = null;
@@ -267,7 +267,7 @@ internal sealed class WorksheetLoader
                 rawValue = num;
                 var xf = GetXf(styleIndex);
                 var fmtCode = styles.ResolveNumberFormat(xf.NumFmtId);
-                if (NumberFormatCategorizer.IsDateTime(fmtCode))
+                if (ExcelFormatCode.IsDateTime(fmtCode))
                 {
                     kind = CellValueKind.DateTime;
                     try
@@ -308,10 +308,9 @@ internal sealed class WorksheetLoader
 
         return kind switch
         {
-            CellValueKind.Number when value is double d => NumberFormatCategorizer.FormatValue(d, fmtCode),
-            CellValueKind.DateTime when value is DateTime dt => NumberFormatCategorizer.FormatValue(dt.ToOADate(), fmtCode),
+            CellValueKind.Number when value is double d => ExcelFormatCode.Format(d, fmtCode),
+            CellValueKind.DateTime when value is DateTime dt => ExcelFormatCode.Format(dt.ToOADate(), fmtCode),
             CellValueKind.Boolean when value is bool b => b ? "TRUE" : "FALSE",
-            CellValueKind.Text => value.ToString() ?? string.Empty,
             _ => value.ToString() ?? string.Empty
         };
     }
@@ -584,12 +583,12 @@ internal sealed class WorksheetLoader
         var colonIdx = reference.IndexOf(':', StringComparison.Ordinal);
         if (colonIdx < 0)
         {
-            var (row, col) = AddressHelper.ParseAddress(reference);
+            AddressHelper.ParseAddress(reference, out var row, out var col);
             return new ReportRange { StartRow = row, StartColumn = col, EndRow = row, EndColumn = col };
         }
 
-        var (r1, c1) = AddressHelper.ParseAddress(reference[..colonIdx]);
-        var (r2, c2) = AddressHelper.ParseAddress(reference[(colonIdx + 1)..]);
+        AddressHelper.ParseAddress(reference[..colonIdx], out var r1, out var c1);
+        AddressHelper.ParseAddress(reference[(colonIdx + 1)..], out var r2, out var c2);
         return new ReportRange
         {
             StartRow = Math.Min(r1, r2),
@@ -647,12 +646,6 @@ internal sealed class WorksheetLoader
         return pixelWidth * PointsPerInch / ScreenDpi * adjustment;
     }
 
-    private sealed record RawCell(int Row, int Column, int StyleIndex, CellValueKind Kind, object? TypedValue, string DisplayText);
-
-    private sealed record RowInfo(int Index, double Height, bool Hidden, int OutlineLevel);
-
-    private sealed record ColumnInfo(int Min, int Max, double Width, bool Hidden, int OutlineLevel, bool CustomWidth, int StyleIndex);
-
     private static int ResolveColumnStyleIndex(List<ColumnInfo> columnInfos, int column)
     {
         foreach (var info in columnInfos)
@@ -664,4 +657,12 @@ internal sealed class WorksheetLoader
         }
         return 0;
     }
+
+    // ReSharper disable NotAccessedPositionalProperty.Local
+    private sealed record RawCell(int Row, int Column, int StyleIndex, CellValueKind Kind, object? TypedValue, string DisplayText);
+
+    private sealed record RowInfo(int Index, double Height, bool Hidden, int OutlineLevel);
+
+    private sealed record ColumnInfo(int Min, int Max, double Width, bool Hidden, int OutlineLevel, bool CustomWidth, int StyleIndex);
+    // ReSharper restore NotAccessedPositionalProperty.Local
 }

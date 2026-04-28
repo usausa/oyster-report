@@ -1,14 +1,50 @@
 namespace OysterReport.Internal.OpenXml;
 
-using System.Globalization;
 using System.Xml.Linq;
 
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
 
-using ExcelNumberFormat;
+// ReSharper disable NotAccessedPositionalProperty.Global
+internal sealed record FontEntry(
+    string Name,
+    double Size,
+    bool Bold,
+    bool Italic,
+    bool Underline,
+    bool Strike,
+    string ColorHex);
 
-using Color = System.Drawing.Color;
+internal sealed record FillEntry(
+    FillPattern Pattern,
+    string ForegroundHex,
+    string BackgroundHex,
+    ForegroundColor? RawFg,
+    BackgroundColor? RawBg,
+    int Reserved);
+
+internal sealed record BorderEntry(
+    BorderLineStyle LeftStyle,
+    ColorType? LeftColor,
+    BorderLineStyle TopStyle,
+    ColorType? TopColor,
+    BorderLineStyle RightStyle,
+    ColorType? RightColor,
+    BorderLineStyle BottomStyle,
+    ColorType? BottomColor);
+
+internal sealed record CellXfEntry(
+    int FontId,
+    int FillId,
+    int BorderId,
+    int NumFmtId,
+    bool ApplyFont,
+    bool ApplyFill,
+    bool ApplyBorder,
+    HorizontalAlignment Horizontal,
+    VerticalAlignment Vertical,
+    bool WrapText);
+// ReSharper restore NotAccessedPositionalProperty.Global
 
 internal sealed class StyleCatalog
 {
@@ -86,10 +122,11 @@ internal sealed class StyleCatalog
         {
             return code;
         }
-        return BuiltInNumberFormat.GetCode(numFmtId);
+
+        return ResolveBuiltInNumberFormat(numFmtId);
     }
 
-    public bool IsDateTimeFormat(int numFmtId) => NumberFormatCategorizer.IsDateTime(ResolveNumberFormat(numFmtId));
+    public bool IsDateTimeFormat(int numFmtId) => ExcelFormatCode.IsDateTime(ResolveNumberFormat(numFmtId));
 
     private static IEnumerable<FontEntry> ReadFonts(Stylesheet styles, ColorResolver resolver)
     {
@@ -213,118 +250,7 @@ internal sealed class StyleCatalog
             BorderLineStyle.None,
             null);
 
-    private static Color[] LoadThemeColors(ThemePart? themePart)
-    {
-        var defaults = new[]
-        {
-            Color.White,
-            Color.Black,
-            Color.FromArgb(0xFF, 0xEE, 0xEC, 0xE1),
-            Color.FromArgb(0xFF, 0x1F, 0x49, 0x7D),
-            Color.FromArgb(0xFF, 0x4F, 0x81, 0xBD),
-            Color.FromArgb(0xFF, 0xC0, 0x50, 0x4D),
-            Color.FromArgb(0xFF, 0x9B, 0xBB, 0x59),
-            Color.FromArgb(0xFF, 0x80, 0x64, 0xA2),
-            Color.FromArgb(0xFF, 0x4B, 0xAC, 0xC6),
-            Color.FromArgb(0xFF, 0xF7, 0x96, 0x46),
-            Color.FromArgb(0xFF, 0x00, 0x00, 0xFF),
-            Color.FromArgb(0xFF, 0x80, 0x00, 0x80)
-        };
-        if (themePart is null)
-        {
-            return defaults;
-        }
-
-        using var stream = themePart.GetStream();
-        var doc = XDocument.Load(stream);
-        var clrScheme = doc.Descendants(A + "clrScheme").FirstOrDefault();
-        if (clrScheme is null)
-        {
-            return defaults;
-        }
-
-        var byName = clrScheme.Elements().ToDictionary(
-            e => e.Name.LocalName,
-            ParseSchemeColor,
-            StringComparer.OrdinalIgnoreCase);
-
-        Color Get(string key, Color fallback) => byName.TryGetValue(key, out var c) ? c : fallback;
-
-        return
-        [
-            Get("lt1", defaults[0]),
-            Get("dk1", defaults[1]),
-            Get("lt2", defaults[2]),
-            Get("dk2", defaults[3]),
-            Get("accent1", defaults[4]),
-            Get("accent2", defaults[5]),
-            Get("accent3", defaults[6]),
-            Get("accent4", defaults[7]),
-            Get("accent5", defaults[8]),
-            Get("accent6", defaults[9]),
-            Get("hlink", defaults[10]),
-            Get("folHlink", defaults[11])
-        ];
-    }
-
-    private static Color ParseSchemeColor(XElement element)
-    {
-        var srgb = element.Descendants(A + "srgbClr").FirstOrDefault();
-        if (srgb is not null)
-        {
-            var val = srgb.Attribute("val")?.Value ?? "000000";
-            var argb = Convert.ToInt32("FF" + val, 16);
-            return Color.FromArgb(argb);
-        }
-        var sys = element.Descendants(A + "sysClr").FirstOrDefault();
-        if (sys is not null)
-        {
-            var lastClr = sys.Attribute("lastClr")?.Value;
-            if (!String.IsNullOrEmpty(lastClr))
-            {
-                var argb = Convert.ToInt32("FF" + lastClr, 16);
-                return Color.FromArgb(argb);
-            }
-            var val = sys.Attribute("val")?.Value;
-            if (val == "windowText")
-            {
-                return Color.Black;
-            }
-            if (val == "window")
-            {
-                return Color.White;
-            }
-        }
-        return Color.Black;
-    }
-}
-
-internal sealed record FontEntry(string Name, double Size, bool Bold, bool Italic, bool Underline, bool Strike, string ColorHex);
-
-internal sealed record FillEntry(
-    FillPattern Pattern,
-    string ForegroundHex,
-    string BackgroundHex,
-    DocumentFormat.OpenXml.Spreadsheet.ForegroundColor? RawFg,
-    DocumentFormat.OpenXml.Spreadsheet.BackgroundColor? RawBg,
-    int Reserved);
-
-internal sealed record BorderEntry(
-    BorderLineStyle LeftStyle, DocumentFormat.OpenXml.Spreadsheet.ColorType? LeftColor,
-    BorderLineStyle TopStyle, DocumentFormat.OpenXml.Spreadsheet.ColorType? TopColor,
-    BorderLineStyle RightStyle, DocumentFormat.OpenXml.Spreadsheet.ColorType? RightColor,
-    BorderLineStyle BottomStyle, DocumentFormat.OpenXml.Spreadsheet.ColorType? BottomColor);
-
-internal sealed record CellXfEntry(
-    int FontId, int FillId, int BorderId, int NumFmtId,
-    bool ApplyFont, bool ApplyFill, bool ApplyBorder,
-    HorizontalAlignment Horizontal,
-    VerticalAlignment Vertical,
-    bool WrapText);
-
-internal static class BuiltInNumberFormat
-{
-    public static string GetCode(int id) => id switch
+    private static string ResolveBuiltInNumberFormat(int id) => id switch
     {
         0 => "General",
         1 => "0",
@@ -356,56 +282,87 @@ internal static class BuiltInNumberFormat
         49 => "@",
         _ => "General"
     };
-}
 
-internal static class NumberFormatCategorizer
-{
-    public static bool IsDateTime(string code)
+    private static ArgbColor[] LoadThemeColors(ThemePart? themePart)
     {
-        if (String.IsNullOrEmpty(code) || code == "General" || code == "@")
+        var defaults = new[]
         {
-            return false;
+            ArgbColor.White,
+            ArgbColor.Black,
+            new ArgbColor(0xFF, 0xEE, 0xEC, 0xE1),
+            new ArgbColor(0xFF, 0x1F, 0x49, 0x7D),
+            new ArgbColor(0xFF, 0x4F, 0x81, 0xBD),
+            new ArgbColor(0xFF, 0xC0, 0x50, 0x4D),
+            new ArgbColor(0xFF, 0x9B, 0xBB, 0x59),
+            new ArgbColor(0xFF, 0x80, 0x64, 0xA2),
+            new ArgbColor(0xFF, 0x4B, 0xAC, 0xC6),
+            new ArgbColor(0xFF, 0xF7, 0x96, 0x46),
+            new ArgbColor(0xFF, 0x00, 0x00, 0xFF),
+            new ArgbColor(0xFF, 0x80, 0x00, 0x80)
+        };
+        if (themePart is null)
+        {
+            return defaults;
         }
 
-        var inBracket = false;
-        foreach (var ch in code)
+        using var stream = themePart.GetStream();
+        var doc = XDocument.Load(stream);
+        var clrScheme = doc.Descendants(A + "clrScheme").FirstOrDefault();
+        if (clrScheme is null)
         {
-            if (ch == '[')
-            {
-                inBracket = true;
-            }
-            else if (ch == ']')
-            {
-                inBracket = false;
-            }
-            else if (!inBracket)
-            {
-                if (ch is 'y' or 'Y' or 'd' or 'D' or 'h' or 'H' or 's' or 'S' or 'm' or 'M')
-                {
-                    return true;
-                }
-            }
+            return defaults;
         }
-        return false;
+
+        var byName = clrScheme.Elements().ToDictionary(
+            e => e.Name.LocalName,
+            ParseSchemeColor,
+            StringComparer.OrdinalIgnoreCase);
+
+        return
+        [
+            byName.GetValueOrDefault("lt1", defaults[0]),
+            byName.GetValueOrDefault("dk1", defaults[1]),
+            byName.GetValueOrDefault("lt2", defaults[2]),
+            byName.GetValueOrDefault("dk2", defaults[3]),
+            byName.GetValueOrDefault("accent1", defaults[4]),
+            byName.GetValueOrDefault("accent2", defaults[5]),
+            byName.GetValueOrDefault("accent3", defaults[6]),
+            byName.GetValueOrDefault("accent4", defaults[7]),
+            byName.GetValueOrDefault("accent5", defaults[8]),
+            byName.GetValueOrDefault("accent6", defaults[9]),
+            byName.GetValueOrDefault("hlink", defaults[10]),
+            byName.GetValueOrDefault("folHlink", defaults[11])
+        ];
     }
 
-    public static string FormatValue(double numericValue, string formatCode)
+    private static ArgbColor ParseSchemeColor(XElement element)
     {
-        if (String.IsNullOrEmpty(formatCode) || formatCode == "General")
+        var srgb = element.Descendants(A + "srgbClr").FirstOrDefault();
+        if (srgb is not null)
         {
-            return numericValue.ToString("G", CultureInfo.InvariantCulture);
+            var val = srgb.Attribute("val")?.Value ?? "000000";
+            var argb = Convert.ToUInt32("FF" + val, 16);
+            return new ArgbColor(argb);
         }
-
-        try
+        var sys = element.Descendants(A + "sysClr").FirstOrDefault();
+        if (sys is not null)
         {
-            var nf = new NumberFormat(formatCode);
-            return nf.IsValid
-                ? nf.Format(numericValue, CultureInfo.InvariantCulture)
-                : numericValue.ToString("G", CultureInfo.InvariantCulture);
+            var lastClr = sys.Attribute("lastClr")?.Value;
+            if (!String.IsNullOrEmpty(lastClr))
+            {
+                var argb = Convert.ToUInt32("FF" + lastClr, 16);
+                return new ArgbColor(argb);
+            }
+            var val = sys.Attribute("val")?.Value;
+            if (val == "windowText")
+            {
+                return ArgbColor.Black;
+            }
+            if (val == "window")
+            {
+                return ArgbColor.White;
+            }
         }
-        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or FormatException)
-        {
-            return numericValue.ToString("G", CultureInfo.InvariantCulture);
-        }
+        return ArgbColor.Black;
     }
 }

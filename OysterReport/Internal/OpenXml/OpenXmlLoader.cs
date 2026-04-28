@@ -91,7 +91,7 @@ internal static class OpenXmlLoader
                 continue;
             }
 
-            var text = dn.Text?.Trim();
+            var text = dn.Text.Trim();
             if (String.IsNullOrEmpty(text))
             {
                 continue;
@@ -115,12 +115,12 @@ internal static class OpenXmlLoader
         var colonIdx = reference.IndexOf(':', StringComparison.Ordinal);
         if (colonIdx < 0)
         {
-            var (row, col) = AddressHelper.ParseAddress(reference);
+            AddressHelper.ParseAddress(reference, out var row, out var col);
             return new ReportRange { StartRow = row, StartColumn = col, EndRow = row, EndColumn = col };
         }
 
-        var (r1, c1) = AddressHelper.ParseAddress(reference[..colonIdx]);
-        var (r2, c2) = AddressHelper.ParseAddress(reference[(colonIdx + 1)..]);
+        AddressHelper.ParseAddress(reference[..colonIdx], out var r1, out var c1);
+        AddressHelper.ParseAddress(reference[(colonIdx + 1)..], out var r2, out var c2);
         return new ReportRange
         {
             StartRow = Math.Min(r1, r2),

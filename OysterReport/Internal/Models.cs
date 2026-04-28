@@ -23,6 +23,8 @@ using System.Diagnostics.CodeAnalysis;
 //     ├── ReportPrintArea?           Print area
 //     └── ReportPageBreak[]          Horizontal/vertical page breaks
 
+// ReSharper disable UseWithExpressionToCopyRecord
+
 //--------------------------------------------------------------------------------
 // Metadata
 //--------------------------------------------------------------------------------
@@ -681,7 +683,7 @@ internal sealed class ReportSheet
                 if (img.ToCellAddress is not null)
                 {
                     var toRow = TryParseRow(img.ToCellAddress);
-                    if (toRow is not null && toRow.Value > endRow)
+                    if (toRow > endRow)
                     {
                         img.ToCellAddress = ReplaceRow(img.ToCellAddress, toRow.Value - count);
                     }
@@ -883,7 +885,7 @@ internal sealed class ReportSheet
         foreach (var img in images)
         {
             var fromRow = TryParseRow(img.FromCellAddress);
-            if (fromRow is not null && fromRow.Value >= insertAtRow)
+            if (fromRow >= insertAtRow)
             {
                 img.FromCellAddress = ReplaceRow(img.FromCellAddress, fromRow.Value + count);
             }
@@ -891,7 +893,7 @@ internal sealed class ReportSheet
             if (img.ToCellAddress is not null)
             {
                 var toRow = TryParseRow(img.ToCellAddress);
-                if (toRow is not null && toRow.Value >= insertAtRow)
+                if (toRow >= insertAtRow)
                 {
                     img.ToCellAddress = ReplaceRow(img.ToCellAddress, toRow.Value + count);
                 }
@@ -967,3 +969,4 @@ internal sealed class ReportWorkbook
         return copy;
     }
 }
+// ReSharper restore UseWithExpressionToCopyRecord
