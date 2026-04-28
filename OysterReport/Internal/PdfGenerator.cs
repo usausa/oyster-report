@@ -365,6 +365,7 @@ internal static class PdfGenerator
         var center = new StringBuilder();
         var right = new StringBuilder();
         var current = center;
+        Span<char> scratch = stackalloc char[16];
 
         for (var index = 0; index < text.Length; index++)
         {
@@ -381,9 +382,21 @@ internal static class PdfGenerator
                 case 'L': current = left; break;
                 case 'C': current = center; break;
                 case 'R': current = right; break;
-                case 'P': current.Append(pageNumber.ToString(CultureInfo.InvariantCulture)); break;
-                case 'N': current.Append(totalPages.ToString(CultureInfo.InvariantCulture)); break;
-                case '&': current.Append('&'); break;
+                case 'P':
+                    if (pageNumber.TryFormat(scratch, out var pn, default, CultureInfo.InvariantCulture))
+                    {
+                        current.Append(scratch[..pn]);
+                    }
+                    break;
+                case 'N':
+                    if (totalPages.TryFormat(scratch, out var tp, default, CultureInfo.InvariantCulture))
+                    {
+                        current.Append(scratch[..tp]);
+                    }
+                    break;
+                case '&':
+                    current.Append('&');
+                    break;
             }
         }
 

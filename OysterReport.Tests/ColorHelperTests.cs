@@ -1,9 +1,9 @@
 namespace OysterReport.Tests;
 
-using System.Drawing;
-
 public sealed class ColorHelperTests
 {
+    private static readonly ArgbColor Red = new(0xFF, 0xFF, 0x00, 0x00);
+
     //--------------------------------------------------------------------------------
     // NormalizeHex
     //--------------------------------------------------------------------------------
@@ -66,7 +66,7 @@ public sealed class ColorHelperTests
     public void ToHexShouldReturnCorrectHexForRed()
     {
         // Act
-        var result = ColorHelper.ToHex(Color.Red);
+        var result = ColorHelper.ToHex(Red);
 
         // Assert
         Assert.Equal("#FFFF0000", result);
@@ -76,7 +76,7 @@ public sealed class ColorHelperTests
     public void ToHexShouldReturnCorrectHexForBlack()
     {
         // Act
-        var result = ColorHelper.ToHex(Color.Black);
+        var result = ColorHelper.ToHex(ArgbColor.Black);
 
         // Assert
         Assert.Equal("#FF000000", result);
@@ -86,7 +86,7 @@ public sealed class ColorHelperTests
     public void ToHexShouldReturnCorrectHexForWhite()
     {
         // Act
-        var result = ColorHelper.ToHex(Color.White);
+        var result = ColorHelper.ToHex(ArgbColor.White);
 
         // Assert
         Assert.Equal("#FFFFFFFF", result);
@@ -96,7 +96,7 @@ public sealed class ColorHelperTests
     public void ToHexShouldIncludeAlphaChannel()
     {
         // Arrange
-        var color = Color.FromArgb(128, 0, 255, 0);
+        var color = new ArgbColor(128, 0, 255, 0);
 
         // Act
         var result = ColorHelper.ToHex(color);
@@ -113,27 +113,27 @@ public sealed class ColorHelperTests
     public void ApplyTintShouldReturnSameColorWhenTintIsNaN()
     {
         // Act
-        var result = ColorHelper.ApplyTint(Color.Red, double.NaN);
+        var result = ColorHelper.ApplyTint(Red, double.NaN);
 
         // Assert
-        Assert.Equal(Color.Red, result);
+        Assert.Equal(Red, result);
     }
 
     [Fact]
     public void ApplyTintShouldReturnSameColorWhenTintIsZero()
     {
         // Act
-        var result = ColorHelper.ApplyTint(Color.Red, 0d);
+        var result = ColorHelper.ApplyTint(Red, 0d);
 
         // Assert
-        Assert.Equal(Color.Red, result);
+        Assert.Equal(Red, result);
     }
 
     [Fact]
     public void ApplyTintShouldReturnBlackWhenTintIsNegativeOneOnGray()
     {
         // Arrange
-        var gray = Color.FromArgb(255, 128, 128, 128);
+        var gray = new ArgbColor(255, 128, 128, 128);
 
         // Act
         var result = ColorHelper.ApplyTint(gray, -1d);
@@ -148,7 +148,7 @@ public sealed class ColorHelperTests
     public void ApplyTintShouldReturnWhiteWhenTintIsOneOnGray()
     {
         // Arrange
-        var gray = Color.FromArgb(255, 128, 128, 128);
+        var gray = new ArgbColor(255, 128, 128, 128);
 
         // Act
         var result = ColorHelper.ApplyTint(gray, 1d);
@@ -163,10 +163,10 @@ public sealed class ColorHelperTests
     public void ApplyTintShouldDarkenColorWhenTintIsNegative()
     {
         // Act
-        var result = ColorHelper.ApplyTint(Color.Red, -0.5d);
+        var result = ColorHelper.ApplyTint(Red, -0.5d);
 
         // Assert
-        Assert.True(result.R < Color.Red.R);
+        Assert.True(result.R < Red.R);
         Assert.Equal(255, result.A);
     }
 
@@ -174,10 +174,10 @@ public sealed class ColorHelperTests
     public void ApplyTintShouldLightenColorWhenTintIsPositive()
     {
         // Act
-        var result = ColorHelper.ApplyTint(Color.Red, 0.5d);
+        var result = ColorHelper.ApplyTint(Red, 0.5d);
 
         // Assert
-        Assert.True(result.G > Color.Red.G);
+        Assert.True(result.G > Red.G);
         Assert.Equal(255, result.A);
     }
 
@@ -185,7 +185,7 @@ public sealed class ColorHelperTests
     public void ApplyTintShouldPreserveAlphaChannel()
     {
         // Arrange
-        var color = Color.FromArgb(100, 200, 100, 50);
+        var color = new ArgbColor(100, 200, 100, 50);
 
         // Act
         var result = ColorHelper.ApplyTint(color, 0.5d);

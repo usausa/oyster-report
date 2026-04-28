@@ -376,7 +376,7 @@ internal static class PdfRenderPlanner
         var results = new List<PdfImageRenderInfo>();
         foreach (var image in sheet.Images)
         {
-            var (row, column) = AddressHelper.ParseAddress(image.FromCellAddress);
+            AddressHelper.ParseAddress(image.FromCellAddress, out var row, out var column);
             if (!rowOffsets.TryGetValue(row, out var top) || !columnOffsets.TryGetValue(column, out var left))
             {
                 continue;

@@ -14,19 +14,19 @@ internal static class EnumMaps
         var raw = style.Value;
         return raw switch
         {
-            var v when v == BorderStyleValues.Thin => BorderLineStyle.Thin,
-            var v when v == BorderStyleValues.Medium => BorderLineStyle.Medium,
-            var v when v == BorderStyleValues.Thick => BorderLineStyle.Thick,
-            var v when v == BorderStyleValues.Double => BorderLineStyle.Double,
-            var v when v == BorderStyleValues.Hair => BorderLineStyle.Hair,
-            var v when v == BorderStyleValues.Dotted => BorderLineStyle.Dotted,
-            var v when v == BorderStyleValues.Dashed => BorderLineStyle.Dashed,
-            var v when v == BorderStyleValues.DashDot => BorderLineStyle.DashDot,
-            var v when v == BorderStyleValues.DashDotDot => BorderLineStyle.DashDotDot,
-            var v when v == BorderStyleValues.MediumDashed => BorderLineStyle.MediumDashed,
-            var v when v == BorderStyleValues.MediumDashDot => BorderLineStyle.MediumDashDot,
-            var v when v == BorderStyleValues.MediumDashDotDot => BorderLineStyle.MediumDashDotDot,
-            var v when v == BorderStyleValues.SlantDashDot => BorderLineStyle.SlantDashDot,
+            _ when raw == BorderStyleValues.Thin => BorderLineStyle.Thin,
+            _ when raw == BorderStyleValues.Medium => BorderLineStyle.Medium,
+            _ when raw == BorderStyleValues.Thick => BorderLineStyle.Thick,
+            _ when raw == BorderStyleValues.Double => BorderLineStyle.Double,
+            _ when raw == BorderStyleValues.Hair => BorderLineStyle.Hair,
+            _ when raw == BorderStyleValues.Dotted => BorderLineStyle.Dotted,
+            _ when raw == BorderStyleValues.Dashed => BorderLineStyle.Dashed,
+            _ when raw == BorderStyleValues.DashDot => BorderLineStyle.DashDot,
+            _ when raw == BorderStyleValues.DashDotDot => BorderLineStyle.DashDotDot,
+            _ when raw == BorderStyleValues.MediumDashed => BorderLineStyle.MediumDashed,
+            _ when raw == BorderStyleValues.MediumDashDot => BorderLineStyle.MediumDashDot,
+            _ when raw == BorderStyleValues.MediumDashDotDot => BorderLineStyle.MediumDashDotDot,
+            _ when raw == BorderStyleValues.SlantDashDot => BorderLineStyle.SlantDashDot,
             _ => BorderLineStyle.None
         };
     }
@@ -41,13 +41,13 @@ internal static class EnumMaps
         var raw = value.Value;
         return raw switch
         {
-            var v when v == HorizontalAlignmentValues.Left => HorizontalAlignment.Left,
-            var v when v == HorizontalAlignmentValues.Center => HorizontalAlignment.Center,
-            var v when v == HorizontalAlignmentValues.Right => HorizontalAlignment.Right,
-            var v when v == HorizontalAlignmentValues.Justify => HorizontalAlignment.Justify,
-            var v when v == HorizontalAlignmentValues.CenterContinuous => HorizontalAlignment.CenterContinuous,
-            var v when v == HorizontalAlignmentValues.Distributed => HorizontalAlignment.Distributed,
-            var v when v == HorizontalAlignmentValues.Fill => HorizontalAlignment.Fill,
+            _ when raw == HorizontalAlignmentValues.Left => HorizontalAlignment.Left,
+            _ when raw == HorizontalAlignmentValues.Center => HorizontalAlignment.Center,
+            _ when raw == HorizontalAlignmentValues.Right => HorizontalAlignment.Right,
+            _ when raw == HorizontalAlignmentValues.Justify => HorizontalAlignment.Justify,
+            _ when raw == HorizontalAlignmentValues.CenterContinuous => HorizontalAlignment.CenterContinuous,
+            _ when raw == HorizontalAlignmentValues.Distributed => HorizontalAlignment.Distributed,
+            _ when raw == HorizontalAlignmentValues.Fill => HorizontalAlignment.Fill,
             _ => HorizontalAlignment.General
         };
     }
@@ -62,10 +62,10 @@ internal static class EnumMaps
         var raw = value.Value;
         return raw switch
         {
-            var v when v == VerticalAlignmentValues.Top => VerticalAlignment.Top,
-            var v when v == VerticalAlignmentValues.Center => VerticalAlignment.Center,
-            var v when v == VerticalAlignmentValues.Justify => VerticalAlignment.Justify,
-            var v when v == VerticalAlignmentValues.Distributed => VerticalAlignment.Distributed,
+            _ when raw == VerticalAlignmentValues.Top => VerticalAlignment.Top,
+            _ when raw == VerticalAlignmentValues.Center => VerticalAlignment.Center,
+            _ when raw == VerticalAlignmentValues.Justify => VerticalAlignment.Justify,
+            _ when raw == VerticalAlignmentValues.Distributed => VerticalAlignment.Distributed,
             _ => VerticalAlignment.Bottom
         };
     }
@@ -92,8 +92,8 @@ internal static class EnumMaps
         var raw = value.Value;
         return raw switch
         {
-            var v when v == OrientationValues.Portrait => PageOrientation.Portrait,
-            var v when v == OrientationValues.Landscape => PageOrientation.Landscape,
+            _ when raw == OrientationValues.Portrait => PageOrientation.Portrait,
+            _ when raw == OrientationValues.Landscape => PageOrientation.Landscape,
             _ => PageOrientation.Default
         };
     }
@@ -108,25 +108,25 @@ internal static class EnumMaps
         var raw = value.Value;
         return raw switch
         {
-            var v when v == PatternValues.None => FillPattern.None,
-            var v when v == PatternValues.Solid => FillPattern.Solid,
-            var v when v == PatternValues.Gray125 => FillPattern.Gray125,
-            var v when v == PatternValues.Gray0625 => FillPattern.Gray0625,
-            var v when v == PatternValues.DarkGray => FillPattern.DarkGray,
-            var v when v == PatternValues.MediumGray => FillPattern.MediumGray,
-            var v when v == PatternValues.LightGray => FillPattern.LightGray,
-            var v when v == PatternValues.DarkHorizontal => FillPattern.DarkHorizontal,
-            var v when v == PatternValues.DarkVertical => FillPattern.DarkVertical,
-            var v when v == PatternValues.DarkDown => FillPattern.DarkDown,
-            var v when v == PatternValues.DarkUp => FillPattern.DarkUp,
-            var v when v == PatternValues.DarkGrid => FillPattern.DarkGrid,
-            var v when v == PatternValues.DarkTrellis => FillPattern.DarkTrellis,
-            var v when v == PatternValues.LightHorizontal => FillPattern.LightHorizontal,
-            var v when v == PatternValues.LightVertical => FillPattern.LightVertical,
-            var v when v == PatternValues.LightDown => FillPattern.LightDown,
-            var v when v == PatternValues.LightUp => FillPattern.LightUp,
-            var v when v == PatternValues.LightGrid => FillPattern.LightGrid,
-            var v when v == PatternValues.LightTrellis => FillPattern.LightTrellis,
+            _ when raw == PatternValues.None => FillPattern.None,
+            _ when raw == PatternValues.Solid => FillPattern.Solid,
+            _ when raw == PatternValues.Gray125 => FillPattern.Gray125,
+            _ when raw == PatternValues.Gray0625 => FillPattern.Gray0625,
+            _ when raw == PatternValues.DarkGray => FillPattern.DarkGray,
+            _ when raw == PatternValues.MediumGray => FillPattern.MediumGray,
+            _ when raw == PatternValues.LightGray => FillPattern.LightGray,
+            _ when raw == PatternValues.DarkHorizontal => FillPattern.DarkHorizontal,
+            _ when raw == PatternValues.DarkVertical => FillPattern.DarkVertical,
+            _ when raw == PatternValues.DarkDown => FillPattern.DarkDown,
+            _ when raw == PatternValues.DarkUp => FillPattern.DarkUp,
+            _ when raw == PatternValues.DarkGrid => FillPattern.DarkGrid,
+            _ when raw == PatternValues.DarkTrellis => FillPattern.DarkTrellis,
+            _ when raw == PatternValues.LightHorizontal => FillPattern.LightHorizontal,
+            _ when raw == PatternValues.LightVertical => FillPattern.LightVertical,
+            _ when raw == PatternValues.LightDown => FillPattern.LightDown,
+            _ when raw == PatternValues.LightUp => FillPattern.LightUp,
+            _ when raw == PatternValues.LightGrid => FillPattern.LightGrid,
+            _ when raw == PatternValues.LightTrellis => FillPattern.LightTrellis,
             _ => FillPattern.None
         };
     }

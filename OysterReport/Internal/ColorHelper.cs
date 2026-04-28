@@ -1,6 +1,5 @@
 namespace OysterReport.Internal;
 
-using System.Drawing;
 using System.Globalization;
 
 internal static class ColorHelper
@@ -12,22 +11,37 @@ internal static class ColorHelper
             return "#00000000";
         }
 
-        var trimmed = argb.Trim();
+        var trimmed = argb.AsSpan().Trim();
         if ((trimmed.Length > 0) && (trimmed[0] == '#'))
         {
-            return trimmed.ToUpperInvariant();
+            var buffer = trimmed.Length <= 64 ? stackalloc char[trimmed.Length] : new char[trimmed.Length];
+            for (var i = 0; i < trimmed.Length; i++)
+            {
+                buffer[i] = Char.ToUpperInvariant(trimmed[i]);
+            }
+
+            return new string(buffer);
         }
 
-        using var sb = new ValueStringBuilder(stackalloc char[12]);
-        sb.Append('#');
-        sb.Append(trimmed.ToUpperInvariant());
-        return sb.ToString();
+        var prefixedBuffer = trimmed.Length + 1 <= 64 ? stackalloc char[trimmed.Length + 1] : new char[trimmed.Length + 1];
+        prefixedBuffer[0] = '#';
+        for (var i = 0; i < trimmed.Length; i++)
+        {
+            prefixedBuffer[i + 1] = Char.ToUpperInvariant(trimmed[i]);
+        }
+
+        return new string(prefixedBuffer);
     }
 
-    public static string ToHex(Color color) =>
-        NormalizeHex(color.ToArgb().ToString("X8", CultureInfo.InvariantCulture));
+    public static string ToHex(ArgbColor color)
+    {
+        Span<char> buffer = stackalloc char[9];
+        buffer[0] = '#';
+        color.Value.TryFormat(buffer[1..], out _, "X8", CultureInfo.InvariantCulture);
+        return new string(buffer);
+    }
 
-    public static Color ApplyTint(Color color, double tint)
+    public static ArgbColor ApplyTint(ArgbColor color, double tint)
     {
         if (Double.IsNaN(tint))
         {
@@ -40,27 +54,27 @@ internal static class ColorHelper
             return color;
         }
 
-        var (hue, saturation, lightness) = RgbToHsl(color);
+        RgbToHsl(color, out var hue, out var saturation, out var lightness);
         var tintedLightness = clampedTint < 0d
             ? lightness * (1d + clampedTint)
             : lightness + ((1d - lightness) * clampedTint);
         return HslToColor(hue, saturation, tintedLightness, color.A);
     }
 
-    private static (double Hue, double Saturation, double Lightness) RgbToHsl(Color color)
+    private static void RgbToHsl(ArgbColor color, out double hue, out double saturation, out double lightness)
     {
         var red = color.R / 255d;
         var green = color.G / 255d;
         var blue = color.B / 255d;
         var max = Math.Max(red, Math.Max(green, blue));
         var min = Math.Min(red, Math.Min(green, blue));
-        var hue = 0d;
-        var saturation = 0d;
-        var lightness = (max + min) / 2d;
+        hue = 0d;
+        saturation = 0d;
+        lightness = (max + min) / 2d;
 
         if (Math.Abs(max - min) < Double.Epsilon)
         {
-            return (hue, saturation, lightness);
+            return;
         }
 
         var delta = max - min;
@@ -82,15 +96,14 @@ internal static class ColorHelper
         }
 
         hue /= 6d;
-        return (hue, saturation, lightness);
     }
 
-    private static Color HslToColor(double hue, double saturation, double lightness, int alpha)
+    private static ArgbColor HslToColor(double hue, double saturation, double lightness, byte alpha)
     {
         if (saturation <= 0d)
         {
             var value = ToByte(lightness * 255d);
-            return Color.FromArgb(alpha, value, value, value);
+            return new ArgbColor(alpha, value, value, value);
         }
 
         var q = lightness < 0.5d
@@ -100,7 +113,7 @@ internal static class ColorHelper
         var red = HueToRgb(p, q, hue + (1d / 3d));
         var green = HueToRgb(p, q, hue);
         var blue = HueToRgb(p, q, hue - (1d / 3d));
-        return Color.FromArgb(alpha, ToByte(red * 255d), ToByte(green * 255d), ToByte(blue * 255d));
+        return new ArgbColor(alpha, ToByte(red * 255d), ToByte(green * 255d), ToByte(blue * 255d));
     }
 
     private static double HueToRgb(double p, double q, double t)
@@ -130,6 +143,6 @@ internal static class ColorHelper
         return p;
     }
 
-    private static int ToByte(double value) =>
-        (int)Math.Round(Math.Clamp(value, 0d, 255d), MidpointRounding.AwayFromZero);
+    private static byte ToByte(double value) =>
+        (byte)Math.Round(Math.Clamp(value, 0d, 255d), MidpointRounding.AwayFromZero);
 }

@@ -30,9 +30,3 @@ global using OysterReport.Internal;
 global using OysterReport.Tests.Helpers;
 
 global using Xunit;
-
-// TODO
-// ReSharper disable MissingBlankLines
-//global using Example.Models;
-//global using Example.Services;
-//global using Example.Web.Application;

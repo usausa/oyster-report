@@ -1,9 +1,7 @@
 namespace OysterReport.Internal.OpenXml;
 
-using System.Drawing;
 using System.Globalization;
 
-using DrawingColor = System.Drawing.Color;
 using SsColor = DocumentFormat.OpenXml.Spreadsheet.ColorType;
 
 internal sealed class ColorResolver
@@ -22,14 +20,14 @@ internal sealed class ColorResolver
         0xFF000000, 0xFFFFFFFF
     ];
 
-    private readonly DrawingColor[] themeColors;
+    private readonly ArgbColor[] themeColors;
 
-    public ColorResolver(DrawingColor[] themeColors)
+    public ColorResolver(ArgbColor[] themeColors)
     {
         this.themeColors = themeColors;
     }
 
-    public bool TryGetThemeColor(int index, out DrawingColor color)
+    public bool TryGetThemeColor(int index, out ArgbColor color)
     {
         if ((index < 0) || (index >= themeColors.Length))
         {

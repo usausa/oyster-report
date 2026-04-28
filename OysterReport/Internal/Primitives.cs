@@ -80,15 +80,6 @@ internal readonly record struct ReportRange
     {
         var startAddress = AddressHelper.ToAddress(StartRow, StartColumn);
         var endAddress = AddressHelper.ToAddress(EndRow, EndColumn);
-        if (startAddress == endAddress)
-        {
-            return startAddress;
-        }
-
-        using var sb = new ValueStringBuilder(stackalloc char[32]);
-        sb.Append(startAddress);
-        sb.Append(':');
-        sb.Append(endAddress);
-        return sb.ToString();
+        return startAddress == endAddress ? startAddress : $"{startAddress}:{endAddress}";
     }
 }

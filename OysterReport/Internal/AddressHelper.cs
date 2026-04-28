@@ -16,43 +16,49 @@ internal static class AddressHelper
             current /= 26;
         }
 
-        using var sb = new ValueStringBuilder(stackalloc char[16]);
-        sb.Append(colBuffer[colStart..]);
-        sb.Append(row.ToString(CultureInfo.InvariantCulture));
-        return sb.ToString();
+        Span<char> rowBuffer = stackalloc char[11];
+        row.TryFormat(rowBuffer, out var rowLength, provider: CultureInfo.InvariantCulture);
+
+        var columnLength = colBuffer.Length - colStart;
+        Span<char> addressBuffer = stackalloc char[columnLength + rowLength];
+        colBuffer[colStart..].CopyTo(addressBuffer);
+        rowBuffer[..rowLength].CopyTo(addressBuffer[columnLength..]);
+        return new string(addressBuffer);
     }
 
-    public static (int Row, int Column) ParseAddress(string address)
+    public static void ParseAddress(string address, out int row, out int column)
     {
-        using var letters = new ValueStringBuilder(stackalloc char[16]);
-        using var digits = new ValueStringBuilder(stackalloc char[8]);
+        var source = address.AsSpan().Trim();
+        var hasLetters = false;
+        var hasDigits = false;
+        var seenDigits = false;
 
-        foreach (var character in address.Trim().ToUpperInvariant())
+        column = 0;
+        row = 0;
+
+        foreach (var character in source)
         {
             if (Char.IsLetter(character))
             {
-                letters.Append(character);
+                if (seenDigits)
+                {
+                    throw new FormatException(String.Create(CultureInfo.InvariantCulture, $"Invalid cell address. address=[{address}]"));
+                }
+
+                column = (column * 26) + (Char.ToUpperInvariant(character) - 'A' + 1);
+                hasLetters = true;
             }
             else if (Char.IsDigit(character))
             {
-                digits.Append(character);
+                row = (row * 10) + (character - '0');
+                hasDigits = true;
+                seenDigits = true;
             }
         }
 
-        var lettersStr = letters.ToString();
-        var digitsStr = digits.ToString();
-
-        if (String.IsNullOrEmpty(lettersStr) || String.IsNullOrEmpty(digitsStr))
+        if (!hasLetters || !hasDigits)
         {
             throw new FormatException(String.Create(CultureInfo.InvariantCulture, $"Invalid cell address. address=[{address}]"));
         }
-
-        var column = 0;
-        foreach (var character in lettersStr)
-        {
-            column = (column * 26) + (character - 'A' + 1);
-        }
-
-        return (Int32.Parse(digitsStr, CultureInfo.InvariantCulture), column);
     }
 }

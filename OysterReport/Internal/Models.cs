@@ -908,7 +908,7 @@ internal sealed class ReportSheet
 
         try
         {
-            var (row, _) = AddressHelper.ParseAddress(address);
+            AddressHelper.ParseAddress(address, out var row, out _);
             return row;
         }
         catch (FormatException)
@@ -919,7 +919,7 @@ internal sealed class ReportSheet
 
     private static string ReplaceRow(string address, int newRow)
     {
-        var (_, col) = AddressHelper.ParseAddress(address);
+        AddressHelper.ParseAddress(address, out _, out var col);
         return AddressHelper.ToAddress(newRow, col);
     }
 }

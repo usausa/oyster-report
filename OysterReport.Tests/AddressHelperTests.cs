@@ -42,7 +42,7 @@ public sealed class AddressHelperTests
     public void ParseAddressShouldReturnExpectedRowAndColumn(string address, int expectedRow, int expectedColumn)
     {
         // Act
-        var (row, column) = AddressHelper.ParseAddress(address);
+        AddressHelper.ParseAddress(address, out var row, out var column);
 
         // Assert
         Assert.Equal(expectedRow, row);
@@ -53,7 +53,7 @@ public sealed class AddressHelperTests
     public void ParseAddressShouldBeCaseInsensitive()
     {
         // Act
-        var (row, column) = AddressHelper.ParseAddress("xfd1048576");
+        AddressHelper.ParseAddress("xfd1048576", out var row, out var column);
 
         // Assert
         Assert.Equal(1048576, row);
@@ -64,7 +64,7 @@ public sealed class AddressHelperTests
     public void ParseAddressShouldTrimWhitespace()
     {
         // Act
-        var (row, column) = AddressHelper.ParseAddress("  B5  ");
+        AddressHelper.ParseAddress("  B5  ", out var row, out var column);
 
         // Assert
         Assert.Equal(5, row);
@@ -75,7 +75,7 @@ public sealed class AddressHelperTests
     public void ParseAddressShouldThrowFormatExceptionWhenNoLetters()
     {
         // Act
-        var exception = Record.Exception((Action)(() => AddressHelper.ParseAddress("123")));
+        var exception = Record.Exception(() => AddressHelper.ParseAddress("123", out _, out _));
 
         // Assert
         Assert.IsType<FormatException>(exception);
@@ -85,7 +85,7 @@ public sealed class AddressHelperTests
     public void ParseAddressShouldThrowFormatExceptionWhenNoDigits()
     {
         // Act
-        var exception = Record.Exception((Action)(() => AddressHelper.ParseAddress("ABC")));
+        var exception = Record.Exception(() => AddressHelper.ParseAddress("ABC", out _, out _));
 
         // Assert
         Assert.IsType<FormatException>(exception);
@@ -95,7 +95,7 @@ public sealed class AddressHelperTests
     public void ParseAddressShouldThrowFormatExceptionForEmptyString()
     {
         // Act / Assert
-        Assert.Throws<FormatException>(() => AddressHelper.ParseAddress(string.Empty));
+        Assert.Throws<FormatException>(() => AddressHelper.ParseAddress(string.Empty, out _, out _));
     }
 
     //--------------------------------------------------------------------------------
@@ -112,7 +112,7 @@ public sealed class AddressHelperTests
     {
         // Act
         var address = AddressHelper.ToAddress(row, column);
-        var (parsedRow, parsedColumn) = AddressHelper.ParseAddress(address);
+        AddressHelper.ParseAddress(address, out var parsedRow, out var parsedColumn);
 
         // Assert
         Assert.Equal(row, parsedRow);
