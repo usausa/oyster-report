@@ -58,6 +58,6 @@ engine.GeneratePdf(workbook, output);
 
 ## Dependencies
 
-- [ClosedXML](https://github.com/ClosedXML/ClosedXML)
+- DocumentFormat.OpenXml
 - [PDFsharp](https://github.com/empira/PDFsharp)
 - [SkiaSharp](https://github.com/mono/SkiaSharp)
