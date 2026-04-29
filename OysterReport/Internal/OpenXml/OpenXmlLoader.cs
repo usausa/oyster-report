@@ -160,11 +160,9 @@ internal static class OpenXmlLoader
     {
         foreach (var table in TableLoader.Load(wsPart))
         {
-            var stripeHex = string.Empty;
-            if (table.ShowRowStripes && !String.IsNullOrEmpty(table.ThemeName))
-            {
-                TryResolveStripeHex(table.ThemeName, colorResolver, out stripeHex);
-            }
+            var stripeHex = table.ShowRowStripes && !String.IsNullOrEmpty(table.ThemeName)
+                ? ResolveStripeHex(table.ThemeName, colorResolver)
+                : string.Empty;
 
             sheet.AddTable(new ReportTable
             {
@@ -224,16 +222,14 @@ internal static class OpenXmlLoader
             ["TableStyleMedium28"] = (9, 0.2)
         };
 
-    private static bool TryResolveStripeHex(string themeName, ColorResolver colorResolver, out string hex)
+    private static string ResolveStripeHex(string themeName, ColorResolver colorResolver)
     {
         if (!StripeBandByStyleName.TryGetValue(themeName, out var band) ||
             !colorResolver.TryGetThemeColor(band.ThemeIndex, out var baseColor))
         {
-            hex = string.Empty;
-            return false;
+            return string.Empty;
         }
 
-        hex = ColorHelper.ToHex(ColorHelper.ApplyTint(baseColor, band.Tint));
-        return true;
+        return ColorHelper.ToHex(ColorHelper.ApplyTint(baseColor, band.Tint));
     }
 }
