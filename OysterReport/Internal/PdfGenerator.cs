@@ -105,12 +105,7 @@ internal static class PdfGenerator
         var backgroundGroups = new Dictionary<string, List<ReportRect>>(StringComparer.Ordinal);
         foreach (var renderCell in cells)
         {
-            if (!sourceCellsByAddress.TryGetValue(renderCell.CellAddress, out var cell))
-            {
-                continue;
-            }
-
-            var colorHex = cell.Style.Fill.BackgroundColorHex;
+            var colorHex = renderCell.BackgroundColorHex;
             if (IsTransparentColor(colorHex))
             {
                 continue;

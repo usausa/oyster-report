@@ -291,6 +291,29 @@ internal sealed class ReportMergedRange
 }
 
 [ExcludeFromCodeCoverage]
+internal sealed class ReportTable
+{
+    public ReportRange Range { get; set; }
+
+    public bool ShowRowStripes { get; init; }
+
+    public bool ShowHeader { get; init; }
+
+    public bool ShowTotals { get; init; }
+
+    public string StripeColorHex { get; init; } = string.Empty;
+
+    public ReportTable DeepClone() => new()
+    {
+        Range = Range,
+        ShowRowStripes = ShowRowStripes,
+        ShowHeader = ShowHeader,
+        ShowTotals = ShowTotals,
+        StripeColorHex = StripeColorHex
+    };
+}
+
+[ExcludeFromCodeCoverage]
 internal sealed class ReportImage
 {
     public string Name { get; init; } = string.Empty;
@@ -333,6 +356,7 @@ internal sealed class ReportSheet
     private readonly List<ReportColumn> columns = [];
     private readonly List<ReportCell> cells = [];
     private readonly List<ReportMergedRange> mergedRanges = [];
+    private readonly List<ReportTable> tables = [];
     private readonly List<ReportImage> images = [];
     private readonly List<ReportPageBreak> horizontalPageBreaks = [];
     private readonly List<ReportPageBreak> verticalPageBreaks = [];
@@ -348,6 +372,8 @@ internal sealed class ReportSheet
     public IReadOnlyList<ReportCell> Cells => cells;
 
     public IReadOnlyList<ReportMergedRange> MergedRanges => mergedRanges;
+
+    public IReadOnlyList<ReportTable> Tables => tables;
 
     public IReadOnlyList<ReportImage> Images => images;
 
@@ -370,6 +396,8 @@ internal sealed class ReportSheet
     public void AddCell(ReportCell cell) => cells.Add(cell);
 
     public void AddMergedRange(ReportMergedRange range) => mergedRanges.Add(range);
+
+    public void AddTable(ReportTable table) => tables.Add(table);
 
     public void AddImage(ReportImage image) => images.Add(image);
 
@@ -518,6 +546,31 @@ internal sealed class ReportSheet
             }
         }
 
+        foreach (var table in tables)
+        {
+            var r = table.Range;
+            if (r.StartRow >= insertAtRow)
+            {
+                table.Range = new ReportRange
+                {
+                    StartRow = r.StartRow + count,
+                    StartColumn = r.StartColumn,
+                    EndRow = r.EndRow + count,
+                    EndColumn = r.EndColumn
+                };
+            }
+            else if (r.EndRow >= insertAtRow)
+            {
+                table.Range = new ReportRange
+                {
+                    StartRow = r.StartRow,
+                    StartColumn = r.StartColumn,
+                    EndRow = r.EndRow + count,
+                    EndColumn = r.EndColumn
+                };
+            }
+        }
+
         ShiftImageRows(insertAtRow, count);
 
         for (var i = 0; i < horizontalPageBreaks.Count; i++)
@@ -657,6 +710,51 @@ internal sealed class ReportSheet
                         StartColumn = mr.StartColumn,
                         EndRow = newEndRow,
                         EndColumn = mr.EndColumn
+                    };
+                }
+            }
+        }
+
+        for (var i = tables.Count - 1; i >= 0; i--)
+        {
+            var tr = tables[i].Range;
+
+            if (tr.EndRow < startRow)
+            {
+                continue;
+            }
+
+            if (tr.StartRow > endRow)
+            {
+                tables[i].Range = new ReportRange
+                {
+                    StartRow = tr.StartRow - count,
+                    StartColumn = tr.StartColumn,
+                    EndRow = tr.EndRow - count,
+                    EndColumn = tr.EndColumn
+                };
+            }
+            else if (tr.StartRow >= startRow && tr.EndRow <= endRow)
+            {
+                tables.RemoveAt(i);
+            }
+            else
+            {
+                var overlap = Math.Min(tr.EndRow, endRow) - Math.Max(tr.StartRow, startRow) + 1;
+                var newStartRow = tr.StartRow < startRow ? tr.StartRow : startRow;
+                var newEndRow = tr.EndRow - overlap;
+                if (newEndRow < newStartRow)
+                {
+                    tables.RemoveAt(i);
+                }
+                else
+                {
+                    tables[i].Range = new ReportRange
+                    {
+                        StartRow = newStartRow,
+                        StartColumn = tr.StartColumn,
+                        EndRow = newEndRow,
+                        EndColumn = tr.EndColumn
                     };
                 }
             }
@@ -837,6 +935,11 @@ internal sealed class ReportSheet
         foreach (var mr in mergedRanges)
         {
             copy.AddMergedRange(new ReportMergedRange { Range = mr.Range });
+        }
+
+        foreach (var table in tables)
+        {
+            copy.AddTable(table.DeepClone());
         }
 
         foreach (var cell in cells)

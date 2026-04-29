@@ -28,6 +28,8 @@ internal sealed record PdfCellRenderInfo
 {
     public string CellAddress { get; init; } = string.Empty;
 
+    public string BackgroundColorHex { get; init; } = string.Empty;
+
     public ReportRect OuterBounds { get; init; }
 
     public ReportRect ContentBounds { get; init; }
@@ -136,6 +138,7 @@ internal static class PdfRenderPlanner
         var columnByIndex = visibleColumns.ToDictionary(c => c.Index);
         var rowByIndex = visibleRows.ToDictionary(r => r.Index);
         var mergedRangeByCell = BuildMergedRangeByCell(sheet.MergedRanges);
+        var stripeColorByCell = BuildStripeColorByCell(sheet.Tables);
 
         // Compute bounding rectangles for each visible cell and build the PdfCellRenderInfo list
         var pageCells = new List<PdfCellRenderInfo>();
@@ -163,6 +166,7 @@ internal static class PdfRenderPlanner
             pageCells.Add(new PdfCellRenderInfo
             {
                 CellAddress = cell.Address,
+                BackgroundColorHex = ResolveBackgroundColor(cell, stripeColorByCell),
                 OuterBounds = outerBounds,
                 ContentBounds = contentBounds,
                 TextBounds = ComputeTextOverflowBounds(
@@ -255,6 +259,54 @@ internal static class PdfRenderPlanner
         }
 
         return map;
+    }
+
+    //--------------------------------------------------------------------------------
+    // Table stripe
+    //--------------------------------------------------------------------------------
+
+    private static Dictionary<(int Row, int Column), string> BuildStripeColorByCell(IEnumerable<ReportTable> tables)
+    {
+        // Maps each (row, column) inside a striped table's data range to the resolved stripe color
+        var map = new Dictionary<(int, int), string>();
+        foreach (var table in tables)
+        {
+            if (!table.ShowRowStripes || String.IsNullOrEmpty(table.StripeColorHex))
+            {
+                continue;
+            }
+
+            var firstDataRow = table.Range.StartRow + (table.ShowHeader ? 1 : 0);
+            var lastDataRow = table.Range.EndRow - (table.ShowTotals ? 1 : 0);
+
+            for (var r = firstDataRow; r <= lastDataRow; r++)
+            {
+                if (((r - firstDataRow) % 2) != 0)
+                {
+                    continue;
+                }
+
+                for (var c = table.Range.StartColumn; c <= table.Range.EndColumn; c++)
+                {
+                    map[(r, c)] = table.StripeColorHex;
+                }
+            }
+        }
+
+        return map;
+    }
+
+    private static string ResolveBackgroundColor(ReportCell cell, Dictionary<(int Row, int Column), string> stripeColorByCell)
+    {
+        // Stripe color overrides the default background only when the cell's own fill is transparent
+        var hex = cell.Style.Fill.BackgroundColorHex;
+        if (stripeColorByCell.TryGetValue((cell.Row, cell.Column), out var stripeHex) &&
+            hex.StartsWith("#00", StringComparison.Ordinal))
+        {
+            return stripeHex;
+        }
+
+        return hex;
     }
 
     //--------------------------------------------------------------------------------

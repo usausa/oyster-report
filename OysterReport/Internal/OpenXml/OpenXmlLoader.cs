@@ -66,7 +66,7 @@ internal static class OpenXmlLoader
                 reportSheet.AddImage(img);
             }
 
-            ApplyTableStyles(reportSheet, wsPart, styles.ColorResolver);
+            LoadTables(reportSheet, wsPart, styles.ColorResolver);
 
             workbook.AddSheet(reportSheet);
             sheetIndex++;
@@ -156,48 +156,24 @@ internal static class OpenXmlLoader
         return renderOption.FallbackMaxDigitWidth;
     }
 
-    private static void ApplyTableStyles(ReportSheet sheet, WorksheetPart wsPart, ColorResolver colorResolver)
+    private static void LoadTables(ReportSheet sheet, WorksheetPart wsPart, ColorResolver colorResolver)
     {
         foreach (var table in TableLoader.Load(wsPart))
         {
-            if (!table.ShowRowStripes || String.IsNullOrEmpty(table.ThemeName))
+            var stripeHex = string.Empty;
+            if (table.ShowRowStripes && !String.IsNullOrEmpty(table.ThemeName))
             {
-                continue;
+                TryResolveStripeHex(table.ThemeName, colorResolver, out stripeHex);
             }
 
-            if (!TryResolveStripeHex(table.ThemeName, colorResolver, out var stripeHex))
+            sheet.AddTable(new ReportTable
             {
-                continue;
-            }
-
-            var firstDataRow = table.Range.StartRow + (table.ShowHeader ? 1 : 0);
-            var lastDataRow = table.Range.EndRow - (table.ShowTotals ? 1 : 0);
-
-            for (var r = firstDataRow; r <= lastDataRow; r++)
-            {
-                if (((r - firstDataRow) % 2) != 0)
-                {
-                    continue;
-                }
-
-                foreach (var cell in sheet.Cells)
-                {
-                    if (cell.Row != r || cell.Column < table.Range.StartColumn || cell.Column > table.Range.EndColumn)
-                    {
-                        continue;
-                    }
-
-                    if (!cell.Style.Fill.BackgroundColorHex.StartsWith("#00", StringComparison.Ordinal))
-                    {
-                        continue;
-                    }
-
-                    cell.Style = cell.Style with
-                    {
-                        Fill = new ReportFill { BackgroundColorHex = stripeHex }
-                    };
-                }
-            }
+                Range = table.Range,
+                ShowRowStripes = table.ShowRowStripes,
+                ShowHeader = table.ShowHeader,
+                ShowTotals = table.ShowTotals,
+                StripeColorHex = stripeHex
+            });
         }
     }
 
