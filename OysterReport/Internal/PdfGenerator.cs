@@ -534,7 +534,7 @@ internal static class PdfGenerator
         ReportRenderOption renderOption)
     {
         // Draws underline and/or strikeout for cell text based on font metrics
-        if ((!sourceCell.Style.Font.Underline) && (!sourceCell.Style.Font.Strikeout))
+        if (sourceCell.Style.Font is { Underline: false, Strikeout: false })
         {
             return;
         }

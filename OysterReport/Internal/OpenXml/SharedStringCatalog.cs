@@ -49,7 +49,7 @@ internal static class SharedStringCatalog
                     sb.Append(runText);
                 }
             }
-            else if (child is Text t && t.Text is { } textValue)
+            else if (child is Text { Text: { } textValue })
             {
                 sb.Append(textValue);
             }

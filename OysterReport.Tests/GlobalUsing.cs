@@ -25,8 +25,11 @@ global using System.Threading.Tasks;
 global using ClosedXML.Excel;
 global using ClosedXML.Excel.Drawings;
 
+global using DocumentFormat.OpenXml.Spreadsheet;
+
 global using OysterReport;
 global using OysterReport.Internal;
+global using OysterReport.Internal.OpenXml;
 global using OysterReport.Tests.Helpers;
 
 global using Xunit;

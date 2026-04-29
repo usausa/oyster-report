@@ -1,6 +1,4 @@
-namespace OysterReport.Tests;
-
-using OysterReport.Internal.OpenXml;
+namespace OysterReport.Tests.Internal.OpenXml;
 
 public sealed class ExcelFormatCodeTests
 {

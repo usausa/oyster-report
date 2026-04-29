@@ -64,8 +64,8 @@ public sealed class InternalPipelineTests
         engine.GeneratePdf(template, output);
 
         // Assert
-        Assert.Contains(resolver.Requests, request => request.FamilyName == "CustomEmbeddedFont" && request.Bold);
-        Assert.Contains(resolver.Requests, request => request.FamilyName == "CustomEmbeddedFont" && request.Italic);
+        Assert.Contains(resolver.Requests, request => request is { FamilyName: "CustomEmbeddedFont", Bold: true });
+        Assert.Contains(resolver.Requests, request => request is { FamilyName: "CustomEmbeddedFont", Italic: true });
     }
 
     [Fact]
