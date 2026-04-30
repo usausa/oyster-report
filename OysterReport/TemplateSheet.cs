@@ -139,14 +139,79 @@ public sealed class TemplateSheet
         return count;
     }
 
-    //--------------------------------------------------------------------------------
-    // Cell text access (for tests and diagnostics)
-    //--------------------------------------------------------------------------------
+    public int ReplacePlaceholders(IEnumerable<IReadOnlyDictionary<string, string?>> rows)
+    {
+        var positions = new Dictionary<string, (int Row, int Column)>();
+        var rowIndex = 0;
+        var count = 0;
+        foreach (var entry in rows)
+        {
+            foreach (var (key, value) in entry)
+            {
+                if (!positions.TryGetValue(key, out var pos))
+                {
+                    if (!TryFindMarkerPosition(key, out pos))
+                    {
+                        continue;
+                    }
+                    positions[key] = pos;
+                }
+
+                SetCellValueCore(pos.Row + rowIndex, pos.Column, value ?? string.Empty);
+                count++;
+            }
+
+            rowIndex++;
+        }
+
+        return count;
+    }
+
+    public (int Row, int Column) FindMarkerPosition(string marker)
+    {
+        if (!TryFindMarkerPosition(marker, out var position))
+        {
+            throw new InvalidOperationException($"Marker not found in sheet. maker=[{marker}]");
+        }
+        return position;
+    }
+
+    public bool TryFindMarkerPosition(string marker, out (int Row, int Column) position)
+    {
+        var placeholder = "{{" + marker + "}}";
+        foreach (var cell in UnderlyingSheet.Cells)
+        {
+            if (cell.DisplayText.Contains(placeholder, StringComparison.Ordinal))
+            {
+                position = (cell.Row, cell.Column);
+                return true;
+            }
+        }
+
+        position = default;
+        return false;
+    }
 
     public string GetCellText(int row, int column)
     {
         var cell = UnderlyingSheet.FindCell(row, column);
         return cell is null ? string.Empty : cell.DisplayText;
+    }
+
+    public void SetCellValue(int row, int column, string? value)
+    {
+        SetCellValueCore(row, column, value ?? string.Empty);
+    }
+
+    private void SetCellValueCore(int row, int column, string value)
+    {
+        var cell = UnderlyingSheet.FindCell(row, column);
+        if (cell is null)
+        {
+            cell = new ReportCell { Row = row, Column = column };
+            UnderlyingSheet.AddCell(cell);
+        }
+        SetCellText(cell, value);
     }
 
     internal static void SetCellText(ReportCell cell, string value)

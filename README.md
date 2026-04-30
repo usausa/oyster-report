@@ -19,22 +19,18 @@ using var workbook = new TemplateWorkbook("Invoice.xlsx");
 var sheet = workbook.GetSheet("Invoice");
 
 // Replace simple placeholders
-sheet.ReplacePlaceholder("CustomerName", "UsaUsa Corp");
-sheet.ReplacePlaceholder("IssueDate", "2025-01-15");
-
-// Expand a detail row
-var templateRow = sheet.FindRow("ItemName");
-var row = templateRow;
-foreach (var item in items)
+sheet.ReplacePlaceholders(new Dictionary<string, string?>
 {
-    row = templateRow.InsertCopyAfter(row);
-    row.ReplacePlaceholders(new Dictionary<string, string?>
-    {
-        ["ItemName"] = item.Name,
-        ["Amount"] = item.Amount.ToString()
-    });
-}
-templateRow.Delete();
+    ["CustomerName"] = "UsaUsa Corp",
+    ["IssueDate"] = "2025-01-15"
+});
+
+// Fill detail rows sequentially from the marker positions
+sheet.ReplacePlaceholders(items.Select(static item => new Dictionary<string, string?>
+{
+    ["ItemName"] = item.Name,
+    ["Amount"] = item.Amount.ToString()
+}));
 
 using var output = File.Create("invoice.pdf");
 engine.GeneratePdf(workbook, output);

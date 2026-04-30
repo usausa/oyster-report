@@ -93,4 +93,64 @@ public sealed class TemplateRowRange
         }
         return count;
     }
+
+    public int ReplacePlaceholders(IEnumerable<IReadOnlyDictionary<string, string?>> rows)
+    {
+        var positions = new Dictionary<string, (int Row, int Column)>(StringComparer.Ordinal);
+        var rowIndex = 0;
+        var count = 0;
+        foreach (var entry in rows)
+        {
+            foreach (var (key, value) in entry)
+            {
+                if (!positions.TryGetValue(key, out var pos))
+                {
+                    if (!TryFindMarkerPosition(key, out pos))
+                    {
+                        continue;
+                    }
+                    positions[key] = pos;
+                }
+
+                SetCellValueCore(pos.Row + rowIndex, pos.Column, value ?? string.Empty);
+                count++;
+            }
+
+            rowIndex++;
+        }
+
+        return count;
+    }
+
+    private bool TryFindMarkerPosition(string marker, out (int Row, int Column) position)
+    {
+        var placeholder = "{{" + marker + "}}";
+        foreach (var cell in sheet.Cells)
+        {
+            if (cell.Row < StartRow || cell.Row > EndRow)
+            {
+                continue;
+            }
+
+            if (cell.DisplayText.Contains(placeholder, StringComparison.Ordinal))
+            {
+                position = (cell.Row, cell.Column);
+                return true;
+            }
+        }
+
+        position = default;
+        return false;
+    }
+
+    private void SetCellValueCore(int row, int column, string value)
+    {
+        var cell = sheet.FindCell(row, column);
+        if (cell is null)
+        {
+            cell = new ReportCell { Row = row, Column = column };
+            sheet.AddCell(cell);
+        }
+        TemplateSheet.SetCellText(cell, value);
+    }
 }

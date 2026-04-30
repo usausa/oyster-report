@@ -106,12 +106,12 @@ internal static class PdfRenderPlanner
 
         // Calculate content offsets for horizontal and vertical centering
         var contentWidth = visibleColumns.Sum(static x => x.WidthPoint);
+        var contentHeight = visibleRows.Sum(static x => x.HeightPoint);
         var contentOffsetX = sheet.PageSetup.CenterHorizontally
             ? Math.Max(0d, (printableBounds.Width - contentWidth) / 2d)
             : 0d;
-        var centeringHeight = ComputeFittingHeight(visibleRows, printableBounds.Height);
         var contentOffsetY = sheet.PageSetup.CenterVertically
-            ? Math.Max(0d, (printableBounds.Height - centeringHeight) / 2d)
+            ? (printableBounds.Height - contentHeight) / 2d
             : 0d;
 
         // Build the row-index to Y-offset (pt) dictionary
@@ -449,22 +449,5 @@ internal static class PdfRenderPlanner
         }
 
         return results;
-    }
-
-    private static double ComputeFittingHeight(IEnumerable<ReportRow> rows, double maxHeight)
-    {
-        // Compute total height of rows that fit within the printable height (used for vertical centering).
-        var height = 0d;
-        foreach (var row in rows)
-        {
-            if (height + row.HeightPoint > maxHeight)
-            {
-                break;
-            }
-
-            height += row.HeightPoint;
-        }
-
-        return height;
     }
 }
