@@ -1,6 +1,7 @@
 namespace OysterReport.Internal.OpenXml;
 
 using System.Globalization;
+using System.Runtime.CompilerServices;
 
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
@@ -180,6 +181,7 @@ internal sealed class WorksheetLoader
         return sheet;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     private void ProcessRow(
         Row row,
         List<RawCell> rawCells,
@@ -317,7 +319,7 @@ internal sealed class WorksheetLoader
 
     private CellXfEntry GetXf(int index)
     {
-        if ((index < 0) || (index >= styles.CellXfs.Length))
+        if ((uint)index >= (uint)styles.CellXfs.Length)
         {
             return new CellXfEntry(0, 0, 0, 0, false, false, false, HorizontalAlignment.General, VerticalAlignment.Bottom, false);
         }
@@ -443,16 +445,17 @@ internal sealed class WorksheetLoader
         };
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     private ReportCellStyle BuildStyle(int styleIndex)
     {
         var xf = GetXf(styleIndex);
-        var font = (xf.FontId >= 0 && xf.FontId < styles.Fonts.Length)
+        var font = ((uint)xf.FontId < (uint)styles.Fonts.Length)
             ? styles.Fonts[xf.FontId]
             : new FontEntry("Calibri", 11d, false, false, false, false, "#FF000000");
-        var fill = (xf.FillId >= 0 && xf.FillId < styles.Fills.Length)
+        var fill = ((uint)xf.FillId < (uint)styles.Fills.Length)
             ? styles.Fills[xf.FillId]
             : new FillEntry(FillPattern.None, "#00000000", "#00000000", null, null, 0);
-        var border = (xf.BorderId >= 0 && xf.BorderId < styles.Borders.Length)
+        var border = ((uint)xf.BorderId < (uint)styles.Borders.Length)
             ? styles.Borders[xf.BorderId]
             : new BorderEntry(
                 BorderLineStyle.None,
@@ -627,6 +630,7 @@ internal sealed class WorksheetLoader
     private const double ExcelColumnWidthRoundingOffset = 128d;
     private const double ScreenDpi = 96d;
 
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     private static double ConvertExcelColumnWidthToPoint(double excelWidth, double maxDigitWidth, double adjustment)
     {
         var normalizedWidth = Math.Max(0, excelWidth);

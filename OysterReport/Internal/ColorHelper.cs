@@ -1,9 +1,11 @@
 namespace OysterReport.Internal;
 
 using System.Globalization;
+using System.Runtime.CompilerServices;
 
 internal static class ColorHelper
 {
+    [SkipLocalsInit]
     public static string NormalizeHex(string? argb)
     {
         if (String.IsNullOrWhiteSpace(argb))
@@ -33,6 +35,7 @@ internal static class ColorHelper
         return new string(prefixedBuffer);
     }
 
+    [SkipLocalsInit]
     public static string ToHex(ArgbColor color)
     {
         Span<char> buffer = stackalloc char[9];

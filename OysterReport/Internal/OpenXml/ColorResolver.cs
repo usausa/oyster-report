@@ -29,7 +29,7 @@ internal sealed class ColorResolver
 
     public bool TryGetThemeColor(int index, out ArgbColor color)
     {
-        if ((index < 0) || (index >= themeColors.Length))
+        if ((uint)index >= (uint)themeColors.Length)
         {
             color = default;
             return false;
@@ -59,13 +59,13 @@ internal sealed class ColorResolver
 
         if (color.Theme is not null)
         {
-            var idx = (int)color.Theme.Value;
-            if ((idx < 0) || (idx >= themeColors.Length))
+            var index = (int)color.Theme.Value;
+            if ((uint)index >= (uint)themeColors.Length)
             {
                 return ColorHelper.NormalizeHex(fallbackHex);
             }
 
-            var baseColor = themeColors[idx];
+            var baseColor = themeColors[index];
             var tint = color.Tint?.Value ?? 0d;
             var tinted = Math.Abs(tint) < Double.Epsilon ? baseColor : ColorHelper.ApplyTint(baseColor, tint);
             return ColorHelper.ToHex(tinted);
@@ -73,10 +73,10 @@ internal sealed class ColorResolver
 
         if (color.Indexed is not null)
         {
-            var idx = (int)color.Indexed.Value;
-            if ((idx >= 0) && (idx < IndexedPalette.Length))
+            var index = (int)color.Indexed.Value;
+            if ((uint)index < (uint)IndexedPalette.Length)
             {
-                return "#" + IndexedPalette[idx].ToString("X8", CultureInfo.InvariantCulture);
+                return "#" + IndexedPalette[index].ToString("X8", CultureInfo.InvariantCulture);
             }
         }
 
@@ -85,12 +85,25 @@ internal sealed class ColorResolver
 
     private static string NormalizeRgbHex(string raw)
     {
-        var trimmed = raw.TrimStart('#').Trim();
-        if (trimmed.Length == 6)
+        var span = raw.AsSpan().TrimStart('#').Trim();
+        Span<char> buffer = stackalloc char[10]; // '#' + up to 8 hex + 'FF' prefix = max 10
+        if (span.Length == 6)
         {
-            trimmed = "FF" + trimmed;
+            buffer[0] = '#';
+            buffer[1] = 'F';
+            buffer[2] = 'F';
+            for (var i = 0; i < span.Length; i++)
+            {
+                buffer[3 + i] = Char.ToUpperInvariant(span[i]);
+            }
+            return new string(buffer[..(3 + span.Length)]);
         }
 
-        return "#" + trimmed.ToUpperInvariant();
+        buffer[0] = '#';
+        for (var i = 0; i < span.Length && i < 9; i++)
+        {
+            buffer[1 + i] = Char.ToUpperInvariant(span[i]);
+        }
+        return new string(buffer[..(1 + Math.Min(span.Length, 9))]);
     }
 }
