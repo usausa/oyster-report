@@ -16,7 +16,7 @@ internal static class TableLoader
         foreach (var part in worksheetPart.TableDefinitionParts)
         {
             var table = part.Table;
-            if (table.Reference?.Value is not { } refStr)
+            if (table?.Reference?.Value is not { } refStr)
             {
                 continue;
             }

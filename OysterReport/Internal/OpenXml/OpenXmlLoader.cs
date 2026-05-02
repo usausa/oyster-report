@@ -39,7 +39,7 @@ internal static class OpenXmlLoader
 
         var loader = new WorksheetLoader(styles, sharedStrings, measurementProfile);
 
-        if (workbookPart.Workbook.Sheets is null)
+        if (workbookPart.Workbook?.Sheets is null)
         {
             return workbook;
         }
@@ -78,7 +78,7 @@ internal static class OpenXmlLoader
     private static Dictionary<int, ReportPrintArea> ReadPrintAreas(WorkbookPart workbookPart)
     {
         var result = new Dictionary<int, ReportPrintArea>();
-        var definedNames = workbookPart.Workbook.DefinedNames;
+        var definedNames = workbookPart.Workbook?.DefinedNames;
         if (definedNames is null)
         {
             return result;
