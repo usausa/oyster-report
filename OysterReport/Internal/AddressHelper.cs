@@ -6,7 +6,7 @@ using System.Runtime.CompilerServices;
 internal static class AddressHelper
 {
     [SkipLocalsInit]
-    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public static string ToAddress(int row, int column)
     {
         Span<char> colBuffer = stackalloc char[8];
@@ -29,7 +29,7 @@ internal static class AddressHelper
         return new string(addressBuffer);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public static void ParseAddress(string address, out int row, out int column)
     {
         var source = address.AsSpan().Trim();

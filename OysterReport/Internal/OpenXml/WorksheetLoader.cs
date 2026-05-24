@@ -181,7 +181,7 @@ internal sealed class WorksheetLoader
         return sheet;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     private void ProcessRow(
         Row row,
         List<RawCell> rawCells,
@@ -445,7 +445,7 @@ internal sealed class WorksheetLoader
         };
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     private ReportCellStyle BuildStyle(int styleIndex)
     {
         var xf = GetXf(styleIndex);
@@ -630,7 +630,7 @@ internal sealed class WorksheetLoader
     private const double ExcelColumnWidthRoundingOffset = 128d;
     private const double ScreenDpi = 96d;
 
-    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     private static double ConvertExcelColumnWidthToPoint(double excelWidth, double maxDigitWidth, double adjustment)
     {
         var normalizedWidth = Math.Max(0, excelWidth);
