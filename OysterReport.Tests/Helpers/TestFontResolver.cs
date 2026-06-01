@@ -41,7 +41,7 @@ internal sealed class TestFontResolver : IReportFontResolver
     }
 
     public ReadOnlyMemory<byte>? GetFont(string faceName) =>
-        string.Equals(ExtractBaseFaceName(faceName), EmbeddedFontName, StringComparison.Ordinal)
+        String.Equals(ExtractBaseFaceName(faceName), EmbeddedFontName, StringComparison.Ordinal)
             ? fontData
             : null;
 

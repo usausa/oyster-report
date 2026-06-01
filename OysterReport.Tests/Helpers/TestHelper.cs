@@ -58,7 +58,7 @@ internal static class TestHelper
             parts.AddRange(words.Select(static w => w.Text));
         }
 
-        return string.Join(" ", parts);
+        return String.Join(" ", parts);
     }
 
     public static int GetPageCount(byte[] pdfBytes)
