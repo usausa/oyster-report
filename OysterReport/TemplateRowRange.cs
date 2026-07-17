@@ -86,12 +86,7 @@ public sealed class TemplateRowRange
 
     public int ReplacePlaceholders(IReadOnlyDictionary<string, string?> values)
     {
-        var count = 0;
-        foreach (var (key, value) in values)
-        {
-            count += ReplacePlaceholder(key, value ?? string.Empty);
-        }
-        return count;
+        return PlaceholderReplacer.ReplaceInRows(sheet, StartRow, EndRow, values);
     }
 
     public int ReplacePlaceholders(IEnumerable<IReadOnlyDictionary<string, string?>> rows)
@@ -150,6 +145,7 @@ public sealed class TemplateRowRange
         {
             cell = new ReportCell { Row = row, Column = column };
             sheet.AddCell(cell);
+            sheet.EnsureRowDefinition(row);
         }
         TemplateSheet.SetCellText(cell, value);
     }

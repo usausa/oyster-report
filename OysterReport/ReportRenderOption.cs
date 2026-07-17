@@ -51,6 +51,9 @@ public sealed record ReportRenderOption
     // Fallback max digit width for unknown fonts (96-DPI reference pixels)
     public double FallbackMaxDigitWidth { get; set; } = 7d;
 
+    // Invoked when a non-fatal rendering problem is skipped (e.g. an image that fails to decode)
+    public Action<ReportRenderWarning>? OnRenderWarning { get; set; }
+
     private static (double Width, double Height) ResolveDefaultPageSize(PaperSize paperSize) =>
         paperSize switch
         {

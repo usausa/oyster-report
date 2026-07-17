@@ -2,12 +2,15 @@ namespace OysterReport.Internal;
 
 using System.Collections.Concurrent;
 using System.Globalization;
+using System.Runtime.InteropServices;
 using System.Text;
 
 using PdfSharp.Drawing;
 using PdfSharp.Drawing.Layout;
 using PdfSharp.Fonts;
 using PdfSharp.Pdf;
+
+using SkiaSharp;
 
 internal static class PdfGenerator
 {
@@ -53,7 +56,7 @@ internal static class PdfGenerator
                 DrawPageBackground(graphics, pagePlan.PageBounds);
                 DrawCells(graphics, sourceSheet, pagePlan.Cells, context);
                 DrawBorders(graphics, sourceSheet, pagePlan.Cells, context.RenderingOptions);
-                DrawImages(graphics, sheetPlan.Images);
+                DrawImages(graphics, sheetPlan.SheetName, sheetPlan.Images, context.RenderingOptions);
                 DrawHeaderFooter(graphics, pagePlan.HeaderFooter, pagePlan.PageNumber, sheetPlan.Pages.Count, context.RenderingOptions);
             }
         }
@@ -283,7 +286,7 @@ internal static class PdfGenerator
     // Image
     //--------------------------------------------------------------------------------
 
-    private static void DrawImages(XGraphics graphics, IEnumerable<PdfImageRenderInfo> images)
+    private static void DrawImages(XGraphics graphics, string sheetName, IEnumerable<PdfImageRenderInfo> images, ReportRenderOption renderOption)
     {
         // Draws images embedded in the sheet onto the page. Skips images that fail to decode
         foreach (var image in images)
@@ -295,14 +298,74 @@ internal static class PdfGenerator
 
             try
             {
-                using var stream = new MemoryStream(image.ImageBytes.ToArray());
-                var xImage = XImage.FromStream(stream);
-                graphics.DrawImage(xImage, image.Bounds.X, image.Bounds.Y, image.Bounds.Width, image.Bounds.Height);
+                DrawSingleImage(graphics, image);
             }
             catch (Exception ex) when (ex is InvalidOperationException or ArgumentException or NotSupportedException)
             {
+                renderOption.OnRenderWarning?.Invoke(new ReportRenderWarning
+                {
+                    Kind = ReportRenderWarningKind.ImageDecodeFailed,
+                    SheetName = sheetName,
+                    Source = image.Name,
+                    Message = $"Failed to decode image. name=[{image.Name}]",
+                    Exception = ex
+                });
             }
         }
+    }
+
+    private static void DrawSingleImage(XGraphics graphics, PdfImageRenderInfo image)
+    {
+        try
+        {
+            using var stream = CreateImageStream(image.ImageBytes);
+            using var xImage = XImage.FromStream(stream);
+            graphics.DrawImage(xImage, image.Bounds.X, image.Bounds.Y, image.Bounds.Width, image.Bounds.Height);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or ArgumentException or NotSupportedException)
+        {
+            // PDFsharp (Core) rejects some formats (e.g. grayscale PNG); retry after normalizing via SkiaSharp
+            var converted = TranscodeToStandardPng(image.ImageBytes);
+            if (converted is null)
+            {
+                throw;
+            }
+
+            using var stream = new MemoryStream(converted, writable: false);
+            using var xImage = XImage.FromStream(stream);
+            graphics.DrawImage(xImage, image.Bounds.X, image.Bounds.Y, image.Bounds.Width, image.Bounds.Height);
+        }
+    }
+
+    private static byte[]? TranscodeToStandardPng(ReadOnlyMemory<byte> imageBytes)
+    {
+        // Re-encodes the image as a 32-bit RGBA PNG that PDFsharp can import. Rendering onto a
+        // BGRA bitmap normalizes color types (e.g. grayscale PNGs) that neither PDFsharp nor a
+        // direct SKBitmap decode accept.
+        using var encoded = SKImage.FromEncodedData(imageBytes.Span);
+        if (encoded is null)
+        {
+            return null;
+        }
+
+        var info = new SKImageInfo(encoded.Width, encoded.Height, SKColorType.Bgra8888, SKAlphaType.Premul);
+        using var bitmap = new SKBitmap(info);
+        using (var canvas = new SKCanvas(bitmap))
+        {
+            canvas.Clear(SKColors.Transparent);
+            canvas.DrawImage(encoded, 0, 0);
+        }
+
+        using var image = SKImage.FromBitmap(bitmap);
+        using var data = image?.Encode(SKEncodedImageFormat.Png, 100);
+        return data?.ToArray();
+    }
+
+    private static MemoryStream CreateImageStream(ReadOnlyMemory<byte> imageBytes)
+    {
+        return MemoryMarshal.TryGetArray(imageBytes, out var segment) && segment.Array is not null
+            ? new MemoryStream(segment.Array, segment.Offset, segment.Count, writable: false)
+            : new MemoryStream(imageBytes.ToArray(), writable: false);
     }
 
     //--------------------------------------------------------------------------------

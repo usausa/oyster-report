@@ -11,18 +11,27 @@ internal sealed class WorksheetLoader
 {
     private const double PointsPerInch = 72d;
 
+    // Difference in days between the 1900 and 1904 Excel date systems
+    private const double Date1904SerialOffset = 1462d;
+
+    private static readonly ReportCellValue BlankCellValue = new() { Kind = CellValueKind.Blank, RawValue = string.Empty };
+
     private readonly StyleCatalog styles;
     private readonly string[] sharedStrings;
     private readonly ReportMeasurementProfile measurementProfile;
+    private readonly bool date1904;
 
-    public WorksheetLoader(StyleCatalog styles, string[] sharedStrings, ReportMeasurementProfile measurementProfile)
+    private readonly Dictionary<int, ReportCellStyle> styleCache = [];
+
+    public WorksheetLoader(StyleCatalog styles, string[] sharedStrings, ReportMeasurementProfile measurementProfile, bool date1904)
     {
         this.styles = styles;
         this.sharedStrings = sharedStrings;
         this.measurementProfile = measurementProfile;
+        this.date1904 = date1904;
     }
 
-    public ReportSheet Load(WorksheetPart part, string name, ReportPrintArea? printArea)
+    public ReportSheet Load(WorksheetPart part, string name, ReportPrintArea? printArea, IEnumerable<ReportTable> tables)
     {
         var sheet = new ReportSheet { Name = name };
         var rawCells = new List<RawCell>();
@@ -176,6 +185,11 @@ internal sealed class WorksheetLoader
         sheet.PrintArea = printArea;
         sheet.ShowGridLines = showGridLines;
 
+        foreach (var table in tables)
+        {
+            sheet.AddTable(table);
+        }
+
         AssembleSheet(sheet, rawCells, rowInfos, columnInfos, merges, rowBreaks, colBreaks, defaultRowHeight);
 
         return sheet;
@@ -237,7 +251,7 @@ internal sealed class WorksheetLoader
         }
         else if (type == CellValues.InlineString)
         {
-            rawValue = cell.InlineString?.Text?.Text ?? string.Empty;
+            rawValue = cell.InlineString is { } inlineString ? OpenXmlText.Extract(inlineString) : string.Empty;
             typedValue = rawValue;
             kind = CellValueKind.Text;
         }
@@ -274,7 +288,7 @@ internal sealed class WorksheetLoader
                     kind = CellValueKind.DateTime;
                     try
                     {
-                        typedValue = DateTime.FromOADate(d);
+                        typedValue = DateTime.FromOADate(date1904 ? d + Date1904SerialOffset : d);
                     }
                     catch (ArgumentException)
                     {
@@ -342,30 +356,7 @@ internal sealed class WorksheetLoader
             return;
         }
         sheet.UsedRange = range.Value;
-
-        for (var r = range.Value.StartRow; r <= range.Value.EndRow; r++)
-        {
-            if (rowInfos.TryGetValue(r, out var info))
-            {
-                sheet.AddRowDefinition(new ReportRow
-                {
-                    Index = r,
-                    HeightPoint = info.Height,
-                    IsHidden = info.Hidden,
-                    OutlineLevel = info.OutlineLevel
-                });
-            }
-            else
-            {
-                sheet.AddRowDefinition(new ReportRow
-                {
-                    Index = r,
-                    HeightPoint = defaultRowHeight,
-                    IsHidden = false,
-                    OutlineLevel = 0
-                });
-            }
-        }
+        sheet.DefaultRowHeightPoint = defaultRowHeight;
 
         var colWidthByIndex = new Dictionary<int, (double Width, bool Hidden, int Outline)>();
         foreach (var info in columnInfos)
@@ -396,6 +387,13 @@ internal sealed class WorksheetLoader
             sheet.AddMergedRange(new ReportMergedRange { Range = merge });
         }
 
+        var startColumn = range.Value.StartColumn;
+        var blankStylesByColumn = new ReportCellStyle[range.Value.EndColumn - startColumn + 1];
+        for (var i = 0; i < blankStylesByColumn.Length; i++)
+        {
+            blankStylesByColumn[i] = GetOrBuildStyle(ResolveColumnStyleIndex(columnInfos, startColumn + i));
+        }
+
         var cellLookup = rawCells.ToDictionary(rc => (rc.Row, rc.Column));
         for (var r = range.Value.StartRow; r <= range.Value.EndRow; r++)
         {
@@ -407,16 +405,51 @@ internal sealed class WorksheetLoader
                 }
                 else
                 {
-                    var columnStyleIndex = ResolveColumnStyleIndex(columnInfos, c);
+                    var blankStyle = blankStylesByColumn[c - startColumn];
+                    if (!ShouldMaterializeBlankCell(blankStyle, r, c, merges, sheet.Tables))
+                    {
+                        continue;
+                    }
+
                     sheet.AddCell(new ReportCell
                     {
                         Row = r,
                         Column = c,
-                        Value = new ReportCellValue { Kind = CellValueKind.Blank, RawValue = string.Empty },
+                        Value = BlankCellValue,
                         DisplayText = string.Empty,
-                        Style = BuildStyle(columnStyleIndex)
+                        Style = blankStyle
                     });
                 }
+            }
+        }
+
+        var rowsWithCells = new HashSet<int>();
+        foreach (var cell in sheet.Cells)
+        {
+            rowsWithCells.Add(cell.Row);
+        }
+
+        for (var r = range.Value.StartRow; r <= range.Value.EndRow; r++)
+        {
+            if (rowInfos.TryGetValue(r, out var info))
+            {
+                sheet.AddRowDefinition(new ReportRow
+                {
+                    Index = r,
+                    HeightPoint = info.Height,
+                    IsHidden = info.Hidden,
+                    OutlineLevel = info.OutlineLevel
+                });
+            }
+            else if (rowsWithCells.Contains(r))
+            {
+                sheet.AddRowDefinition(new ReportRow
+                {
+                    Index = r,
+                    HeightPoint = defaultRowHeight,
+                    IsHidden = false,
+                    OutlineLevel = 0
+                });
             }
         }
 
@@ -433,16 +466,62 @@ internal sealed class WorksheetLoader
         ApplyMerges(sheet);
     }
 
+    private static bool ShouldMaterializeBlankCell(ReportCellStyle style, int row, int column, List<ReportRange> merges, IEnumerable<ReportTable> tables)
+    {
+        if (HasVisibleStyle(style))
+        {
+            return true;
+        }
+
+        foreach (var merge in merges)
+        {
+            if (merge.Contains(row, column))
+            {
+                return true;
+            }
+        }
+
+        foreach (var table in tables)
+        {
+            if (table.Range.Contains(row, column))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool HasVisibleStyle(ReportCellStyle style) =>
+        !style.Fill.BackgroundColorHex.StartsWith("#00", StringComparison.Ordinal) ||
+        (style.Borders.Left.Style != BorderLineStyle.None) ||
+        (style.Borders.Top.Style != BorderLineStyle.None) ||
+        (style.Borders.Right.Style != BorderLineStyle.None) ||
+        (style.Borders.Bottom.Style != BorderLineStyle.None);
+
     private ReportCell BuildCell(RawCell raw)
     {
         return new ReportCell
         {
             Row = raw.Row,
             Column = raw.Column,
-            Value = new ReportCellValue { Kind = raw.Kind, RawValue = raw.TypedValue },
+            Value = raw.Kind == CellValueKind.Blank
+                ? BlankCellValue
+                : new ReportCellValue { Kind = raw.Kind, RawValue = raw.TypedValue },
             DisplayText = raw.DisplayText,
-            Style = BuildStyle(raw.StyleIndex)
+            Style = GetOrBuildStyle(raw.StyleIndex)
         };
+    }
+
+    private ReportCellStyle GetOrBuildStyle(int styleIndex)
+    {
+        if (!styleCache.TryGetValue(styleIndex, out var style))
+        {
+            style = BuildStyle(styleIndex);
+            styleCache[styleIndex] = style;
+        }
+
+        return style;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
@@ -605,15 +684,18 @@ internal sealed class WorksheetLoader
     {
         foreach (var merge in sheet.MergedRanges)
         {
-            foreach (var cell in sheet.Cells)
+            var info = new ReportMergeInfo
             {
-                if (merge.Range.Contains(cell.Row, cell.Column))
+                OwnerCellAddress = merge.OwnerCellAddress,
+                Range = merge.Range
+            };
+
+            for (var r = merge.Range.StartRow; r <= merge.Range.EndRow; r++)
+            {
+                for (var c = merge.Range.StartColumn; c <= merge.Range.EndColumn; c++)
                 {
-                    cell.Merge = new ReportMergeInfo
-                    {
-                        OwnerCellAddress = merge.OwnerCellAddress,
-                        Range = merge.Range
-                    };
+                    var cell = sheet.FindCell(r, c);
+                    cell?.Merge = info;
                 }
             }
         }

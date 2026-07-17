@@ -53,6 +53,13 @@ internal sealed record ReportMeasurementProfile
 
 //--------------------------------------------------------------------------------
 // Cell value and style
+//
+// The records below (ReportCellValue, ReportCellStyle and its nested Font/Fill/
+// Borders/Alignment records, ReportMergeInfo) are immutable and intentionally shared
+// across cells, sheets, and workbooks: the loader caches one style per style index,
+// CloneCore preserves that sharing, and CopyRowContent shares value/style with the
+// source row. Keep every property init-only — an in-place mutation would corrupt every
+// cell sharing the instance. Replace the whole record (e.g. SetCellText) instead.
 //--------------------------------------------------------------------------------
 
 [ExcludeFromCodeCoverage]
@@ -355,6 +362,8 @@ internal sealed class ReportSheet
     private readonly List<ReportRow> rows = [];
     private readonly List<ReportColumn> columns = [];
     private readonly List<ReportCell> cells = [];
+
+    private readonly Dictionary<(int Row, int Column), ReportCell> cellIndex = [];
     private readonly List<ReportMergedRange> mergedRanges = [];
     private readonly List<ReportTable> tables = [];
     private readonly List<ReportImage> images = [];
@@ -389,11 +398,17 @@ internal sealed class ReportSheet
 
     public bool ShowGridLines { get; set; }
 
+    public double DefaultRowHeightPoint { get; set; } = 15d;
+
     public void AddRowDefinition(ReportRow row) => rows.Add(row);
 
     public void AddColumnDefinition(ReportColumn column) => columns.Add(column);
 
-    public void AddCell(ReportCell cell) => cells.Add(cell);
+    public void AddCell(ReportCell cell)
+    {
+        cells.Add(cell);
+        cellIndex.TryAdd((cell.Row, cell.Column), cell);
+    }
 
     public void AddMergedRange(ReportMergedRange range) => mergedRanges.Add(range);
 
@@ -416,10 +431,17 @@ internal sealed class ReportSheet
         });
 
         var top = 0d;
+        var previousIndex = 0;
         foreach (var row in rows)
         {
+            if (row.Index > previousIndex + 1)
+            {
+                top += (row.Index - previousIndex - 1) * DefaultRowHeightPoint;
+            }
+
             row.TopPoint = top;
             top += row.HeightPoint;
+            previousIndex = row.Index;
         }
 
         var left = 0d;
@@ -427,6 +449,12 @@ internal sealed class ReportSheet
         {
             column.LeftPoint = left;
             left += column.WidthPoint;
+        }
+
+        cellIndex.Clear();
+        foreach (var cell in cells)
+        {
+            cellIndex.TryAdd((cell.Row, cell.Column), cell);
         }
     }
 
@@ -446,17 +474,19 @@ internal sealed class ReportSheet
         return null;
     }
 
-    public ReportCell? FindCell(int row, int column)
+    public void EnsureRowDefinition(int row)
     {
-        foreach (var cell in cells)
+        if (GetRowDefinition(row) is null)
         {
-            if (cell.Row == row && cell.Column == column)
+            rows.Add(new ReportRow
             {
-                return cell;
-            }
+                Index = row,
+                HeightPoint = DefaultRowHeightPoint
+            });
         }
-        return null;
     }
+
+    public ReportCell? FindCell(int row, int column) => cellIndex.GetValueOrDefault((row, column));
 
     // Inserts `count` blank rows at `insertAtRow`, shifting existing rows/cells/merges/images/breaks down.
     public void InsertEmptyRowsAt(int insertAtRow, int count)
@@ -479,7 +509,7 @@ internal sealed class ReportSheet
             rows.Add(new ReportRow
             {
                 Index = insertAtRow + i,
-                HeightPoint = 15d
+                HeightPoint = DefaultRowHeightPoint
             });
         }
 
@@ -860,7 +890,7 @@ internal sealed class ReportSheet
         RecalculateLayout();
     }
 
-    // Copies the contents (cells and row height) of sourceRow into destinationRow.
+    // Copies the contents (cells, row height, and single-row merges) of sourceRow into destinationRow.
     public void CopyRowContent(int sourceRow, int destinationRow)
     {
         if (sourceRow == destinationRow)
@@ -869,6 +899,7 @@ internal sealed class ReportSheet
         }
 
         cells.RemoveAll(c => c.Row == destinationRow);
+        mergedRanges.RemoveAll(mr => (mr.Range.StartRow == destinationRow) && (mr.Range.EndRow == destinationRow));
 
         var source = GetRowDefinition(sourceRow);
         var destination = GetRowDefinition(destinationRow);
@@ -879,6 +910,7 @@ internal sealed class ReportSheet
 
         foreach (var cell in cells.Where(c => c.Row == sourceRow).ToList())
         {
+            var translatedMerge = TranslateMergeForRowCopy(cell.Merge, destinationRow);
             cells.Add(new ReportCell
             {
                 Row = destinationRow,
@@ -886,11 +918,44 @@ internal sealed class ReportSheet
                 Value = cell.Value,
                 DisplayText = cell.DisplayText,
                 Style = cell.Style,
-                Merge = cell.Merge
+                Merge = translatedMerge
             });
+
+            if (translatedMerge is { } moved &&
+                (moved.Range.StartRow == moved.Range.EndRow) &&
+                (cell.Column == moved.Range.StartColumn))
+            {
+                mergedRanges.Add(new ReportMergedRange { Range = moved.Range });
+            }
         }
 
         RecalculateLayout();
+    }
+
+    private static ReportMergeInfo? TranslateMergeForRowCopy(ReportMergeInfo? merge, int destinationRow)
+    {
+        if (merge is null)
+        {
+            return null;
+        }
+
+        var range = merge.Range;
+        if (range.StartRow == range.EndRow)
+        {
+            return new ReportMergeInfo
+            {
+                OwnerCellAddress = AddressHelper.ToAddress(destinationRow, range.StartColumn),
+                Range = new ReportRange
+                {
+                    StartRow = destinationRow,
+                    StartColumn = range.StartColumn,
+                    EndRow = destinationRow,
+                    EndColumn = range.EndColumn
+                }
+            };
+        }
+
+        return range.Contains(destinationRow, range.StartColumn) ? merge.DeepClone() : null;
     }
 
     public ReportSheet Clone(string newName) => CloneCore(newName);
@@ -906,7 +971,8 @@ internal sealed class ReportSheet
             PageSetup = PageSetup.DeepClone(),
             HeaderFooter = HeaderFooter.DeepClone(),
             PrintArea = PrintArea?.DeepClone(),
-            ShowGridLines = ShowGridLines
+            ShowGridLines = ShowGridLines,
+            DefaultRowHeightPoint = DefaultRowHeightPoint
         };
 
         foreach (var row in rows)
@@ -942,16 +1008,20 @@ internal sealed class ReportSheet
             copy.AddTable(table.DeepClone());
         }
 
+        // Instances shared between cells (styles, blank values, merge infos) stay shared in the copy
+        var valueMap = new Dictionary<ReportCellValue, ReportCellValue>(ReferenceEqualityComparer.Instance);
+        var styleMap = new Dictionary<ReportCellStyle, ReportCellStyle>(ReferenceEqualityComparer.Instance);
+        var mergeMap = new Dictionary<ReportMergeInfo, ReportMergeInfo>(ReferenceEqualityComparer.Instance);
         foreach (var cell in cells)
         {
             copy.AddCell(new ReportCell
             {
                 Row = cell.Row,
                 Column = cell.Column,
-                Value = cell.Value.DeepClone(),
+                Value = GetOrClone(valueMap, cell.Value, static x => x.DeepClone()),
                 DisplayText = cell.DisplayText,
-                Style = cell.Style.DeepClone(),
-                Merge = cell.Merge?.DeepClone()
+                Style = GetOrClone(styleMap, cell.Style, static x => x.DeepClone()),
+                Merge = cell.Merge is null ? null : GetOrClone(mergeMap, cell.Merge, static x => x.DeepClone())
             });
         }
 
@@ -980,6 +1050,18 @@ internal sealed class ReportSheet
         }
 
         copy.RecalculateLayout();
+        return copy;
+    }
+
+    private static T GetOrClone<T>(Dictionary<T, T> map, T source, Func<T, T> clone)
+        where T : class
+    {
+        if (!map.TryGetValue(source, out var copy))
+        {
+            copy = clone(source);
+            map[source] = copy;
+        }
+
         return copy;
     }
 

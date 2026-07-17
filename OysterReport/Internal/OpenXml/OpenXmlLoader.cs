@@ -37,7 +37,8 @@ internal static class OpenXmlLoader
             MeasurementProfile = measurementProfile
         };
 
-        var loader = new WorksheetLoader(styles, sharedStrings, measurementProfile);
+        var date1904 = workbookPart.Workbook?.WorkbookProperties?.Date1904?.Value ?? false;
+        var loader = new WorksheetLoader(styles, sharedStrings, measurementProfile, date1904);
 
         if (workbookPart.Workbook?.Sheets is null)
         {
@@ -59,14 +60,14 @@ internal static class OpenXmlLoader
 
             var name = sheetRef.Name?.Value ?? string.Empty;
             printAreas.TryGetValue(sheetIndex, out var printArea);
-            var reportSheet = loader.Load(wsPart, name, printArea);
+
+            var tables = BuildTables(wsPart, styles.ColorResolver);
+            var reportSheet = loader.Load(wsPart, name, printArea, tables);
 
             foreach (var img in DrawingLoader.Load(wsPart))
             {
                 reportSheet.AddImage(img);
             }
-
-            LoadTables(reportSheet, wsPart, styles.ColorResolver);
 
             workbook.AddSheet(reportSheet);
             sheetIndex++;
@@ -156,15 +157,16 @@ internal static class OpenXmlLoader
         return renderOption.FallbackMaxDigitWidth;
     }
 
-    private static void LoadTables(ReportSheet sheet, WorksheetPart wsPart, ColorResolver colorResolver)
+    private static List<ReportTable> BuildTables(WorksheetPart wsPart, ColorResolver colorResolver)
     {
+        var result = new List<ReportTable>();
         foreach (var table in TableLoader.Load(wsPart))
         {
             var stripeHex = table.ShowRowStripes && !String.IsNullOrEmpty(table.ThemeName)
                 ? ResolveStripeHex(table.ThemeName, colorResolver)
                 : string.Empty;
 
-            sheet.AddTable(new ReportTable
+            result.Add(new ReportTable
             {
                 Range = table.Range,
                 ShowRowStripes = table.ShowRowStripes,
@@ -173,6 +175,8 @@ internal static class OpenXmlLoader
                 StripeColorHex = stripeHex
             });
         }
+
+        return result;
     }
 
     private static readonly Dictionary<string, (int ThemeIndex, double Tint)> StripeBandByStyleName =

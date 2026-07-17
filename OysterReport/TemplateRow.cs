@@ -75,11 +75,6 @@ public sealed class TemplateRow
 
     public int ReplacePlaceholders(IReadOnlyDictionary<string, string?> values)
     {
-        var count = 0;
-        foreach (var (key, value) in values)
-        {
-            count += ReplacePlaceholder(key, value ?? string.Empty);
-        }
-        return count;
+        return PlaceholderReplacer.ReplaceInRows(sheet, RowNumber, RowNumber, values);
     }
 }

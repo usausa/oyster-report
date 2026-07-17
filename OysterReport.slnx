@@ -8,6 +8,9 @@
   <Folder Name="/Tests/">
     <Project Path="OysterReport.Tests/OysterReport.Tests.csproj" />
   </Folder>
+  <Folder Name="/Benchmark/">
+    <Project Path="OysterReport.Benchmark/OysterReport.Benchmark.csproj" />
+  </Folder>
   <Folder Name="/Solution Items/">
     <File Path=".editorconfig" />
     <File Path=".gitattributes" />

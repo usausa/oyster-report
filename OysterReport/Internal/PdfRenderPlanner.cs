@@ -94,19 +94,22 @@ internal static class PdfRenderPlanner
         // Resolve the render range from print area or used cell range
         var renderRange = sheet.PrintArea?.Range ?? sheet.UsedRange;
 
-        // Filter visible rows and columns within the render range, sorted by index
-        var visibleRows = sheet.Rows
-            .Where(x => !x.IsHidden && (x.Index >= renderRange.StartRow) && (x.Index <= renderRange.EndRow))
+        // Filter rows and columns within the render range, sorted by index
+        var defaultRowHeight = sheet.DefaultRowHeightPoint;
+        var rowsInRange = sheet.Rows
+            .Where(x => (x.Index >= renderRange.StartRow) && (x.Index <= renderRange.EndRow))
             .OrderBy(static x => x.Index)
             .ToList();
+        var visibleRows = rowsInRange.Where(static x => !x.IsHidden).ToList();
         var visibleColumns = sheet.Columns
             .Where(x => !x.IsHidden && (x.Index >= renderRange.StartColumn) && (x.Index <= renderRange.EndColumn))
             .OrderBy(static x => x.Index)
             .ToList();
 
         // Calculate content offsets for horizontal and vertical centering
+        var nonMaterializedRowCount = (renderRange.EndRow - renderRange.StartRow + 1) - rowsInRange.Count;
         var contentWidth = visibleColumns.Sum(static x => x.WidthPoint);
-        var contentHeight = visibleRows.Sum(static x => x.HeightPoint);
+        var contentHeight = visibleRows.Sum(static x => x.HeightPoint) + (nonMaterializedRowCount * defaultRowHeight);
         var contentOffsetX = sheet.PageSetup.CenterHorizontally
             ? Math.Max(0d, (printableBounds.Width - contentWidth) / 2d)
             : 0d;
@@ -114,13 +117,20 @@ internal static class PdfRenderPlanner
             ? (printableBounds.Height - contentHeight) / 2d
             : 0d;
 
-        // Build the row-index to Y-offset (pt) dictionary
+        // Build the row-index to Y-offset (pt) dictionary, filling the gaps between materialized rows
         var rowOffsets = new Dictionary<int, double>();
         var currentTop = printableBounds.Y + contentOffsetY;
-        foreach (var row in visibleRows)
+        var previousRowIndex = renderRange.StartRow - 1;
+        foreach (var row in rowsInRange)
         {
-            rowOffsets[row.Index] = currentTop;
-            currentTop += row.HeightPoint;
+            currentTop += (row.Index - previousRowIndex - 1) * defaultRowHeight;
+            if (!row.IsHidden)
+            {
+                rowOffsets[row.Index] = currentTop;
+                currentTop += row.HeightPoint;
+            }
+
+            previousRowIndex = row.Index;
         }
 
         // Build the column-index to X-offset (pt) dictionary
@@ -132,17 +142,18 @@ internal static class PdfRenderPlanner
             currentLeft += column.WidthPoint;
         }
 
-        // Build lookup dictionaries for merged ranges, cells, and columns
+        // Images can anchor on a blank (non-materialized) row that carries no cell
+        AddImageAnchorRowOffsets(sheet, renderRange, rowsInRange, rowOffsets, printableBounds.Y + contentOffsetY, defaultRowHeight);
+
+        // Build lookup dictionaries for merged ranges and columns; cells are resolved via sheet.FindCell
         var mergedRanges = sheet.MergedRanges.ToDictionary(range => range.OwnerCellAddress, range => range);
-        var cellsByRowCol = sheet.Cells.ToDictionary(c => (c.Row, c.Column));
         var columnByIndex = visibleColumns.ToDictionary(c => c.Index);
         var rowByIndex = visibleRows.ToDictionary(r => r.Index);
-        var mergedRangeByCell = BuildMergedRangeByCell(sheet.MergedRanges);
-        var stripeColorByCell = BuildStripeColorByCell(sheet.Tables);
+        var mergedRangesByRow = BuildMergedRangesByRow(sheet.MergedRanges);
 
         // Compute bounding rectangles for each visible cell and build the PdfCellRenderInfo list
         var pageCells = new List<PdfCellRenderInfo>();
-        foreach (var cell in sheet.Cells.Where(x => rowOffsets.ContainsKey(x.Row) && columnOffsets.ContainsKey(x.Column)))
+        foreach (var cell in sheet.Cells.Where(x => rowByIndex.ContainsKey(x.Row) && columnOffsets.ContainsKey(x.Column)))
         {
             var outerBounds = new ReportRect
             {
@@ -166,7 +177,7 @@ internal static class PdfRenderPlanner
             pageCells.Add(new PdfCellRenderInfo
             {
                 CellAddress = cell.Address,
-                BackgroundColorHex = ResolveBackgroundColor(cell, stripeColorByCell),
+                BackgroundColorHex = ResolveBackgroundColor(cell, sheet.Tables),
                 OuterBounds = outerBounds,
                 ContentBounds = contentBounds,
                 TextBounds = ComputeTextOverflowBounds(
@@ -175,10 +186,10 @@ internal static class PdfRenderPlanner
                     outerBounds,
                     isMergedOwner,
                     isMergedOwner ? mergedRanges.GetValueOrDefault(cell.Address) : null,
-                    cellsByRowCol,
+                    sheet,
                     columnByIndex,
                     columnOffsets,
-                    mergedRangeByCell),
+                    mergedRangesByRow),
                 IsMergedOwner = isMergedOwner
             });
         }
@@ -242,35 +253,61 @@ internal static class PdfRenderPlanner
         };
     }
 
-    private static Dictionary<(int Row, int Column), ReportMergedRange> BuildMergedRangeByCell(
+    private static Dictionary<int, List<ReportMergedRange>> BuildMergedRangesByRow(
         IEnumerable<ReportMergedRange> mergedRanges)
     {
-        // Builds dictionary for looking up merged ranges
-        var map = new Dictionary<(int, int), ReportMergedRange>();
+        // Indexes merged ranges by row so membership checks avoid expanding every covered cell
+        var map = new Dictionary<int, List<ReportMergedRange>>();
         foreach (var mr in mergedRanges)
         {
             for (var r = mr.Range.StartRow; r <= mr.Range.EndRow; r++)
             {
-                for (var c = mr.Range.StartColumn; c <= mr.Range.EndColumn; c++)
+                if (!map.TryGetValue(r, out var list))
                 {
-                    map[(r, c)] = mr;
+                    list = [];
+                    map[r] = list;
                 }
+
+                list.Add(mr);
             }
         }
 
         return map;
     }
 
+    private static bool IsInsideMergedRange(Dictionary<int, List<ReportMergedRange>> mergedRangesByRow, int row, int column)
+    {
+        if (!mergedRangesByRow.TryGetValue(row, out var list))
+        {
+            return false;
+        }
+
+        foreach (var mr in list)
+        {
+            if ((column >= mr.Range.StartColumn) && (column <= mr.Range.EndColumn))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     //--------------------------------------------------------------------------------
     // Table stripe
     //--------------------------------------------------------------------------------
 
-    private static Dictionary<(int Row, int Column), string> BuildStripeColorByCell(IEnumerable<ReportTable> tables)
+    private static string ResolveBackgroundColor(ReportCell cell, IReadOnlyList<ReportTable> tables)
     {
-        // Maps each (row, column) inside a striped table's data range to the resolved stripe color
-        var map = new Dictionary<(int, int), string>();
-        foreach (var table in tables)
+        var hex = cell.Style.Fill.BackgroundColorHex;
+        if (!hex.StartsWith("#00", StringComparison.Ordinal))
         {
+            return hex;
+        }
+
+        for (var i = tables.Count - 1; i >= 0; i--)
+        {
+            var table = tables[i];
             if (!table.ShowRowStripes || String.IsNullOrEmpty(table.StripeColorHex))
             {
                 continue;
@@ -278,32 +315,14 @@ internal static class PdfRenderPlanner
 
             var firstDataRow = table.Range.StartRow + (table.ShowHeader ? 1 : 0);
             var lastDataRow = table.Range.EndRow - (table.ShowTotals ? 1 : 0);
-
-            for (var r = firstDataRow; r <= lastDataRow; r++)
+            if ((cell.Row < firstDataRow) || (cell.Row > lastDataRow) ||
+                (((cell.Row - firstDataRow) % 2) != 0) ||
+                (cell.Column < table.Range.StartColumn) || (cell.Column > table.Range.EndColumn))
             {
-                if (((r - firstDataRow) % 2) != 0)
-                {
-                    continue;
-                }
-
-                for (var c = table.Range.StartColumn; c <= table.Range.EndColumn; c++)
-                {
-                    map[(r, c)] = table.StripeColorHex;
-                }
+                continue;
             }
-        }
 
-        return map;
-    }
-
-    private static string ResolveBackgroundColor(ReportCell cell, Dictionary<(int Row, int Column), string> stripeColorByCell)
-    {
-        // Stripe color overrides the default background only when the cell's own fill is transparent
-        var hex = cell.Style.Fill.BackgroundColorHex;
-        if (stripeColorByCell.TryGetValue((cell.Row, cell.Column), out var stripeHex) &&
-            hex.StartsWith("#00", StringComparison.Ordinal))
-        {
-            return stripeHex;
+            return table.StripeColorHex;
         }
 
         return hex;
@@ -319,10 +338,10 @@ internal static class PdfRenderPlanner
         ReportRect outerBounds,
         bool isMergedOwner,
         ReportMergedRange? mergedRange,
-        Dictionary<(int Row, int Column), ReportCell> cellsByRowCol,
+        ReportSheet sheet,
         Dictionary<int, ReportColumn> columnByIndex,
         Dictionary<int, double> columnOffsets,
-        Dictionary<(int Row, int Column), ReportMergedRange> mergedRangeByCell)
+        Dictionary<int, List<ReportMergedRange>> mergedRangesByRow)
     {
         // Computes text drawing bounds
         if (cell.Style.WrapText || cell.DisplayText.Contains('\n', StringComparison.Ordinal))
@@ -349,12 +368,12 @@ internal static class PdfRenderPlanner
                columnByIndex.TryGetValue(nextCol, out var nextColInfo))
         {
             // Merged cells block text overflow (consistent with Excel's behavior)
-            if (mergedRangeByCell.ContainsKey((cell.Row, nextCol)))
+            if (IsInsideMergedRange(mergedRangesByRow, cell.Row, nextCol))
             {
                 break;
             }
 
-            if (cellsByRowCol.TryGetValue((cell.Row, nextCol), out var adjacentCell))
+            if (sheet.FindCell(cell.Row, nextCol) is { } adjacentCell)
             {
                 if (!String.IsNullOrEmpty(adjacentCell.DisplayText))
                 {
@@ -418,6 +437,68 @@ internal static class PdfRenderPlanner
     //--------------------------------------------------------------------------------
     // Image
     //--------------------------------------------------------------------------------
+
+    private static void AddImageAnchorRowOffsets(
+        ReportSheet sheet,
+        ReportRange renderRange,
+        List<ReportRow> rowsInRange,
+        Dictionary<int, double> rowOffsets,
+        double baseTop,
+        double defaultRowHeight)
+    {
+        if (sheet.Images.Count == 0)
+        {
+            return;
+        }
+
+        var materialized = new HashSet<int>(rowsInRange.Count);
+        foreach (var row in rowsInRange)
+        {
+            materialized.Add(row.Index);
+        }
+
+        foreach (var image in sheet.Images)
+        {
+            AddressHelper.ParseAddress(image.FromCellAddress, out var anchorRow, out _);
+
+            if ((anchorRow < renderRange.StartRow) || (anchorRow > renderRange.EndRow) ||
+                materialized.Contains(anchorRow) || rowOffsets.ContainsKey(anchorRow))
+            {
+                continue;
+            }
+
+            rowOffsets[anchorRow] = ResolveRowTop(rowsInRange, renderRange.StartRow, baseTop, defaultRowHeight, anchorRow);
+        }
+    }
+
+    private static double ResolveRowTop(
+        List<ReportRow> rowsInRange,
+        int rangeStartRow,
+        double baseTop,
+        double defaultRowHeight,
+        int targetRow)
+    {
+        var top = baseTop;
+        var previousIndex = rangeStartRow - 1;
+        foreach (var row in rowsInRange)
+        {
+            if (row.Index >= targetRow)
+            {
+                break;
+            }
+
+            top += (row.Index - previousIndex - 1) * defaultRowHeight;
+            if (!row.IsHidden)
+            {
+                top += row.HeightPoint;
+            }
+
+            previousIndex = row.Index;
+        }
+
+        top += (targetRow - previousIndex - 1) * defaultRowHeight;
+        return top;
+    }
 
     private static List<PdfImageRenderInfo> BuildImageInfos(
         ReportSheet sheet,

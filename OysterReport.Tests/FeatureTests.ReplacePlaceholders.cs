@@ -271,6 +271,34 @@ public sealed partial class FeatureTests
     }
 
     [Fact]
+    public void ReplacePlaceholdersShouldCountCellsPerKeyAndReplaceAllInOnePass()
+    {
+        // Arrange
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
+        {
+            var sheet = workbook.AddWorksheet("Report");
+            sheet.Cell("A1").Value = "{{A}}+{{A}}+{{B}}";
+            sheet.Cell("B1").Value = "{{B}} and {{Unknown}}";
+        });
+
+        stream.Position = 0;
+        using var workbook = new TemplateWorkbook(stream);
+        var sheet = Assert.Single(workbook.Sheets);
+
+        // Act
+        var count = sheet.ReplacePlaceholders(new Dictionary<string, string?>
+        {
+            ["A"] = "1",
+            ["B"] = "2"
+        });
+
+        // Assert — one count per (cell, key) pair: A1 counts A and B, B1 counts B
+        Assert.Equal(3, count);
+        Assert.Equal("1+1+2", sheet.GetCellText(1, 1));
+        Assert.Equal("2 and {{Unknown}}", sheet.GetCellText(1, 2));
+    }
+
+    [Fact]
     public void FindMarkerPositionShouldReturnRowAndColumn()
     {
         // Arrange

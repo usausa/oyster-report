@@ -154,4 +154,39 @@ public sealed partial class FeatureTests
         Assert.DoesNotContain("ROW-5", text, StringComparison.Ordinal);
         Assert.DoesNotContain("{{Seq}}", text, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void DetailRowExpansionShouldShareImmutableStyleYetIsolateSourceOnMutation()
+    {
+        // Arrange
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
+        {
+            var sheet = workbook.AddWorksheet("Report");
+            var cell = sheet.Cell("A1");
+            cell.Value = "{{Item}}";
+            cell.Style.Font.Bold = true;
+        });
+
+        stream.Position = 0;
+        using var workbook = new TemplateWorkbook(stream);
+        var sheet = Assert.Single(workbook.Sheets);
+        var underlying = sheet.UnderlyingSheet;
+        var template = sheet.FindRow("Item");
+        var sourceCell = underlying.FindCell(1, 1);
+        Assert.NotNull(sourceCell);
+
+        // Act — copy the row, then replace the placeholder only in the copy
+        var copy = template.InsertCopyBelow();
+        copy.ReplacePlaceholder("Item", "Widget");
+        var copiedCell = underlying.FindCell(2, 1);
+
+        // Assert
+        Assert.NotNull(copiedCell);
+        // The immutable style is shared with the source (no per-copy allocation)
+        Assert.Same(sourceCell.Style, copiedCell.Style);
+        // Replacing the copy's text swaps its whole value and leaves the source untouched
+        Assert.Equal("{{Item}}", sourceCell.DisplayText);
+        Assert.Equal("Widget", copiedCell.DisplayText);
+        Assert.NotSame(sourceCell.Value, copiedCell.Value);
+    }
 }

@@ -90,9 +90,9 @@ public sealed class TemplateWorkbook : IDisposable
     public int ReplacePlaceholders(IReadOnlyDictionary<string, string?> values)
     {
         var count = 0;
-        foreach (var (key, value) in values)
+        foreach (var sheet in sheets)
         {
-            count += ReplacePlaceholder(key, value ?? string.Empty);
+            count += sheet.ReplacePlaceholders(values);
         }
         return count;
     }

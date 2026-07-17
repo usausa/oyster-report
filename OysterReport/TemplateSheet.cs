@@ -41,7 +41,7 @@ public sealed class TemplateSheet
             }
         }
 
-        throw new InvalidOperationException($"Marker not found in sheet. maker=[{marker}]");
+        throw new InvalidOperationException($"Marker not found in sheet. marker=[{marker}], sheet=[{Name}]");
     }
 
     public TemplateRowRange FindRows(string marker)
@@ -59,7 +59,7 @@ public sealed class TemplateSheet
 
         if (markerRow < 0)
         {
-            throw new InvalidOperationException($"Marker not found in sheet. maker=[{marker}]");
+            throw new InvalidOperationException($"Marker not found in sheet. marker=[{marker}], sheet=[{Name}]");
         }
 
         var startRow = markerRow;
@@ -131,12 +131,7 @@ public sealed class TemplateSheet
 
     public int ReplacePlaceholders(IReadOnlyDictionary<string, string?> values)
     {
-        var count = 0;
-        foreach (var (key, value) in values)
-        {
-            count += ReplacePlaceholder(key, value ?? string.Empty);
-        }
-        return count;
+        return PlaceholderReplacer.ReplaceInRows(UnderlyingSheet, 1, Int32.MaxValue, values);
     }
 
     public int ReplacePlaceholders(IEnumerable<IReadOnlyDictionary<string, string?>> rows)
@@ -171,7 +166,7 @@ public sealed class TemplateSheet
     {
         if (!TryFindMarkerPosition(marker, out var position))
         {
-            throw new InvalidOperationException($"Marker not found in sheet. maker=[{marker}]");
+            throw new InvalidOperationException($"Marker not found in sheet. marker=[{marker}], sheet=[{Name}]");
         }
         return position;
     }
@@ -210,6 +205,7 @@ public sealed class TemplateSheet
         {
             cell = new ReportCell { Row = row, Column = column };
             UnderlyingSheet.AddCell(cell);
+            UnderlyingSheet.EnsureRowDefinition(row);
         }
         SetCellText(cell, value);
     }
