@@ -75,8 +75,7 @@ public sealed partial class FeatureTests
         stream.Position = 0;
         using var workbook = new TemplateWorkbook(stream);
         var warnings = new List<ReportRenderWarning>();
-        var engine = new OysterReportEngine();
-        engine.RenderingOptions.OnRenderWarning = warnings.Add;
+        var engine = new OysterReportEngine { RenderingOptions = { OnRenderWarning = warnings.Add } };
 
         // Act
         using var output = new MemoryStream();
@@ -119,8 +118,7 @@ public sealed partial class FeatureTests
         stream.Position = 0;
         using var workbook = new TemplateWorkbook(stream);
         var warnings = new List<ReportRenderWarning>();
-        var engine = new OysterReportEngine();
-        engine.RenderingOptions.OnRenderWarning = warnings.Add;
+        var engine = new OysterReportEngine { RenderingOptions = { OnRenderWarning = warnings.Add } };
 
         // Act
         using var output = new MemoryStream();
@@ -156,8 +154,7 @@ public sealed partial class FeatureTests
         });
 
         var warnings = new List<ReportRenderWarning>();
-        var engine = new OysterReportEngine();
-        engine.RenderingOptions.OnRenderWarning = warnings.Add;
+        var engine = new OysterReportEngine { RenderingOptions = { OnRenderWarning = warnings.Add } };
 
         // Act
         using var output = new MemoryStream();
