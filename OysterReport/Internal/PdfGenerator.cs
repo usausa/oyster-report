@@ -353,7 +353,7 @@ internal static class PdfGenerator
         using (var canvas = new SKCanvas(bitmap))
         {
             canvas.Clear(SKColors.Transparent);
-            canvas.DrawImage(encoded, 0, 0);
+            canvas.DrawImage(encoded, 0, 0, SKSamplingOptions.Default);
         }
 
         using var image = SKImage.FromBitmap(bitmap);
