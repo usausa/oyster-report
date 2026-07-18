@@ -20,8 +20,4 @@
     <PackageReference Include="SkiaSharp" Version="4.150.1" />
   </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Update="Microsoft.SourceLink.GitHub" Version="10.0.301" />
-  </ItemGroup>
-
 </Project>
