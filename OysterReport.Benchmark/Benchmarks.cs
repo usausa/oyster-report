@@ -173,6 +173,52 @@ public class PdfGenerationBenchmark
     }
 }
 
+// Border-heavy sheet: exercises the border edge de-duplication path in DrawBorders
+[MemoryDiagnoser]
+public class BorderPdfGenerationBenchmark
+{
+    private const int Columns = 6;
+
+    private ReportWorkbook workbook = default!;
+    private OysterReportEngine engine = default!;
+
+    [Params(200, 1000)]
+    public int Rows { get; set; }
+
+    [GlobalSetup]
+    public void Setup()
+    {
+        var bytes = BenchmarkWorkbookFactory.Create(xl =>
+        {
+            var sheet = xl.AddWorksheet("Report");
+            for (var r = 1; r <= Rows; r++)
+            {
+                for (var c = 1; c <= Columns; c++)
+                {
+                    sheet.Cell(r, c).Value = $"R{r}C{c}";
+                }
+            }
+
+            var range = sheet.Range(1, 1, Rows, Columns);
+            range.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            range.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+        });
+
+        using var stream = new MemoryStream(bytes, writable: false);
+        workbook = OpenXmlLoader.Load(stream);
+        engine = new OysterReportEngine();
+    }
+
+    [Benchmark]
+    public long GeneratePdf()
+    {
+        var sheet = new TemplateSheet(workbook, workbook.Sheets[0]);
+        using var output = new MemoryStream();
+        engine.GeneratePdf(sheet, output);
+        return output.Length;
+    }
+}
+
 internal static class BenchmarkWorkbookFactory
 {
     public static byte[] Create(Action<IXLWorkbook> configure)
