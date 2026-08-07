@@ -22,8 +22,21 @@ mono_crash.*
 [Dd]ebugPublic/
 [Rr]elease/
 [Rr]eleases/
-x64/
-x86/
+
+[Dd]ebug/x64/
+[Dd]ebugPublic/x64/
+[Rr]elease/x64/
+[Rr]eleases/x64/
+bin/x64/
+obj/x64/
+
+[Dd]ebug/x86/
+[Dd]ebugPublic/x86/
+[Rr]elease/x86/
+[Rr]eleases/x86/
+bin/x86/
+obj/x86/
+
 [Ww][Ii][Nn]32/
 [Aa][Rr][Mm]/
 [Aa][Rr][Mm]64/
@@ -40,7 +53,7 @@ bld/
 # (https://github.com/github/gitignore/pull/3736)
 #!**/[Bb]in/*.refresh
 
-# Visual Studio 2015/2017 cache/option directory
+# Visual Studio 2015/2017 cache/options directory
 .vs/
 # Uncomment if you have tasks that create the project's static files in wwwroot
 #wwwroot/
@@ -73,6 +86,7 @@ BenchmarkDotNet.Artifacts/
 project.lock.json
 project.fragment.lock.json
 artifacts/
+.artifacts/
 
 # ASP.NET Scaffolding
 ScaffoldingReadMe.txt
@@ -304,14 +318,11 @@ node_modules/
 # Visual Studio 6 build log
 *.plg
 
-# Visual Studio 6 workspace option file
+# Visual Studio 6 workspace options file
 *.opt
 
 # Visual Studio 6 auto-generated workspace file (contains which files were open etc.)
 *.vbw
-
-# Visual Studio 6 auto-generated project file (contains which files were open etc.)
-*.vbp
 
 # Visual Studio 6 workspace and project file (working project files containing files to include in project)
 *.dsw
