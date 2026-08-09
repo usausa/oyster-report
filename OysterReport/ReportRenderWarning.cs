@@ -7,7 +7,11 @@ using System.Diagnostics.CodeAnalysis;
 public enum ReportRenderWarningKind
 {
     // An embedded image could not be decoded and was skipped.
-    ImageDecodeFailed
+    ImageDecodeFailed,
+
+    // The engine's FontResolver could not be bridged into PDFsharp because both
+    // GlobalFontSettings.FontResolver and FallbackFontResolver are owned by another component.
+    FontResolverNotInstalled
 }
 
 [ExcludeFromCodeCoverage]

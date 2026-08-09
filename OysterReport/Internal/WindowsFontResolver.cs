@@ -3,6 +3,7 @@ namespace OysterReport.Internal;
 using System.Buffers.Binary;
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Runtime.Versioning;
 using System.Text;
 
@@ -17,6 +18,9 @@ internal sealed class WindowsFontResolver : IFontResolver
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
 
     private readonly Dictionary<string, (string Path, int FaceIndex)> fontNameToPathAndFace;
+
+    // Keyed by "path|faceIndex" rather than face name, so style variants resolving to the
+    // same file share one byte array instead of holding duplicates.
     private readonly ConcurrentDictionary<string, byte[]> cache = new(StringComparer.OrdinalIgnoreCase);
 
     public WindowsFontResolver()
@@ -30,25 +34,25 @@ internal sealed class WindowsFontResolver : IFontResolver
 
     public byte[] GetFont(string faceName)
     {
-        if (cache.TryGetValue(faceName, out var fontBytes))
-        {
-            return fontBytes;
-        }
-
         ParseFaceName(faceName, out var family, out var wantBold, out var wantItalic);
         if (!TryFindFont(family, wantBold, wantItalic, out var path, out var faceIndex))
         {
             throw new FileNotFoundException($"Installed font not found. faceName=[{faceName}], family=[{family}], bold=[{wantBold}], italic=[{wantItalic}]");
         }
 
+        var cacheKey = path + "|" + faceIndex.ToString(CultureInfo.InvariantCulture);
+        return cache.GetOrAdd(cacheKey, _ => LoadFontData(path, faceIndex));
+    }
+
+    private static byte[] LoadFontData(string path, int faceIndex)
+    {
         var rawBytes = File.ReadAllBytes(path);
 
         if (String.Equals(Path.GetExtension(path), ".ttc", StringComparison.OrdinalIgnoreCase))
         {
-            rawBytes = ExtractTtfFaceFromTtc(rawBytes, faceIndex);
+            return ExtractTtfFaceFromTtc(rawBytes, faceIndex, path);
         }
 
-        cache[faceName] = rawBytes;
         return rawBytes;
     }
 
@@ -75,34 +79,71 @@ internal sealed class WindowsFontResolver : IFontResolver
     // TTC extraction
     //--------------------------------------------------------------------------------
 
-    private static byte[] ExtractTtfFaceFromTtc(byte[] ttc, int faceIndex)
+    // TTC header: tag(4) version(4) numFonts(4) offsets(4 * numFonts); each face is an sfnt
+    // header(12) followed by a table directory(16 * numTables). Offsets and lengths are read
+    // as uint and validated in long arithmetic so a corrupted file produces a clear error
+    // instead of a negative-length AsSpan failure.
+    internal static byte[] ExtractTtfFaceFromTtc(byte[] ttc, int faceIndex, string path)
     {
-        var numFonts = (int)BinaryPrimitives.ReadUInt32BigEndian(ttc.AsSpan(8, sizeof(uint)));
-        if (faceIndex >= numFonts)
+        InvalidDataException Corrupted(string reason) =>
+            new($"TTC font file is corrupted. path=[{path}], faceIndex=[{faceIndex}], reason=[{reason}]");
+
+        if (ttc.Length < 12)
         {
-            throw new ArgumentOutOfRangeException(nameof(faceIndex), $"TTC face index out of range. numFonts=[{numFonts}], faceIndex=[{faceIndex}]");
+            throw Corrupted("header is truncated");
         }
 
-        var faceOffset = (int)BinaryPrimitives.ReadUInt32BigEndian(ttc.AsSpan(12 + (4 * faceIndex), sizeof(uint)));
-        var numTables = BinaryPrimitives.ReadUInt16BigEndian(ttc.AsSpan(faceOffset + 4, sizeof(ushort)));
+        var numFonts = BinaryPrimitives.ReadUInt32BigEndian(ttc.AsSpan(8, sizeof(uint)));
+        if ((uint)faceIndex >= numFonts)
+        {
+            throw Corrupted($"face index is out of range. numFonts=[{numFonts}]");
+        }
+
+        var offsetPosition = 12L + (4L * faceIndex);
+        if ((offsetPosition + 4) > ttc.Length)
+        {
+            throw Corrupted("face offset table is truncated");
+        }
+
+        var faceOffset = (long)BinaryPrimitives.ReadUInt32BigEndian(ttc.AsSpan((int)offsetPosition, sizeof(uint)));
+        if ((faceOffset + 12) > ttc.Length)
+        {
+            throw Corrupted($"face offset is out of bounds. faceOffset=[{faceOffset}]");
+        }
+
+        var numTables = (int)BinaryPrimitives.ReadUInt16BigEndian(ttc.AsSpan((int)(faceOffset + 4), sizeof(ushort)));
+        if ((faceOffset + 12 + (numTables * 16L)) > ttc.Length)
+        {
+            throw Corrupted($"table directory is out of bounds. numTables=[{numTables}]");
+        }
 
         var tables = new (string Tag, uint CheckSum, int SrcOffset, int Length)[numTables];
         for (var i = 0; i < numTables; i++)
         {
-            var ttcTableEntryOffset = faceOffset + 12 + (i * 16);
+            var ttcTableEntryOffset = (int)(faceOffset + 12 + (i * 16));
+            var tag = Encoding.ASCII.GetString(ttc, ttcTableEntryOffset, 4);
+            var srcOffset = (long)BinaryPrimitives.ReadUInt32BigEndian(ttc.AsSpan(ttcTableEntryOffset + 8, sizeof(uint)));
+            var length = (long)BinaryPrimitives.ReadUInt32BigEndian(ttc.AsSpan(ttcTableEntryOffset + 12, sizeof(uint)));
+            if ((srcOffset + length) > ttc.Length)
+            {
+                throw Corrupted($"table is out of bounds. tag=[{tag}], offset=[{srcOffset}], length=[{length}]");
+            }
+
             tables[i] = (
-                Tag: Encoding.ASCII.GetString(ttc, ttcTableEntryOffset, 4),
+                Tag: tag,
                 CheckSum: BinaryPrimitives.ReadUInt32BigEndian(ttc.AsSpan(ttcTableEntryOffset + 4, sizeof(uint))),
-                SrcOffset: (int)BinaryPrimitives.ReadUInt32BigEndian(ttc.AsSpan(ttcTableEntryOffset + 8, sizeof(uint))),
-                Length: (int)BinaryPrimitives.ReadUInt32BigEndian(ttc.AsSpan(ttcTableEntryOffset + 12, sizeof(uint))));
+                SrcOffset: (int)srcOffset,
+                Length: (int)length);
         }
 
         var headerSize = 12 + (numTables * 16);
         var tableOffsets = new int[numTables];
-        var totalSize = headerSize;
+        var totalSize = (long)headerSize;
         for (var i = 0; i < numTables; i++)
         {
-            tableOffsets[i] = totalSize;
+            // The int casts below are safe whenever the final size check passes, because the
+            // running total is monotonic; on overflow the check throws and none are used.
+            tableOffsets[i] = (int)totalSize;
             totalSize += tables[i].Length;
             var paddingNeeded = totalSize % 4;
             if (paddingNeeded != 0)
@@ -111,8 +152,13 @@ internal sealed class WindowsFontResolver : IFontResolver
             }
         }
 
-        var ttf = new byte[totalSize];
-        ttc.AsSpan(faceOffset, 12).CopyTo(ttf);
+        if (totalSize > int.MaxValue)
+        {
+            throw Corrupted($"reconstructed font is too large. size=[{totalSize}]");
+        }
+
+        var ttf = new byte[(int)totalSize];
+        ttc.AsSpan((int)faceOffset, 12).CopyTo(ttf);
 
         for (var i = 0; i < numTables; i++)
         {
