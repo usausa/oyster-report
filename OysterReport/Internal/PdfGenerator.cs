@@ -16,8 +16,6 @@ internal static class PdfGenerator
 {
     private const double BoldSimulationOffset = 0.35d;
 
-    // Cooperative one-time installation into PDFsharp's process-global resolver slots.
-    // false = both slots are owned by other components, so our fonts can not take effect.
     private static readonly Lazy<bool> FontResolverInstalled = new(InstallFontResolver);
 
     private static readonly ConcurrentDictionary<string, XColor> ColorCache = new(StringComparer.Ordinal);
@@ -37,8 +35,6 @@ internal static class PdfGenerator
     {
         if (!FontResolverInstalled.Value && (context.FontResolver is not null))
         {
-            // Fonts supplied through FontResolver never reach PDFsharp in this state.
-            // This used to be silently ignored; make it visible to the caller instead.
             context.RenderingOptions.OnRenderWarning?.Invoke(new ReportRenderWarning
             {
                 Kind = ReportRenderWarningKind.FontResolverNotInstalled,
@@ -95,21 +91,16 @@ internal static class PdfGenerator
                 return true;
             }
 
-            // Another component owns the main slot: cooperate by taking the fallback slot,
-            // which PDFsharp consults when the main resolver does not resolve a font.
             if (GlobalFontSettings.FontResolver is not null && GlobalFontSettings.FallbackFontResolver is null)
             {
                 GlobalFontSettings.FallbackFontResolver = new ReportFontResolverAdapter();
                 return true;
             }
 
-            // The main slot is empty but the fallback belongs to someone else. Taking the main
-            // slot would shadow that fallback (this resolver always answers), so stay out.
             return false;
         }
         catch (InvalidOperationException)
         {
-            // PDFsharp rejects changing the resolver after fonts have been created.
             return false;
         }
     }

@@ -12,8 +12,6 @@ internal sealed class ReportFontResolverAdapter : IFontResolver
 
     private static readonly ConcurrentDictionary<string, EmbeddedFontEntry> EmbeddedFontCache = new(StringComparer.OrdinalIgnoreCase);
 
-    // Data is the defensive copy handed to PDFsharp. Source* remember the identity of the
-    // buffer the caller last registered, so re-registrations of the same buffer are O(1).
     private sealed record EmbeddedFontEntry(byte[] Data, object? SourceArray, int SourceOffset, int SourceLength);
 
     private static readonly Lazy<WindowsFontResolver?> WindowsFallback = new(() => OperatingSystem.IsWindows() ? new WindowsFontResolver() : null);
@@ -28,8 +26,6 @@ internal sealed class ReportFontResolverAdapter : IFontResolver
 
         if (EmbeddedFontCache.TryGetValue(fontName, out var entry))
         {
-            // This is called on every font creation during rendering, typically with the same
-            // buffer; without these checks each call would copy the whole font again.
             if ((segment.Array is not null) &&
                 ReferenceEquals(entry.SourceArray, segment.Array) &&
                 (entry.SourceOffset == segment.Offset) &&
@@ -38,7 +34,6 @@ internal sealed class ReportFontResolverAdapter : IFontResolver
                 return;
             }
 
-            // Same content in a different buffer: keep the existing copy, remember the new source.
             if (fontData.Span.SequenceEqual(entry.Data))
             {
                 EmbeddedFontCache[fontName] = new EmbeddedFontEntry(entry.Data, segment.Array, segment.Offset, segment.Count);
@@ -46,7 +41,6 @@ internal sealed class ReportFontResolverAdapter : IFontResolver
             }
         }
 
-        // Re-registering an existing name with different data replaces it (last one wins).
         EmbeddedFontCache[fontName] = new EmbeddedFontEntry(fontData.ToArray(), segment.Array, segment.Offset, segment.Count);
     }
 

@@ -2,15 +2,9 @@ namespace OysterReport;
 
 using System.Diagnostics.CodeAnalysis;
 
-// Categorizes a non-fatal rendering problem. New kinds are added over time, so consumers
-// should treat unknown values defensively rather than assuming an exhaustive switch.
 public enum ReportRenderWarningKind
 {
-    // An embedded image could not be decoded and was skipped.
     ImageDecodeFailed,
-
-    // The engine's FontResolver could not be bridged into PDFsharp because both
-    // GlobalFontSettings.FontResolver and FallbackFontResolver are owned by another component.
     FontResolverNotInstalled
 }
 
@@ -21,7 +15,6 @@ public sealed record ReportRenderWarning
 
     public string SheetName { get; init; } = string.Empty;
 
-    // Identifies the element that triggered the warning (e.g. an image name); null when not applicable.
     public string? Source { get; init; }
 
     public string Message { get; init; } = string.Empty;

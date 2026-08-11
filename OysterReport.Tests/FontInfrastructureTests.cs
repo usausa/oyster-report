@@ -6,6 +6,7 @@ using System.Text;
 using OysterReport.Internal;
 
 // ReSharper disable StringLiteralTypo
+// ReSharper disable UseUtf8StringLiteral
 #pragma warning disable IDE0230
 #pragma warning disable CA1416
 public sealed class FontInfrastructureTests

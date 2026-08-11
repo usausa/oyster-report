@@ -52,23 +52,6 @@ engine.GeneratePdf(workbook, output);
 | **Print area** | Defined print area |
 | **Embedded fonts** | Custom font resolver |
 
-## Font settings
-
-Font resolution is process-global, because PDFsharp resolves fonts through the
-process-global `GlobalFontSettings`. Keep the following in mind:
-
-- `OysterReportEngine.FontResolver` supplies fonts per engine, but registrations land in a
-  process-global cache: registering the same font name with different data is last-one-wins
-  across engines. Use one font configuration per process.
-- On first render, OysterReport installs its resolver into `GlobalFontSettings.FontResolver`
-  when the slot is free. If another component owns it, `FallbackFontResolver` is used instead,
-  so both can coexist (the other component resolves first). If both slots are taken, fonts
-  supplied by `FontResolver` cannot take effect and a `FontResolverNotInstalled` warning is
-  raised through `ReportRenderOption.OnRenderWarning`.
-- Registered font data stays in memory for the lifetime of the process. PDFsharp keeps its
-  own copy of every font it has used and provides no way to release it, so OysterReport does
-  not offer a release API either.
-
 ## Dependencies
 
 - DocumentFormat.OpenXml

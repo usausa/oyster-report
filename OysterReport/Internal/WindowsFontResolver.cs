@@ -19,8 +19,6 @@ internal sealed class WindowsFontResolver : IFontResolver
 
     private readonly Dictionary<string, (string Path, int FaceIndex)> fontNameToPathAndFace;
 
-    // Keyed by "path|faceIndex" rather than face name, so style variants resolving to the
-    // same file share one byte array instead of holding duplicates.
     private readonly ConcurrentDictionary<string, byte[]> cache = new(StringComparer.OrdinalIgnoreCase);
 
     public WindowsFontResolver()
@@ -79,10 +77,6 @@ internal sealed class WindowsFontResolver : IFontResolver
     // TTC extraction
     //--------------------------------------------------------------------------------
 
-    // TTC header: tag(4) version(4) numFonts(4) offsets(4 * numFonts); each face is an sfnt
-    // header(12) followed by a table directory(16 * numTables). Offsets and lengths are read
-    // as uint and validated in long arithmetic so a corrupted file produces a clear error
-    // instead of a negative-length AsSpan failure.
     internal static byte[] ExtractTtfFaceFromTtc(byte[] ttc, int faceIndex, string path)
     {
         InvalidDataException Corrupted(string reason) =>
@@ -141,8 +135,6 @@ internal sealed class WindowsFontResolver : IFontResolver
         var totalSize = (long)headerSize;
         for (var i = 0; i < numTables; i++)
         {
-            // The int casts below are safe whenever the final size check passes, because the
-            // running total is monotonic; on overflow the check throws and none are used.
             tableOffsets[i] = (int)totalSize;
             totalSize += tables[i].Length;
             var paddingNeeded = totalSize % 4;
