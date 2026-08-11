@@ -5,6 +5,8 @@ using System.Text;
 
 using OysterReport.Internal;
 
+// ReSharper disable StringLiteralTypo
+#pragma warning disable IDE0230
 #pragma warning disable CA1416
 public sealed class FontInfrastructureTests
 {
@@ -34,7 +36,7 @@ public sealed class FontInfrastructureTests
     }
 
     [Fact]
-    public void ExtractTtc_ValidData_RebuildsTtf()
+    public void ExtractTtcValidDataRebuildsTtf()
     {
         if (!OperatingSystem.IsWindows())
         {
@@ -51,7 +53,7 @@ public sealed class FontInfrastructureTests
     }
 
     [Fact]
-    public void ExtractTtc_TruncatedHeader_ReportsCorruption()
+    public void ExtractTtcTruncatedHeaderReportsCorruption()
     {
         if (!OperatingSystem.IsWindows())
         {
@@ -63,7 +65,7 @@ public sealed class FontInfrastructureTests
     }
 
     [Fact]
-    public void ExtractTtc_FaceIndexOutOfRange_ReportsCorruption()
+    public void ExtractTtcFaceIndexOutOfRangeReportsCorruption()
     {
         if (!OperatingSystem.IsWindows())
         {
@@ -75,7 +77,7 @@ public sealed class FontInfrastructureTests
     }
 
     [Fact]
-    public void ExtractTtc_FaceOffsetOutOfBounds_ReportsCorruption()
+    public void ExtractTtcFaceOffsetOutOfBoundsReportsCorruption()
     {
         if (!OperatingSystem.IsWindows())
         {
@@ -90,7 +92,7 @@ public sealed class FontInfrastructureTests
     }
 
     [Fact]
-    public void ExtractTtc_TableLengthBeyondFile_ReportsCorruption()
+    public void ExtractTtcTableLengthBeyondFileReportsCorruption()
     {
         if (!OperatingSystem.IsWindows())
         {
@@ -110,7 +112,7 @@ public sealed class FontInfrastructureTests
     //--------------------------------------------------------------------------------
 
     [Fact]
-    public void RegisterEmbeddedFont_SameBuffer_KeepsExistingCopy()
+    public void RegisterEmbeddedFontSameBufferKeepsExistingCopy()
     {
         var name = "ReRegSame-" + Guid.NewGuid().ToString("N");
         var data = new byte[] { 1, 2, 3, 4 };
@@ -124,7 +126,7 @@ public sealed class FontInfrastructureTests
     }
 
     [Fact]
-    public void RegisterEmbeddedFont_SameContentDifferentBuffer_KeepsExistingCopy()
+    public void RegisterEmbeddedFontSameContentDifferentBufferKeepsExistingCopy()
     {
         var name = "ReRegClone-" + Guid.NewGuid().ToString("N");
         var data = new byte[] { 1, 2, 3, 4 };
@@ -138,7 +140,7 @@ public sealed class FontInfrastructureTests
     }
 
     [Fact]
-    public void RegisterEmbeddedFont_DifferentContent_ReplacesData()
+    public void RegisterEmbeddedFontDifferentContentReplacesData()
     {
         var name = "ReRegNew-" + Guid.NewGuid().ToString("N");
         var adapter = new ReportFontResolverAdapter();
@@ -150,7 +152,7 @@ public sealed class FontInfrastructureTests
     }
 
     [Fact]
-    public void RegisterEmbeddedFont_IsDefensiveCopy()
+    public void RegisterEmbeddedFontIsDefensiveCopy()
     {
         var name = "ReRegCopy-" + Guid.NewGuid().ToString("N");
         var data = new byte[] { 1, 2, 3, 4 };
@@ -163,3 +165,4 @@ public sealed class FontInfrastructureTests
     }
 }
 #pragma warning restore CA1416
+#pragma warning restore IDE0230
