@@ -20,9 +20,7 @@ public sealed partial class FeatureTests
                 var cell = wsPart.Worksheet!.Descendants<Cell>().First(static c => c.CellReference?.Value == "A1");
                 cell.DataType = new EnumValue<CellValues>(CellValues.InlineString);
                 cell.CellValue = null;
-                cell.InlineString = new InlineString(
-                    new Run(new Text("{{Pla")),
-                    new Run(new Text("ceholder}}")));
+                cell.InlineString = [with(new Run(new Text("{{Pla")), new Run(new Text("ceholder}}")))];
             });
 
         stream.Position = 0;
@@ -53,7 +51,7 @@ public sealed partial class FeatureTests
                 var cell = wsPart.Worksheet!.Descendants<Cell>().First(static c => c.CellReference?.Value == "A1");
                 cell.DataType = new EnumValue<CellValues>(CellValues.InlineString);
                 cell.CellValue = null;
-                cell.InlineString = new InlineString(new Text("PlainInline"));
+                cell.InlineString = [with(new Text("PlainInline"))];
             });
 
         stream.Position = 0;

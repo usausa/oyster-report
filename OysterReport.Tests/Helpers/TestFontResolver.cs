@@ -4,6 +4,7 @@ internal sealed class TestFontResolver : IReportFontResolver
 {
     private const string EmbeddedFontName = "IPAexGothic";
 
+    // ReSharper disable UseCollectionExpression
 #pragma warning disable IDE0028
     private static readonly HashSet<string> GothicFontNames = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -18,6 +19,7 @@ internal sealed class TestFontResolver : IReportFontResolver
         "Yu Gothic Medium"
     };
 #pragma warning restore IDE0028
+    // ReSharper restore UseCollectionExpression
 
     private readonly ReadOnlyMemory<byte> fontData;
 

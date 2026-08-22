@@ -19,7 +19,7 @@ public sealed class StyleCatalogTests
             var wbPart = doc.AddWorkbookPart();
             wbPart.Workbook = new Workbook();
             var wsPart = wbPart.AddNewPart<WorksheetPart>();
-            wsPart.Worksheet = new Worksheet(new SheetData());
+            wsPart.Worksheet = [with(new SheetData())];
             var sheets = wbPart.Workbook.AppendChild(new Sheets());
             sheets.Append(new Sheet { Id = wbPart.GetIdOfPart(wsPart), SheetId = 1u, Name = "Report" });
         }
@@ -290,7 +290,7 @@ public sealed class StyleCatalogTests
             var wbPart = doc.AddWorkbookPart();
             wbPart.Workbook = new Workbook();
             var wsPart = wbPart.AddNewPart<WorksheetPart>();
-            wsPart.Worksheet = new Worksheet(new SheetData());
+            wsPart.Worksheet = [with(new SheetData())];
             var sheets = wbPart.Workbook.AppendChild(new Sheets());
             sheets.Append(new Sheet { Id = wbPart.GetIdOfPart(wsPart), SheetId = 1u, Name = "Report" });
         }
