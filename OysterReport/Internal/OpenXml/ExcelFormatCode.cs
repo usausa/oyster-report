@@ -1,6 +1,7 @@
 namespace OysterReport.Internal.OpenXml;
 
 using System.Globalization;
+using System.Runtime.CompilerServices;
 
 internal static class ExcelFormatCode
 {
@@ -218,6 +219,7 @@ internal static class ExcelFormatCode
     // Numeric
     //--------------------------------------------------------------------------------
 
+    [SkipLocalsInit]
     private static string FormatNumeric(double work, double original, ReadOnlySpan<char> body)
     {
         if (HasFractionPattern(body))
@@ -429,6 +431,7 @@ internal static class ExcelFormatCode
     // Date/Time
     //--------------------------------------------------------------------------------
 
+    [SkipLocalsInit]
     private static string FormatDateTime(double value, ReadOnlySpan<char> body)
     {
         DateTime dt;
