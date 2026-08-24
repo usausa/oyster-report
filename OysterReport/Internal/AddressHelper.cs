@@ -5,6 +5,11 @@ using System.Runtime.CompilerServices;
 
 internal static class AddressHelper
 {
+    private const string Digits2 =
+        "00010203040506070809101112131415161718192021222324252627282930313233343536373839" +
+        "40414243444546474849505152535455565758596061626364656667686970717273747576777879" +
+        "8081828384858687888990919293949596979899";
+
     [SkipLocalsInit]
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public static string ToAddress(int row, int column)
@@ -20,12 +25,33 @@ internal static class AddressHelper
         }
 
         Span<char> rowBuffer = stackalloc char[11];
-        row.TryFormat(rowBuffer, out var rowLength, provider: CultureInfo.InvariantCulture);
+        var table = Digits2.AsSpan();
+        var rowStart = rowBuffer.Length;
+        var value = row;
+        while (value >= 100)
+        {
+            var quotient = value / 100;
+            var remainder = value - (quotient * 100);
+            rowStart -= 2;
+            table.Slice(remainder * 2, 2).CopyTo(rowBuffer[rowStart..]);
+            value = quotient;
+        }
+
+        if (value >= 10)
+        {
+            rowStart -= 2;
+            table.Slice(value * 2, 2).CopyTo(rowBuffer[rowStart..]);
+        }
+        else
+        {
+            rowBuffer[--rowStart] = (char)('0' + value);
+        }
 
         var columnLength = colBuffer.Length - colStart;
+        var rowLength = rowBuffer.Length - rowStart;
         Span<char> addressBuffer = stackalloc char[columnLength + rowLength];
         colBuffer[colStart..].CopyTo(addressBuffer);
-        rowBuffer[..rowLength].CopyTo(addressBuffer[columnLength..]);
+        rowBuffer[rowStart..].CopyTo(addressBuffer[columnLength..]);
         return new string(addressBuffer);
     }
 

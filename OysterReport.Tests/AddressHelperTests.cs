@@ -16,6 +16,17 @@ public sealed class AddressHelperTests
     [InlineData(1, 703, "AAA1")]
     [InlineData(100, 3, "C100")]
     [InlineData(1048576, 16384, "XFD1048576")]
+    [InlineData(9, 1, "A9")]
+    [InlineData(10, 1, "A10")]
+    [InlineData(42, 1, "A42")]
+    [InlineData(99, 1, "A99")]
+    [InlineData(101, 1, "A101")]
+    [InlineData(999, 1, "A999")]
+    [InlineData(1000, 1, "A1000")]
+    [InlineData(1234, 1, "A1234")]
+    [InlineData(9999, 1, "A9999")]
+    [InlineData(10000, 1, "A10000")]
+    [InlineData(123456, 1, "A123456")]
     public void ToAddressShouldReturnExpectedAddress(int row, int column, string expected)
     {
         // Act

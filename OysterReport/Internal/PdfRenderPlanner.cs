@@ -163,7 +163,8 @@ internal static class PdfRenderPlanner
                 Height = rowByIndex[cell.Row].HeightPoint
             };
 
-            var isMergedOwner = mergedRanges.TryGetValue(cell.Address, out var mergedRange);
+            var address = cell.Address;
+            var isMergedOwner = mergedRanges.TryGetValue(address, out var mergedRange);
             if (isMergedOwner && mergedRange is not null)
             {
                 outerBounds = BuildMergedBounds(mergedRange, visibleRows, visibleColumns, rowOffsets, columnOffsets);
@@ -176,7 +177,7 @@ internal static class PdfRenderPlanner
             });
             pageCells.Add(new PdfCellRenderInfo
             {
-                CellAddress = cell.Address,
+                CellAddress = address,
                 BackgroundColorHex = ResolveBackgroundColor(cell, sheet.Tables),
                 OuterBounds = outerBounds,
                 ContentBounds = contentBounds,
@@ -185,7 +186,7 @@ internal static class PdfRenderPlanner
                     contentBounds,
                     outerBounds,
                     isMergedOwner,
-                    isMergedOwner ? mergedRanges.GetValueOrDefault(cell.Address) : null,
+                    isMergedOwner ? mergedRange : null,
                     sheet,
                     columnByIndex,
                     columnOffsets,
