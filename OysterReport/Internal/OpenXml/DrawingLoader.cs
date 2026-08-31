@@ -88,7 +88,7 @@ internal static class DrawingLoader
         {
             var from = anchor.Element(Xdr + "from");
             var to = anchor.Element(Xdr + "to");
-            if (from is null || to is null)
+            if ((from is null) || (to is null))
             {
                 return null;
             }

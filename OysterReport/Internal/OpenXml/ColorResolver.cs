@@ -100,7 +100,7 @@ internal sealed class ColorResolver
         }
 
         buffer[0] = '#';
-        for (var i = 0; i < span.Length && i < 9; i++)
+        for (var i = 0; (i < span.Length) && (i < 9); i++)
         {
             buffer[1 + i] = Char.ToUpperInvariant(span[i]);
         }

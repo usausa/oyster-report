@@ -94,7 +94,7 @@ internal static class TestHelper
         }
 
         // %PDF
-        return pdfBytes[0] == 0x25 && pdfBytes[1] == 0x50 && pdfBytes[2] == 0x44 && pdfBytes[3] == 0x46;
+        return (pdfBytes[0] == 0x25) && (pdfBytes[1] == 0x50) && (pdfBytes[2] == 0x44) && (pdfBytes[3] == 0x46);
     }
 
     private static string MakeSafeFileName(string name)

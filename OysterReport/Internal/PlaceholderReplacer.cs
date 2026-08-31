@@ -36,7 +36,7 @@ internal static class PlaceholderReplacer
     // Keeps the ordinal marker comparison used by the single-key replacement API
     private static IReadOnlyDictionary<string, string?> EnsureOrdinalLookup(IReadOnlyDictionary<string, string?> values)
     {
-        if (values is Dictionary<string, string?> dictionary &&
+        if ((values is Dictionary<string, string?> dictionary) &&
             (ReferenceEquals(dictionary.Comparer, EqualityComparer<string>.Default) ||
              ReferenceEquals(dictionary.Comparer, StringComparer.Ordinal)))
         {

@@ -9,7 +9,7 @@ internal static class ExcelFormatCode
 
     public static bool IsDateTime(ReadOnlySpan<char> code)
     {
-        if (code.IsEmpty || code is "General" || code is "@")
+        if (code.IsEmpty || (code is "General") || (code is "@"))
         {
             return false;
         }
@@ -18,7 +18,7 @@ internal static class ExcelFormatCode
         for (var i = 0; i < code.Length; i++)
         {
             var c = code[i];
-            if (c == '\\' && i + 1 < code.Length)
+            if ((c == '\\') && (i + 1 < code.Length))
             {
                 i++;
                 continue;
@@ -56,7 +56,7 @@ internal static class ExcelFormatCode
 
     public static string Format(double value, ReadOnlySpan<char> formatCode)
     {
-        if (formatCode.IsEmpty || formatCode is "General")
+        if (formatCode.IsEmpty || (formatCode is "General"))
         {
             return value.ToString("G", CultureInfo.InvariantCulture);
         }
@@ -72,7 +72,7 @@ internal static class ExcelFormatCode
                 return string.Empty;
             }
 
-            var work = (idx == 1 && sectionCount >= 2) ? Math.Abs(value) : value;
+            var work = ((idx == 1) && (sectionCount >= 2)) ? Math.Abs(value) : value;
 
             if (IsDateTimeSection(section))
             {
@@ -117,7 +117,7 @@ internal static class ExcelFormatCode
         for (var i = 0; i < format.Length; i++)
         {
             var c = format[i];
-            if (c == '\\' && i + 1 < format.Length)
+            if ((c == '\\') && (i + 1 < format.Length))
             {
                 i++;
                 continue;
@@ -138,7 +138,7 @@ internal static class ExcelFormatCode
                     inBracket = false;
                 }
             }
-            if (c == ';' && !inQuote && !inBracket && count < sections.Length - 1)
+            if ((c == ';') && !inQuote && !inBracket && (count < sections.Length - 1))
             {
                 sections[count++] = sectionStart..i;
                 sectionStart = i + 1;
@@ -158,7 +158,7 @@ internal static class ExcelFormatCode
         for (var i = 0; i < section.Length; i++)
         {
             var c = section[i];
-            if (c == '\\' && i + 1 < section.Length)
+            if ((c == '\\') && (i + 1 < section.Length))
             {
                 i++;
                 continue;
@@ -201,7 +201,7 @@ internal static class ExcelFormatCode
             return false;
         }
         var first = Char.ToLowerInvariant(inner[0]);
-        if (first != 'h' && first != 'm' && first != 's')
+        if ((first != 'h') && (first != 'm') && (first != 's'))
         {
             return false;
         }
@@ -273,7 +273,7 @@ internal static class ExcelFormatCode
         {
             var c = body[i];
 
-            if (c == '\\' && i + 1 < body.Length)
+            if ((c == '\\') && (i + 1 < body.Length))
             {
                 AppendLiteral(body[i + 1], prefix, ref prefixLen, suffix, ref suffixLen, ref phase);
                 i++;
@@ -300,13 +300,13 @@ internal static class ExcelFormatCode
                 i += rel + 1;
                 continue;
             }
-            if (c == '_' && i + 1 < body.Length)
+            if ((c == '_') && (i + 1 < body.Length))
             {
                 AppendLiteral(' ', prefix, ref prefixLen, suffix, ref suffixLen, ref phase);
                 i++;
                 continue;
             }
-            if (c == '*' && i + 1 < body.Length)
+            if ((c == '*') && (i + 1 < body.Length))
             {
                 i++;
                 continue;
@@ -354,7 +354,7 @@ internal static class ExcelFormatCode
         {
             return true;
         }
-        if ((c == '+' || c == '-') && (prevPattern == 'E' || prevPattern == 'e'))
+        if (((c == '+') || (c == '-')) && ((prevPattern == 'E') || (prevPattern == 'e')))
         {
             return true;
         }
@@ -395,7 +395,7 @@ internal static class ExcelFormatCode
         for (var i = 0; i < body.Length; i++)
         {
             var c = body[i];
-            if (c == '\\' && i + 1 < body.Length)
+            if ((c == '\\') && (i + 1 < body.Length))
             {
                 i++;
                 continue;
@@ -419,7 +419,7 @@ internal static class ExcelFormatCode
                 i += rel + 1;
                 continue;
             }
-            if (c == '/' && i > 0 && body[i - 1] is '0' or '#' or '?')
+            if ((c == '/') && (i > 0) && (body[i - 1] is '0' or '#' or '?'))
             {
                 return true;
             }
@@ -468,7 +468,7 @@ internal static class ExcelFormatCode
         {
             var c = body[i];
 
-            if (c == '\\' && i + 1 < body.Length)
+            if ((c == '\\') && (i + 1 < body.Length))
             {
                 output[outputLen++] = body[i + 1];
                 i += 2;
@@ -564,12 +564,12 @@ internal static class ExcelFormatCode
                 var len = CountTokenLen(body, i);
                 AppendInt(output, ref outputLen, scratch, dt.Second, len);
                 i += len;
-                if (i < body.Length && body[i] == '.' && i + 1 < body.Length && body[i + 1] == '0')
+                if ((i < body.Length) && (body[i] == '.') && (i + 1 < body.Length) && (body[i + 1] == '0'))
                 {
                     output[outputLen++] = '.';
                     i++;
                     var fracLen = 0;
-                    while (i < body.Length && body[i] == '0')
+                    while ((i < body.Length) && (body[i] == '0'))
                     {
                         fracLen++;
                         i++;
@@ -639,7 +639,7 @@ internal static class ExcelFormatCode
     {
         var c = Char.ToLowerInvariant(s[start]);
         var n = 1;
-        while (start + n < s.Length && Char.ToLowerInvariant(s[start + n]) == c)
+        while ((start + n < s.Length) && (Char.ToLowerInvariant(s[start + n]) == c))
         {
             n++;
         }
@@ -658,7 +658,7 @@ internal static class ExcelFormatCode
         for (var i = 0; i < body.Length; i++)
         {
             var c = body[i];
-            if (c == '\\' && i + 1 < body.Length)
+            if ((c == '\\') && (i + 1 < body.Length))
             {
                 i++;
                 continue;
@@ -735,11 +735,11 @@ internal static class ExcelFormatCode
         while (p >= 0)
         {
             var c = body[p];
-            if (c == 'h' || c == 'H')
+            if ((c == 'h') || (c == 'H'))
             {
                 return true;
             }
-            if (c == ':' || c == '.')
+            if ((c == ':') || (c == '.'))
             {
                 p--;
                 continue;
@@ -751,11 +751,11 @@ internal static class ExcelFormatCode
         while (q < body.Length)
         {
             var c = body[q];
-            if (c == 's' || c == 'S')
+            if ((c == 's') || (c == 'S'))
             {
                 return true;
             }
-            if (c == ':' || c == '.')
+            if ((c == ':') || (c == '.'))
             {
                 q++;
                 continue;

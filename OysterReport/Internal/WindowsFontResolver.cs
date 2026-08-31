@@ -210,7 +210,7 @@ internal sealed class WindowsFontResolver : IFontResolver
 
         foreach (var valueName in key.GetValueNames())
         {
-            if (key.GetValue(valueName) is not string registryValue || String.IsNullOrWhiteSpace(registryValue))
+            if ((key.GetValue(valueName) is not string registryValue) || String.IsNullOrWhiteSpace(registryValue))
             {
                 continue;
             }

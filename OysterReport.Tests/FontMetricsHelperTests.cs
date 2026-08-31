@@ -41,7 +41,7 @@ public sealed class FontMetricsHelperTests
         // Assert
         // SkiaSharp may fall back to a default typeface instead of returning null,
         // so only verify that a non-null result is positive.
-        Assert.True(result is null || result > 0d);
+        Assert.True((result is null) || (result > 0d));
     }
 
     //--------------------------------------------------------------------------------

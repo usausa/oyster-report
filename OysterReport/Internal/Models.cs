@@ -534,7 +534,7 @@ internal sealed class ReportSheet
                     };
                 }
             }
-            else if (cell.Merge is not null && cell.Merge.Range.EndRow >= insertAtRow)
+            else if ((cell.Merge is not null) && (cell.Merge.Range.EndRow >= insertAtRow))
             {
                 var mr = cell.Merge.Range;
                 cell.Merge = new ReportMergeInfo
@@ -642,7 +642,7 @@ internal sealed class ReportSheet
             }
         }
 
-        if (UsedRange.StartRow >= insertAtRow || UsedRange.EndRow >= insertAtRow)
+        if ((UsedRange.StartRow >= insertAtRow) || (UsedRange.EndRow >= insertAtRow))
         {
             var u = UsedRange;
             UsedRange = new ReportRange
@@ -667,7 +667,7 @@ internal sealed class ReportSheet
 
         var count = endRow - startRow + 1;
 
-        rows.RemoveAll(r => r.Index >= startRow && r.Index <= endRow);
+        rows.RemoveAll(r => (r.Index >= startRow) && (r.Index <= endRow));
         foreach (var row in rows)
         {
             if (row.Index > endRow)
@@ -676,7 +676,7 @@ internal sealed class ReportSheet
             }
         }
 
-        cells.RemoveAll(c => c.Row >= startRow && c.Row <= endRow);
+        cells.RemoveAll(c => (c.Row >= startRow) && (c.Row <= endRow));
         foreach (var cell in cells)
         {
             if (cell.Row > endRow)
@@ -719,7 +719,7 @@ internal sealed class ReportSheet
                     EndColumn = mr.EndColumn
                 };
             }
-            else if (mr.StartRow >= startRow && mr.EndRow <= endRow)
+            else if ((mr.StartRow >= startRow) && (mr.EndRow <= endRow))
             {
                 mergedRanges.RemoveAt(i);
             }
@@ -764,7 +764,7 @@ internal sealed class ReportSheet
                     EndColumn = tr.EndColumn
                 };
             }
-            else if (tr.StartRow >= startRow && tr.EndRow <= endRow)
+            else if ((tr.StartRow >= startRow) && (tr.EndRow <= endRow))
             {
                 tables.RemoveAt(i);
             }
@@ -799,7 +799,7 @@ internal sealed class ReportSheet
                 continue;
             }
 
-            if (fromRow.Value >= startRow && fromRow.Value <= endRow)
+            if ((fromRow.Value >= startRow) && (fromRow.Value <= endRow))
             {
                 images.RemoveAt(i);
                 continue;
@@ -822,7 +822,7 @@ internal sealed class ReportSheet
         for (var i = horizontalPageBreaks.Count - 1; i >= 0; i--)
         {
             var idx = horizontalPageBreaks[i].Index;
-            if (idx >= startRow && idx <= endRow)
+            if ((idx >= startRow) && (idx <= endRow))
             {
                 horizontalPageBreaks.RemoveAt(i);
             }
@@ -903,7 +903,7 @@ internal sealed class ReportSheet
 
         var source = GetRowDefinition(sourceRow);
         var destination = GetRowDefinition(destinationRow);
-        if (source is not null && destination is not null)
+        if ((source is not null) && (destination is not null))
         {
             destination.HeightPoint = source.HeightPoint;
         }
@@ -921,7 +921,7 @@ internal sealed class ReportSheet
                 Merge = translatedMerge
             });
 
-            if (translatedMerge is { } moved &&
+            if ((translatedMerge is { } moved) &&
                 (moved.Range.StartRow == moved.Range.EndRow) &&
                 (cell.Column == moved.Range.StartColumn))
             {

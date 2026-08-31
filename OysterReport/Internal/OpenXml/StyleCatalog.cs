@@ -139,10 +139,10 @@ internal sealed class StyleCatalog
         {
             var name = f.FontName?.Val?.Value ?? "Calibri";
             var size = f.FontSize?.Val?.Value ?? 11d;
-            var bold = f.Bold is not null && (f.Bold.Val?.Value ?? true);
-            var italic = f.Italic is not null && (f.Italic.Val?.Value ?? true);
+            var bold = (f.Bold is not null) && (f.Bold.Val?.Value ?? true);
+            var italic = (f.Italic is not null) && (f.Italic.Val?.Value ?? true);
             var underline = f.Underline is not null;
-            var strike = f.Strike is not null && (f.Strike.Val?.Value ?? true);
+            var strike = (f.Strike is not null) && (f.Strike.Val?.Value ?? true);
             var colorHex = resolver.Resolve(f.Color, "#FF000000");
             yield return new FontEntry(name, size, bold, italic, underline, strike, colorHex);
         }

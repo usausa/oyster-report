@@ -27,7 +27,7 @@ internal readonly struct ArgbColor : IEquatable<ArgbColor>
 
     public bool Equals(ArgbColor other) => Value == other.Value;
 
-    public override bool Equals(object? obj) => obj is ArgbColor other && Equals(other);
+    public override bool Equals(object? obj) => (obj is ArgbColor other) && Equals(other);
 
     public override int GetHashCode() => Value.GetHashCode();
 

@@ -79,19 +79,19 @@ internal static class PdfGenerator
     {
         try
         {
-            if (GlobalFontSettings.FontResolver is ReportFontResolverAdapter ||
-                GlobalFontSettings.FallbackFontResolver is ReportFontResolverAdapter)
+            if ((GlobalFontSettings.FontResolver is ReportFontResolverAdapter) ||
+                (GlobalFontSettings.FallbackFontResolver is ReportFontResolverAdapter))
             {
                 return true;
             }
 
-            if (GlobalFontSettings.FontResolver is null && GlobalFontSettings.FallbackFontResolver is null)
+            if ((GlobalFontSettings.FontResolver is null) && (GlobalFontSettings.FallbackFontResolver is null))
             {
                 GlobalFontSettings.FontResolver = new ReportFontResolverAdapter();
                 return true;
             }
 
-            if (GlobalFontSettings.FontResolver is not null && GlobalFontSettings.FallbackFontResolver is null)
+            if ((GlobalFontSettings.FontResolver is not null) && (GlobalFontSettings.FallbackFontResolver is null))
             {
                 GlobalFontSettings.FallbackFontResolver = new ReportFontResolverAdapter();
                 return true;
@@ -166,7 +166,7 @@ internal static class PdfGenerator
                 continue;
             }
 
-            if (!renderCell.IsMergedOwner && sourceCell.Merge is not null)
+            if (!renderCell.IsMergedOwner && (sourceCell.Merge is not null))
             {
                 continue;
             }
@@ -238,7 +238,7 @@ internal static class PdfGenerator
                 continue;
             }
 
-            if (sourceCell.Merge is not null && !renderCell.IsMergedOwner)
+            if ((sourceCell.Merge is not null) && !renderCell.IsMergedOwner)
             {
                 continue;
             }
@@ -276,7 +276,7 @@ internal static class PdfGenerator
 
         var lineKey = BuildLineKey(line);
         if (collectedLines.TryGetValue(lineKey, out var existing) &&
-            GetBorderPriority(existing.Border.Style) >= GetBorderPriority(border.Style))
+            (GetBorderPriority(existing.Border.Style) >= GetBorderPriority(border.Style)))
         {
             return;
         }
@@ -387,7 +387,7 @@ internal static class PdfGenerator
 
     private static MemoryStream CreateImageStream(ReadOnlyMemory<byte> imageBytes)
     {
-        return MemoryMarshal.TryGetArray(imageBytes, out var segment) && segment.Array is not null
+        return MemoryMarshal.TryGetArray(imageBytes, out var segment) && (segment.Array is not null)
             ? new MemoryStream(segment.Array, segment.Offset, segment.Count, writable: false)
             : new MemoryStream(imageBytes.ToArray(), writable: false);
     }
@@ -452,7 +452,7 @@ internal static class PdfGenerator
         for (var index = 0; index < text.Length; index++)
         {
             var character = text[index];
-            if (character != '&' || index == text.Length - 1)
+            if ((character != '&') || (index == text.Length - 1))
             {
                 current.Append(character);
                 continue;
@@ -500,7 +500,7 @@ internal static class PdfGenerator
         var simulateBold = false;
 
         var resolvedTypeface = context.FontResolver?.ResolveTypeface(font.Name, font.Bold, font.Italic);
-        if (resolvedTypeface != null && !String.IsNullOrWhiteSpace(resolvedTypeface.FaceName))
+        if ((resolvedTypeface != null) && !String.IsNullOrWhiteSpace(resolvedTypeface.FaceName))
         {
             ReportFontResolverAdapter.RegisterResolvedTypeface(resolvedTypeface);
             var embeddedFontData = context.FontResolver?.GetFont(resolvedTypeface.FaceName);
@@ -952,7 +952,7 @@ internal static class PdfGenerator
         foreach (var cell in mergedCells.Where(cell => (fixedSelector(cell) == fixedIndex) && (rangeSelector(cell) >= rangeStart) && (rangeSelector(cell) <= rangeEnd)))
         {
             var border = borderSelector(cell);
-            if (bestBorder is null || GetBorderPriority(border.Style) > GetBorderPriority(bestBorder.Style))
+            if ((bestBorder is null) || (GetBorderPriority(border.Style) > GetBorderPriority(bestBorder.Style)))
             {
                 bestBorder = border;
             }

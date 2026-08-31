@@ -71,10 +71,10 @@ internal readonly record struct ReportRange
     public int EndColumn { get; init; }
 
     public bool Contains(int row, int column) =>
-        row >= StartRow &&
-        row <= EndRow &&
-        column >= StartColumn &&
-        column <= EndColumn;
+        (row >= StartRow) &&
+        (row <= EndRow) &&
+        (column >= StartColumn) &&
+        (column <= EndColumn);
 
     public override string ToString()
     {

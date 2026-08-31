@@ -87,7 +87,7 @@ internal static class OpenXmlLoader
 
         foreach (var dn in definedNames.Elements<DocumentFormat.OpenXml.Spreadsheet.DefinedName>())
         {
-            if (dn.Name?.Value != "_xlnm.Print_Area" || dn.LocalSheetId?.Value is not { } sheetId)
+            if ((dn.Name?.Value != "_xlnm.Print_Area") || (dn.LocalSheetId?.Value is not { } sheetId))
             {
                 continue;
             }
@@ -143,7 +143,7 @@ internal static class OpenXmlLoader
 
     private static double ResolveMaxDigitWidth(string? fontName, double fontSize, ReportRenderOption renderOption)
     {
-        if (String.IsNullOrWhiteSpace(fontName) || fontSize <= 0d)
+        if (String.IsNullOrWhiteSpace(fontName) || (fontSize <= 0d))
         {
             return renderOption.FallbackMaxDigitWidth;
         }

@@ -241,8 +241,8 @@ internal sealed class WorksheetLoader
 
         if (type == CellValues.SharedString)
         {
-            if (cell.CellValue?.Text is { } idxText && Int32.TryParse(idxText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var idx) &&
-                idx >= 0 && idx < sharedStrings.Length)
+            if ((cell.CellValue?.Text is { } idxText) && Int32.TryParse(idxText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var idx) &&
+                (idx >= 0) && (idx < sharedStrings.Length))
             {
                 rawValue = sharedStrings[idx];
                 typedValue = rawValue;
@@ -276,7 +276,7 @@ internal sealed class WorksheetLoader
         }
         else
         {
-            if (cell.CellValue?.Text is { Length: > 0 } num &&
+            if ((cell.CellValue?.Text is { Length: > 0 } num) &&
                 Double.TryParse(num, NumberStyles.Float, CultureInfo.InvariantCulture, out var d))
             {
                 typedValue = d;
@@ -303,7 +303,7 @@ internal sealed class WorksheetLoader
             }
         }
 
-        if (rawValue is null && cell.CellValue is null)
+        if ((rawValue is null) && (cell.CellValue is null))
         {
             return new RawCell(row, col, styleIndex, CellValueKind.Blank, string.Empty, string.Empty);
         }
@@ -619,7 +619,7 @@ internal sealed class WorksheetLoader
 
     private static ReportRange? ResolveRange(List<RawCell> cells, List<ReportRange> merges, ReportPrintArea? printArea)
     {
-        if (cells.Count == 0 && merges.Count == 0 && printArea is null)
+        if ((cells.Count == 0) && (merges.Count == 0) && (printArea is null))
         {
             return null;
         }
@@ -652,7 +652,7 @@ internal sealed class WorksheetLoader
             endCol = Math.Max(endCol, r.EndColumn);
         }
 
-        if (startRow == Int32.MaxValue || endRow == Int32.MinValue)
+        if ((startRow == Int32.MaxValue) || (endRow == Int32.MinValue))
         {
             return null;
         }
@@ -703,6 +703,7 @@ internal sealed class WorksheetLoader
 
     private static double InchToPoint(double inch) => inch * PointsPerInch;
 
+#pragma warning disable SA1203
     private const double ColumnWidthOffset = 0.710625d;
     private const double DefaultMaxDigitWidth = 7d;
     private const double ExcelColumnPaddingMultiplier = 2d;
@@ -711,6 +712,7 @@ internal sealed class WorksheetLoader
     private const double ExcelColumnWidthGranularity = 256d;
     private const double ExcelColumnWidthRoundingOffset = 128d;
     private const double ScreenDpi = 96d;
+#pragma warning restore SA1203
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     private static double ConvertExcelColumnWidthToPoint(double excelWidth, double maxDigitWidth, double adjustment)
@@ -736,7 +738,7 @@ internal sealed class WorksheetLoader
     {
         foreach (var info in columnInfos)
         {
-            if (column >= info.Min && column <= info.Max)
+            if ((column >= info.Min) && (column <= info.Max))
             {
                 return info.StyleIndex;
             }

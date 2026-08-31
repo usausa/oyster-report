@@ -67,7 +67,7 @@ public sealed class TemplateRowRange
 
         foreach (var cell in sheet.Cells)
         {
-            if (cell.Row < StartRow || cell.Row > EndRow)
+            if ((cell.Row < StartRow) || (cell.Row > EndRow))
             {
                 continue;
             }
@@ -122,7 +122,7 @@ public sealed class TemplateRowRange
         var placeholder = "{{" + marker + "}}";
         foreach (var cell in sheet.Cells)
         {
-            if (cell.Row < StartRow || cell.Row > EndRow)
+            if ((cell.Row < StartRow) || (cell.Row > EndRow))
             {
                 continue;
             }

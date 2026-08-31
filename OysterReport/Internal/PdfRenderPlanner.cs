@@ -165,7 +165,7 @@ internal static class PdfRenderPlanner
 
             var address = cell.Address;
             var isMergedOwner = mergedRanges.TryGetValue(address, out var mergedRange);
-            if (isMergedOwner && mergedRange is not null)
+            if (isMergedOwner && (mergedRange is not null))
             {
                 outerBounds = BuildMergedBounds(mergedRange, visibleRows, visibleColumns, rowOffsets, columnOffsets);
             }
@@ -357,7 +357,7 @@ internal static class PdfRenderPlanner
         }
 
         var rightmostCol = cell.Column;
-        if (isMergedOwner && mergedRange != null)
+        if (isMergedOwner && (mergedRange != null))
         {
             rightmostCol = mergedRange.Range.EndColumn;
         }

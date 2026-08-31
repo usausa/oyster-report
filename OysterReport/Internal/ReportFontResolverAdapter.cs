@@ -106,7 +106,7 @@ internal sealed class ReportFontResolverAdapter : IFontResolver
 
     public static bool IsBoldSimulationRequired(string faceName, bool isItalic)
     {
-        return WindowsFallback.Value is not null && WindowsFallback.Value.IsBoldSimulationRequired(faceName, isItalic);
+        return (WindowsFallback.Value is not null) && WindowsFallback.Value.IsBoldSimulationRequired(faceName, isItalic);
     }
 
     //--------------------------------------------------------------------------------
