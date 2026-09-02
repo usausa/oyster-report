@@ -17,14 +17,9 @@ internal sealed class WindowsFontResolver : IFontResolver
     private static readonly string WindowsFontsDirectory =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
 
-    private readonly Dictionary<string, (string Path, int FaceIndex)> fontNameToPathAndFace;
+    private readonly Dictionary<string, (string Path, int FaceIndex)> fontNameToPathAndFace = LoadFontRegistry();
 
     private readonly ConcurrentDictionary<string, byte[]> cache = new(StringComparer.OrdinalIgnoreCase);
-
-    public WindowsFontResolver()
-    {
-        fontNameToPathAndFace = LoadFontRegistry();
-    }
 
     //--------------------------------------------------------------------------------
     // IFontResolver

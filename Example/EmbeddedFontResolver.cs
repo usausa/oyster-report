@@ -23,12 +23,7 @@ internal sealed class EmbeddedFontResolver : IReportFontResolver
 #pragma warning restore IDE0028
     // ReSharper restore UseCollectionExpression
 
-    private readonly ReadOnlyMemory<byte> fontData;
-
-    public EmbeddedFontResolver()
-    {
-        fontData = File.ReadAllBytes("ipaexg.ttf");
-    }
+    private readonly ReadOnlyMemory<byte> fontData = File.ReadAllBytes("ipaexg.ttf");
 
     public FontResolveInfo? ResolveTypeface(string familyName, bool bold, bool italic)
     {
