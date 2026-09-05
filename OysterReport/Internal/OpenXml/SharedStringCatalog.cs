@@ -27,6 +27,6 @@ internal static class SharedStringCatalog
             list.Add(OpenXmlText.Extract(item));
         }
 
-        return list.ToArray();
+        return [.. list];
     }
 }

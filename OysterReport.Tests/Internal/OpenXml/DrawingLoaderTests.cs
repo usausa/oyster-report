@@ -153,6 +153,6 @@ public sealed class DrawingLoaderTests
         stream.Position = 0;
         using var doc = SpreadsheetDocument.Open(stream, isEditable: false);
         var wsPart = doc.WorkbookPart!.WorksheetParts.First();
-        return DrawingLoader.Load(wsPart).ToArray();
+        return [.. DrawingLoader.Load(wsPart)];
     }
 }
