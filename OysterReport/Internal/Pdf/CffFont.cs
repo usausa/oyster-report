@@ -1,163 +1,295 @@
 namespace OysterReport.Internal.Pdf;
 
-// Minimal CFF reader: enough to embed an OpenType/CFF face as CIDFontType0 (FontFile3 /CIDFontType0C).
-// Reads the Top DICT (ROS / charset / CharStrings) and the charset to map glyph ids to CIDs.
+// CFF (Compact Font Format) reader for subsetting. Structures follow fontkit (MIT) src/cff.
+// DICT entries keep their raw operand bytes so unchanged values are copied verbatim.
 internal sealed class CffFont
 {
-    private readonly ushort[] gidToCid;
+    public const int StandardStringCount = 391;
 
-    public CffFont(ReadOnlySpan<byte> cff, int glyphCount)
+    private readonly byte[] data;
+    private readonly int start;
+
+    public CffFont(byte[] data, int start, int length)
     {
-        Data = cff.ToArray();
-        int hdrSize = cff[2];
-        var pos = hdrSize;
-        pos = SkipIndex(cff, pos); // Name INDEX
-        var (topOffset, topLength) = ReadIndexEntry(cff, pos, 0);
-        var dict = ParseDict(cff.Slice(topOffset, topLength));
-        IsCidKeyed = dict.ContainsKey(1230); // ROS (12 30)
-        gidToCid = new ushort[glyphCount];
-        if (dict.TryGetValue(15, out var charsetOffset) && charsetOffset[0] > 2)
+        this.data = data;
+        this.start = start;
+        Length = length;
+
+        var pos = (int)Byte(2); // hdrSize
+        Names = ReadIndex(ref pos);
+        var topDicts = ReadIndex(ref pos);
+        Strings = ReadIndex(ref pos);
+        GlobalSubrs = ReadIndex(ref pos);
+
+        var (topOffset, topLength) = topDicts.Get(0);
+        TopDict = CffDictEntry.Parse(Slice(topOffset, topLength));
+        IsCidKeyed = TopDict.Any(static x => x.Op == CffOperators.Ros);
+
+        var charStringsOffset = (int)Find(TopDict, CffOperators.CharStrings)![0];
+        var charStringsPos = charStringsOffset;
+        CharStrings = ReadIndex(ref charStringsPos);
+
+        if (IsCidKeyed)
         {
-            ReadCharset(cff, (int)charsetOffset[0], glyphCount, gidToCid);
+            var fdArrayPos = (int)Find(TopDict, CffOperators.FDArray)![0];
+            var fdArray = ReadIndex(ref fdArrayPos);
+            for (var i = 0; i < fdArray.Count; i++)
+            {
+                var (offset, length2) = fdArray.Get(i);
+                FontDicts.Add(ReadFontDict(CffDictEntry.Parse(Slice(offset, length2))));
+            }
+
+            FdSelect = ReadFdSelect((int)Find(TopDict, CffOperators.FDSelect)![0], CharStrings.Count);
         }
         else
         {
-            for (var i = 0; i < glyphCount; i++)
-            {
-                gidToCid[i] = (ushort)i; // predefined charset: only meaningful for name-keyed fonts
-            }
+            // Name-keyed: the Top DICT's Private DICT acts as the single font dict
+            FontDicts.Add(ReadFontDict(TopDict));
+            FdSelect = new byte[CharStrings.Count];
         }
     }
 
-    public byte[] Data { get; }
+    public int Length { get; }
+
+    public CffIndex Names { get; }
+
+    public CffIndex Strings { get; }
+
+    public CffIndex GlobalSubrs { get; }
+
+    public CffIndex CharStrings { get; }
+
+    public IReadOnlyList<CffDictEntry> TopDict { get; }
 
     public bool IsCidKeyed { get; }
 
-    // For CID-keyed CFF the PDF content uses CIDs; for name-keyed CFF CID == GID
-    public ushort ToCid(ushort gid) => IsCidKeyed ? gidToCid[gid] : gid;
+    public List<CffFontDict> FontDicts { get; } = [];
 
-    private static void ReadCharset(ReadOnlySpan<byte> cff, int offset, int glyphCount, ushort[] map)
+    // gid -> index into FontDicts
+    public byte[] FdSelect { get; }
+
+    public ReadOnlySpan<byte> Slice(int offset, int length) => data.AsSpan(start + offset, length);
+
+    public ReadOnlySpan<byte> Get(CffIndex index, int i)
     {
-        var format = cff[offset];
-        var pos = offset + 1;
-        var gid = 1;
-        switch (format)
-        {
-            case 0:
-                while (gid < glyphCount)
-                {
-                    map[gid++] = TrueTypeFont.U16(cff, pos);
-                    pos += 2;
-                }
-
-                break;
-            case 1:
-            case 2:
-                while (gid < glyphCount)
-                {
-                    int first = TrueTypeFont.U16(cff, pos);
-                    int left = format == 1 ? cff[pos + 2] : TrueTypeFont.U16(cff, pos + 2);
-                    pos += format == 1 ? 3 : 4;
-                    for (var i = 0; i <= left && gid < glyphCount; i++)
-                    {
-                        map[gid++] = (ushort)(first + i);
-                    }
-                }
-
-                break;
-            default:
-                throw new InvalidDataException($"Unsupported CFF charset format. format=[{format}]");
-        }
+        var (offset, length) = index.Get(i);
+        return Slice(offset, length);
     }
 
-    private static int SkipIndex(ReadOnlySpan<byte> cff, int pos)
+    internal static double[]? Find(IEnumerable<CffDictEntry> dict, int op) =>
+        dict.FirstOrDefault(x => x.Op == op)?.Values;
+
+    private byte Byte(int offset) => data[start + offset];
+
+    private CffFontDict ReadFontDict(IReadOnlyList<CffDictEntry> dict)
     {
-        int count = TrueTypeFont.U16(cff, pos);
+        var result = new CffFontDict { Entries = [.. dict.Where(static x => x.Op != CffOperators.Private)] };
+        if (Find(dict, CffOperators.Private) is not [var size, var offset])
+        {
+            return result;
+        }
+
+        result.Private = [.. CffDictEntry.Parse(Slice((int)offset, (int)size))];
+        if (Find(result.Private, CffOperators.Subrs) is [var subrsOffset])
+        {
+            var subrsPos = (int)offset + (int)subrsOffset;
+            result.Subrs = ReadIndex(ref subrsPos);
+        }
+
+        return result;
+    }
+
+    private byte[] ReadFdSelect(int offset, int glyphCount)
+    {
+        var result = new byte[glyphCount];
+        var format = Byte(offset);
+        if (format == 0)
+        {
+            Slice(offset + 1, glyphCount).CopyTo(result);
+            return result;
+        }
+
+        if (format != 3)
+        {
+            throw new InvalidDataException($"Unsupported FDSelect format. format=[{format}]");
+        }
+
+        int ranges = TrueTypeFont.U16(data, start + offset + 1);
+        for (var i = 0; i < ranges; i++)
+        {
+            var rec = offset + 3 + (i * 3);
+            int first = TrueTypeFont.U16(data, start + rec);
+            var fd = Byte(rec + 2);
+            int next = TrueTypeFont.U16(data, start + rec + 3); // next range's first, or the sentinel
+            for (var gid = first; gid < next && gid < glyphCount; gid++)
+            {
+                result[gid] = fd;
+            }
+        }
+
+        return result;
+    }
+
+    private CffIndex ReadIndex(ref int pos)
+    {
+        int count = TrueTypeFont.U16(data, start + pos);
         if (count == 0)
         {
-            return pos + 2;
+            pos += 2;
+            return new CffIndex([0]);
         }
 
-        int offSize = cff[pos + 2];
-        var last = ReadOffset(cff, pos + 3 + (count * offSize), offSize);
-        return pos + 3 + ((count + 1) * offSize) + last - 1;
-    }
-
-    private static (int Offset, int Length) ReadIndexEntry(ReadOnlySpan<byte> cff, int pos, int index)
-    {
-        int offSize = cff[pos + 2];
-        var start = ReadOffset(cff, pos + 3 + (index * offSize), offSize);
-        var end = ReadOffset(cff, pos + 3 + ((index + 1) * offSize), offSize);
-        var count = TrueTypeFont.U16(cff, pos);
+        int offSize = Byte(pos + 2);
+        var offsets = new int[count + 1];
         var dataStart = pos + 3 + ((count + 1) * offSize) - 1;
-        return (dataStart + start, end - start);
-    }
-
-    private static int ReadOffset(ReadOnlySpan<byte> d, int pos, int size)
-    {
-        var v = 0;
-        for (var i = 0; i < size; i++)
+        for (var i = 0; i <= count; i++)
         {
-            v = (v << 8) | d[pos + i];
+            var v = 0;
+            for (var b = 0; b < offSize; b++)
+            {
+                v = (v << 8) | Byte(pos + 3 + (i * offSize) + b);
+            }
+
+            offsets[i] = dataStart + v;
         }
 
-        return v;
+        pos = offsets[count];
+        return new CffIndex(offsets);
     }
+}
 
-    private static Dictionary<int, List<double>> ParseDict(ReadOnlySpan<byte> d)
+// Absolute offsets (from the start of the CFF table) of each item, plus the end offset
+internal sealed class CffIndex(int[] offsets)
+{
+    public int Count => offsets.Length - 1;
+
+    public (int Offset, int Length) Get(int i) => (offsets[i], offsets[i + 1] - offsets[i]);
+}
+
+internal sealed class CffFontDict
+{
+    public List<CffDictEntry> Entries { get; init; } = [];
+
+    public List<CffDictEntry> Private { get; set; } = [];
+
+    public CffIndex? Subrs { get; set; }
+}
+
+internal static class CffOperators
+{
+    public const int Version = 0;
+    public const int Notice = 1;
+    public const int FullName = 2;
+    public const int FamilyName = 3;
+    public const int Weight = 4;
+    public const int UniqueId = 13;
+    public const int Xuid = 14;
+    public const int Charset = 15;
+    public const int Encoding = 16;
+    public const int CharStrings = 17;
+    public const int Private = 18;
+    public const int Subrs = 19;
+    public const int Copyright = 1200;
+    public const int SyntheticBase = 1220;
+    public const int Ros = 1230;
+    public const int CidCount = 1234;
+    public const int UidBase = 1235;
+    public const int FDArray = 1236;
+    public const int FDSelect = 1237;
+    public const int FontName = 1238;
+}
+
+internal sealed record CffDictEntry(int Op, byte[] Operands, double[] Values)
+{
+    public static List<CffDictEntry> Parse(ReadOnlySpan<byte> d)
     {
-        var result = new Dictionary<int, List<double>>();
-        var operands = new List<double>();
+        var result = new List<CffDictEntry>();
+        var values = new List<double>();
+        var operandStart = 0;
         var i = 0;
         while (i < d.Length)
         {
             int b0 = d[i];
             if (b0 <= 21)
             {
-                var op = b0 == 12 ? 1200 + d[++i] : b0;
-                result[op] = operands;
-                operands = [];
-                i++;
+                var op = b0 == 12 ? 1200 + d[i + 1] : b0;
+                result.Add(new CffDictEntry(op, d[operandStart..i].ToArray(), [.. values]));
+                i += b0 == 12 ? 2 : 1;
+                operandStart = i;
+                values.Clear();
             }
             else if (b0 == 28)
             {
-                operands.Add((short)((d[i + 1] << 8) | d[i + 2]));
+                values.Add((short)((d[i + 1] << 8) | d[i + 2]));
                 i += 3;
             }
             else if (b0 == 29)
             {
-                operands.Add((d[i + 1] << 24) | (d[i + 2] << 16) | (d[i + 3] << 8) | d[i + 4]);
+                values.Add((d[i + 1] << 24) | (d[i + 2] << 16) | (d[i + 3] << 8) | d[i + 4]);
                 i += 5;
             }
             else if (b0 == 30)
             {
-                // real: skip nibbles until 0xf terminator (value not needed here)
+                // Real number: nibbles until 0xF (value is copied verbatim, decoding is not needed)
                 i++;
-                while (i < d.Length && (d[i] & 0x0F) != 0x0F && (d[i] & 0xF0) != 0xF0)
+                while ((i < d.Length) && ((d[i] & 0x0F) != 0x0F) && ((d[i] & 0xF0) != 0xF0))
                 {
                     i++;
                 }
 
                 i++;
-                operands.Add(0);
+                values.Add(0);
             }
             else if (b0 <= 246)
             {
-                operands.Add(b0 - 139);
+                values.Add(b0 - 139);
                 i++;
             }
             else if (b0 <= 250)
             {
-                operands.Add(((b0 - 247) * 256) + d[i + 1] + 108);
+                values.Add(((b0 - 247) * 256) + d[i + 1] + 108);
                 i += 2;
             }
             else
             {
-                operands.Add((-(b0 - 251) * 256) - d[i + 1] - 108);
+                values.Add((-(b0 - 251) * 256) - d[i + 1] - 108);
                 i += 2;
             }
         }
 
         return result;
+    }
+
+    // Integer operands are written as 5-byte values so offsets can be patched without changing sizes
+    public static CffDictEntry Integers(int op, params int[] values)
+    {
+        var operands = new byte[values.Length * 5];
+        for (var i = 0; i < values.Length; i++)
+        {
+            operands[i * 5] = 29;
+            System.Buffers.Binary.BinaryPrimitives.WriteInt32BigEndian(operands.AsSpan((i * 5) + 1), values[i]);
+        }
+
+        return new CffDictEntry(op, operands, [.. values.Select(static x => (double)x)]);
+    }
+
+    public static byte[] Encode(IEnumerable<CffDictEntry> entries)
+    {
+        using var ms = new MemoryStream();
+        foreach (var entry in entries)
+        {
+            ms.Write(entry.Operands);
+            if (entry.Op >= 1200)
+            {
+                ms.WriteByte(12);
+                ms.WriteByte((byte)(entry.Op - 1200));
+            }
+            else
+            {
+                ms.WriteByte((byte)entry.Op);
+            }
+        }
+
+        return ms.ToArray();
     }
 }

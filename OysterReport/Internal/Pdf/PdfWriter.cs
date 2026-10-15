@@ -252,11 +252,12 @@ internal readonly record struct PdfColor(byte A, byte R, byte G, byte B)
 }
 
 // Port of PDFKit lib/font/embedded.js (no shaping: plain cmap lookup, same as PDFsharp).
-// TrueType: glyphs are subset and renumbered (CIDFontType2, CIDToGIDMap Identity).
-// CFF (OpenType/CFF, CID-keyed): CFF table embedded as CIDFontType0C, codes are the font's CIDs.
+// Glyphs are subset and renumbered; the PDF codes are the new glyph ids.
+// TrueType: CIDFontType2 + FontFile2 (CIDToGIDMap Identity).
+// OpenType/CFF: CIDFontType0 + FontFile3/CIDFontType0C (the subset CFF is CID-keyed with CID == new glyph id).
 internal sealed class PdfEmbeddedFont(TrueTypeFont font, string name, PdfDocumentWriter owner)
 {
-    private readonly TrueTypeSubset? subset = font.IsCff ? null : new TrueTypeSubset(font);
+    private readonly IFontSubset subset = font.Cff is { } cff ? new CffSubset(cff) : new TrueTypeSubset(font);
     private readonly SortedDictionary<int, (int Width, int CodePoint)> codes = [];
     private int? id;
 
@@ -275,7 +276,7 @@ internal sealed class PdfEmbeddedFont(TrueTypeFont font, string name, PdfDocumen
         foreach (var rune in text.EnumerateRunes())
         {
             var gid = Font.GetGlyphId(rune.Value);
-            var code = Font.Cff is { } cff ? cff.ToCid(gid) : subset!.IncludeGlyph(gid);
+            var code = subset.IncludeGlyph(gid);
             sb.Append(code.ToString("X4", CultureInfo.InvariantCulture));
             // [PDFsharp compat] integer division (truncation) like GlyphIndexToPdfWidth; viewers advance glyphs by /W
             // ToUnicode from the *input* code point (no Kangxi radical mapping issue)
@@ -291,19 +292,14 @@ internal sealed class PdfEmbeddedFont(TrueTypeFont font, string name, PdfDocumen
         var descent = -Font.CellDescent * scale;
         var fontFileId = doc.Reserve();
         string fontFileKey;
-        if (Font.Cff is { } cff)
+        var fontData = subset.Encode();
+        if (Font.IsCff)
         {
-            if (!cff.IsCidKeyed)
-            {
-                throw new NotSupportedException("Name-keyed CFF fonts are not supported yet.");
-            }
-
-            doc.WriteStream(fontFileId, "/Subtype /CIDFontType0C", cff.Data);
+            doc.WriteStream(fontFileId, "/Subtype /CIDFontType0C", fontData);
             fontFileKey = "FontFile3";
         }
         else
         {
-            var fontData = subset!.Encode();
             doc.WriteStream(fontFileId, string.Create(CultureInfo.InvariantCulture, $"/Length1 {fontData.Length}"), fontData);
             fontFileKey = "FontFile2";
         }
@@ -326,7 +322,7 @@ internal sealed class PdfEmbeddedFont(TrueTypeFont font, string name, PdfDocumen
         }
 
         var tag = string.Concat(Enumerable.Range(0, 6).Select(i => (char)('A' + (((Id * 7) + (i * 3)) % 26))));
-        var baseFont = Font.IsCff ? Font.PostScriptName.Replace(' ', '_') : $"{tag}+{Font.PostScriptName.Replace(' ', '_')}";
+        var baseFont = $"{tag}+{Font.PostScriptName.Replace(' ', '_')}";
 
         var descriptorId = doc.Reserve();
         doc.WriteObject(descriptorId, string.Create(CultureInfo.InvariantCulture,

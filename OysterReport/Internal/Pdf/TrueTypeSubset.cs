@@ -5,7 +5,7 @@ using System.Buffers.Binary;
 using System.Text;
 
 // Port of fontkit TTFSubset: new glyph ids are allocated in first-use order, composite components appended.
-internal sealed class TrueTypeSubset(TrueTypeFont font)
+internal sealed class TrueTypeSubset(TrueTypeFont font) : IFontSubset
 {
     private const ushort ArgsAreWords = 0x0001;
     private const ushort WeHaveAScale = 0x0008;

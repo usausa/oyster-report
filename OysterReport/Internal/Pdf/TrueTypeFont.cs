@@ -11,6 +11,7 @@ internal sealed class TrueTypeFont
     private readonly Dictionary<string, (int Offset, int Length)> tables = new(StringComparer.Ordinal);
     private readonly Dictionary<int, ushort> cmap = [];
     private uint[] loca = [];
+    private bool hasPostScriptName;
     private ushort[] advanceWidths = [];
     private short[] leftSideBearings = [];
 
@@ -205,7 +206,13 @@ internal sealed class TrueTypeFont
         ParseCmap();
         if (IsCff)
         {
-            Cff = new CffFont(GetTable("CFF "), NumGlyphs);
+            var (offset, length) = tables["CFF "];
+            Cff = new CffFont(data, offset, length);
+            if (!hasPostScriptName)
+            {
+                // Fall back to the CFF Name INDEX when the name table has no PostScript name
+                PostScriptName = Encoding.ASCII.GetString(Cff.Get(Cff.Names, 0));
+            }
         }
     }
 
@@ -235,6 +242,7 @@ internal sealed class TrueTypeFont
 
             var start = name.Offset + stringOffset + off;
             PostScriptName = platform is 0 or 3 ? Encoding.BigEndianUnicode.GetString(data, start, length) : Encoding.Latin1.GetString(data, start, length);
+            hasPostScriptName = true;
             if (platform == 3)
             {
                 break;

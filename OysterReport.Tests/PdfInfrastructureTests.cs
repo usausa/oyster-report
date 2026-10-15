@@ -72,6 +72,107 @@ public sealed class PdfInfrastructureTests
     }
 
     //--------------------------------------------------------------------------------
+    // CFF
+    //--------------------------------------------------------------------------------
+
+    [Fact]
+    public void CffSubsetShouldInlineSubroutines()
+    {
+        // Arrange
+        var font = TrueTypeFont.Load(File.ReadAllBytes(AssetPath("OysterTestCffCid.otf")));
+        var subset = new CffSubset(font.Cff!);
+        subset.IncludeGlyph(font.GetGlyphId('A'));
+        subset.IncludeGlyph(font.GetGlyphId('本'));
+
+        // Act
+        var bytes = subset.Encode();
+        var result = new CffFont(bytes, 0, bytes.Length);
+
+        // Assert
+        Assert.True(result.IsCidKeyed);
+        Assert.Equal(3, result.CharStrings.Count);
+        Assert.Equal(0, result.GlobalSubrs.Count);
+        Assert.All(result.FontDicts, static x => Assert.Null(x.Subrs));
+
+        // "A" calls gsubr 0 and local subr 0; both bodies are inlined (no operand byte of this font equals 10 or 29)
+        var a = result.Get(result.CharStrings, 1).ToArray();
+        Assert.Equal(14, a[^1]);
+        Assert.DoesNotContain((byte)10, a);
+        Assert.DoesNotContain((byte)29, a);
+    }
+
+    [Fact]
+    public void CffSubsetShouldConvertNameKeyedFontToCidKeyed()
+    {
+        // Arrange
+        var font = TrueTypeFont.Load(File.ReadAllBytes(AssetPath("OysterTestCff.otf")));
+        var source = font.Cff!;
+        var subset = new CffSubset(source, desubroutinize: false);
+        subset.IncludeGlyph(font.GetGlyphId('A'));
+        subset.IncludeGlyph(font.GetGlyphId('日'));
+
+        // Act
+        var bytes = subset.Encode();
+        var result = new CffFont(bytes, 0, bytes.Length);
+
+        // Assert
+        Assert.False(source.IsCidKeyed);
+        Assert.True(result.IsCidKeyed);
+        Assert.Equal(3, result.CharStrings.Count);
+        Assert.Single(result.FontDicts);
+        Assert.Equal(source.Get(source.CharStrings, font.GetGlyphId('日')).ToArray(), result.Get(result.CharStrings, 2).ToArray());
+
+        // A uses global subr 0 and local subr 0, 日 uses local subr 0; the others become "return"
+        Assert.Equal(source.Get(source.GlobalSubrs, 0).ToArray(), result.Get(result.GlobalSubrs, 0).ToArray());
+        Assert.Equal(new byte[] { 11 }, result.Get(result.GlobalSubrs, 1).ToArray());
+        var subrs = result.FontDicts[0].Subrs!;
+        Assert.Equal(source.Get(source.FontDicts[0].Subrs!, 0).ToArray(), result.Get(subrs, 0).ToArray());
+        Assert.Equal(new byte[] { 11 }, result.Get(subrs, 1).ToArray());
+    }
+
+    [Fact]
+    public void CffSubsetShouldRemapFontDictsOfCidKeyedFont()
+    {
+        // Arrange
+        var font = TrueTypeFont.Load(File.ReadAllBytes(AssetPath("OysterTestCffCid.otf")));
+        var source = font.Cff!;
+        var subset = new CffSubset(source, desubroutinize: false);
+        subset.IncludeGlyph(font.GetGlyphId('本'));
+        subset.IncludeGlyph(font.GetGlyphId('A'));
+
+        // Act
+        var bytes = subset.Encode();
+        var result = new CffFont(bytes, 0, bytes.Length);
+
+        // Assert
+        Assert.True(source.IsCidKeyed);
+        Assert.Equal(2, source.FontDicts.Count);
+        Assert.Equal(2, result.FontDicts.Count);
+        Assert.Equal(new byte[] { 0, 1, 0 }, result.FdSelect);
+        Assert.Equal(source.Get(source.CharStrings, font.GetGlyphId('本')).ToArray(), result.Get(result.CharStrings, 1).ToArray());
+
+        // 本 (FD 1 in the source, FD 1 here since .notdef keeps FD 0) calls local subr 1 and global subr 0
+        Assert.Equal(source.Get(source.FontDicts[1].Subrs!, 1).ToArray(), result.Get(result.FontDicts[1].Subrs!, 1).ToArray());
+        Assert.Equal(new byte[] { 11 }, result.Get(result.FontDicts[1].Subrs!, 0).ToArray());
+    }
+
+    [Theory]
+    [InlineData("OysterTestCff.otf")]
+    [InlineData("OysterTestCffCid.otf")]
+    public void PdfDocumentWriterShouldEmbedCffSubset(string fileName)
+    {
+        // Act
+        var pdf = WritePdf(compress: true, font: File.ReadAllBytes(AssetPath(fileName)), draw: static (page, font) =>
+            page.ShowText(font, 12, PdfColor.Black, 20, 60, "AB日本", 0));
+        TestHelper.SavePdf($"{nameof(PdfDocumentWriterShouldEmbedCffSubset)}-{Path.GetFileNameWithoutExtension(fileName)}", pdf);
+
+        // Assert
+        using var document = PdfDocument.Open(pdf);
+        Assert.Equal("AB日本", String.Concat(document.GetPage(1).Letters.Select(static x => x.Value)));
+        Assert.Contains("/CIDFontType0C", Encoding.Latin1.GetString(pdf), StringComparison.Ordinal);
+    }
+
+    //--------------------------------------------------------------------------------
     // Writer
     //--------------------------------------------------------------------------------
 
@@ -252,13 +353,15 @@ public sealed class PdfInfrastructureTests
     // Helper
     //--------------------------------------------------------------------------------
 
-    private static byte[] WritePdf(bool compress, Action<PdfPageCanvas, PdfEmbeddedFont> draw)
+    private static string AssetPath(string fileName) => Path.Combine(AppContext.BaseDirectory, "Assets", fileName);
+
+    private static byte[] WritePdf(bool compress, Action<PdfPageCanvas, PdfEmbeddedFont> draw, byte[]? font = null)
     {
         using var output = new MemoryStream();
         var writer = new PdfDocumentWriter(output, compress);
-        var font = writer.AddFont(TrueTypeFont.Load(IpaExGothic.Value));
+        var embedded = writer.AddFont(TrueTypeFont.Load(font ?? IpaExGothic.Value));
         var page = writer.BeginPage(200, 100);
-        draw(page, font);
+        draw(page, embedded);
         writer.EndPage(page);
         writer.Close();
         return output.ToArray();

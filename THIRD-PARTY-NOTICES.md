@@ -6,7 +6,7 @@ Each project is distributed under the MIT License reproduced at the end of this 
 | Project | Copyright | Used for |
 |---|---|---|
 | [PDFKit](https://github.com/foliojs/pdfkit) | Copyright (c) 2014 Devon Govett | PDF object writing, Type0 font embedding and ToUnicode CMap, JPEG/PNG image XObjects (`Internal/Pdf/PdfWriter.cs`, `Internal/Pdf/PdfImageWriter.cs`) |
-| [fontkit](https://github.com/foliojs/fontkit) | Copyright (c) 2014 Devon Govett | TrueType font subsetting (`Internal/Pdf/TrueTypeSubset.cs`) |
+| [fontkit](https://github.com/foliojs/fontkit) | Copyright (c) 2014 Devon Govett | TrueType and CFF font subsetting (`Internal/Pdf/TrueTypeSubset.cs`, `Internal/Pdf/CffSubset.cs`, `Internal/Pdf/CffFont.cs`) |
 | [png.js](https://github.com/foliojs/png.js) | Copyright (c) 2017 Devon Govett | PNG scanline decoding (`Internal/Pdf/RasterDecoders.cs`) |
 | [PDFsharp](https://github.com/empira/PDFsharp) 6.2.4 | Copyright (c) 2001-2026 empira Software GmbH, Troisdorf (Cologne Area), Germany | Text placement and line breaking (`XGraphics.DrawString`, `XTextFormatter`) and font line metrics (`Internal/Pdf/PdfTextLayout.cs`, `Internal/Pdf/TrueTypeFont.cs`) |
 
