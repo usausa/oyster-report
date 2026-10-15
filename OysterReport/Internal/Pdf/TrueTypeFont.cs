@@ -339,6 +339,63 @@ internal sealed class TrueTypeFont
         }
     }
 
+    public static bool IsCollection(ReadOnlySpan<byte> data) => (data.Length >= 12) && (U32(data, 0) == 0x74746366);
+
+    // Index of the face in a collection whose family / full / PostScript name equals name (case-insensitive)
+    public static int? FindFaceIndex(byte[] data, string name)
+    {
+        if (!IsCollection(data))
+        {
+            return null;
+        }
+
+        var count = (int)U32(data, 8);
+        for (var face = 0; face < count; face++)
+        {
+            var offset = (int)U32(data, 12 + (face * 4));
+            int numTables = U16(data, offset + 4);
+            for (var i = 0; i < numTables; i++)
+            {
+                var rec = offset + 12 + (i * 16);
+                if (Encoding.ASCII.GetString(data, rec, 4) != "name")
+                {
+                    continue;
+                }
+
+                if (ReadNames(data, (int)U32(data, rec + 8)).Contains(name, StringComparer.OrdinalIgnoreCase))
+                {
+                    return face;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    // nameID 1 (family), 4 (full), 6 (PostScript), 16 (typographic family)
+    private static List<string> ReadNames(byte[] data, int nameOffset)
+    {
+        var result = new List<string>();
+        int count = U16(data, nameOffset + 2);
+        int stringOffset = U16(data, nameOffset + 4);
+        for (var i = 0; i < count; i++)
+        {
+            var rec = nameOffset + 6 + (i * 12);
+            int platform = U16(data, rec);
+            int nameId = U16(data, rec + 6);
+            if (nameId is not (1 or 4 or 6 or 16))
+            {
+                continue;
+            }
+
+            var start = nameOffset + stringOffset + U16(data, rec + 10);
+            int length = U16(data, rec + 8);
+            result.Add(platform is 0 or 3 ? Encoding.BigEndianUnicode.GetString(data, start, length) : Encoding.Latin1.GetString(data, start, length));
+        }
+
+        return result;
+    }
+
     public ushort GetGlyphId(int codePoint) => cmap.TryGetValue(codePoint, out var g) ? g : (ushort)0;
 
     public bool HasGlyph(int codePoint) => cmap.ContainsKey(codePoint);

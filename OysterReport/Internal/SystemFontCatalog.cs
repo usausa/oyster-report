@@ -4,26 +4,19 @@ using System.Buffers.Binary;
 using System.Collections.Concurrent;
 using System.Text;
 
-// Cross-platform, fully managed system font index (replaces the registry-based Windows resolver).
-// Scans OS font directories, reads only the sfnt table directory + name/OS/2/head tables of each face.
+// Cross-platform, fully managed font index (replaces the registry-based Windows resolver).
+// Scans font directories, reads only the sfnt table directory + name/OS/2/head tables of each face.
 internal sealed class SystemFontCatalog
 {
     private static readonly Lazy<SystemFontCatalog> DefaultInstance = new(static () => new SystemFontCatalog(GetDefaultDirectories()));
 
-    // Metric-compatible substitutes (same idea as fontconfig's 30-metric-aliases.conf)
-    private static readonly Dictionary<string, string[]> Aliases = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["Calibri"] = ["Carlito"],
-        ["Cambria"] = ["Caladea"],
-        ["Arial"] = ["Liberation Sans", "Arimo"],
-        ["Helvetica"] = ["Liberation Sans", "Arimo"],
-        ["Times New Roman"] = ["Liberation Serif", "Tinos"],
-        ["Courier New"] = ["Liberation Mono", "Cousine"],
-    };
+    private static readonly ConcurrentDictionary<string, Lazy<SystemFontCatalog>> DirectoryCatalogs = new(StringComparer.Ordinal);
+
+    private static readonly ConcurrentDictionary<string, byte[]> FileCache = new(StringComparer.Ordinal);
 
     private readonly Dictionary<string, List<FontFaceEntry>> facesByFamily = new(StringComparer.OrdinalIgnoreCase);
-    private readonly ConcurrentDictionary<string, byte[]> fileCache = new(StringComparer.Ordinal);
 
+    // Fonts in the OS font directories
     public static SystemFontCatalog Default => DefaultInstance.Value;
 
     public int FaceCount { get; private set; }
@@ -55,6 +48,15 @@ internal sealed class SystemFontCatalog
         }
     }
 
+    // Catalog of user-supplied directories (scanned once per distinct directory list)
+    public static SystemFontCatalog ForDirectories(IReadOnlyList<string> directories)
+    {
+        var key = String.Join('\n', directories);
+        return DirectoryCatalogs.GetOrAdd(key, _ => new Lazy<SystemFontCatalog>(() => new SystemFontCatalog(directories))).Value;
+    }
+
+    public static byte[] LoadFile(FontFaceEntry face) => FileCache.GetOrAdd(face.Path, File.ReadAllBytes);
+
     public static IEnumerable<string> GetDefaultDirectories()
     {
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
@@ -80,42 +82,23 @@ internal sealed class SystemFontCatalog
 
     public bool TryResolve(string family, bool bold, bool italic, out FontFaceEntry face, out bool simulateBold, out bool simulateItalic)
     {
-        foreach (var candidate in Candidates(family))
+        if (!facesByFamily.TryGetValue(family, out var faces))
         {
-            if (!facesByFamily.TryGetValue(candidate, out var faces))
-            {
-                continue;
-            }
-
-            // Exact style first, then the closest face with simulation (same policy as WindowsFontResolver)
-            var best = faces
-                .OrderByDescending(f => (f.Bold == bold ? 2 : 0) + (f.Italic == italic ? 1 : 0))
-                .ThenBy(static f => f.Bold || f.Italic ? 1 : 0)
-                .First();
-            face = best;
-            simulateBold = bold && !best.Bold;
-            simulateItalic = italic && !best.Italic;
-            return true;
+            face = default!;
+            simulateBold = false;
+            simulateItalic = false;
+            return false;
         }
 
-        face = default!;
-        simulateBold = false;
-        simulateItalic = false;
-        return false;
-    }
-
-    public byte[] LoadFile(FontFaceEntry face) => fileCache.GetOrAdd(face.Path, File.ReadAllBytes);
-
-    private static IEnumerable<string> Candidates(string family)
-    {
-        yield return family;
-        if (Aliases.TryGetValue(family, out var aliases))
-        {
-            foreach (var alias in aliases)
-            {
-                yield return alias;
-            }
-        }
+        // Exact style first, then the closest face with simulation (same policy as the former WindowsFontResolver)
+        var best = faces
+            .OrderByDescending(f => (f.Bold == bold ? 2 : 0) + (f.Italic == italic ? 1 : 0))
+            .ThenBy(static f => f.Bold || f.Italic ? 1 : 0)
+            .First();
+        face = best;
+        simulateBold = bold && !best.Bold;
+        simulateItalic = italic && !best.Italic;
+        return true;
     }
 
     private void IndexFile(string path)

@@ -1,18 +1,21 @@
 namespace OysterReport.Internal.Pdf;
 
+using System.Collections.Concurrent;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 // Per-document font resolution (replaces PDFsharp GlobalFontSettings + ReportFontResolverAdapter).
 // No process-global state: each document owns its faces and subsets.
-internal sealed class PdfFontManager(PdfDocumentWriter writer, IReportFontResolver? resolver)
+internal sealed class PdfFontManager(PdfDocumentWriter writer, IReportFontResolver? resolver, FontLocator locator)
 {
     // Parsed faces are immutable, so they are shared across documents (subset state lives in PdfEmbeddedFont).
     // Keyed by the caller's byte[] so a resolver returning the same buffer never re-copies/re-parses a 6MB font.
-    private static readonly ConditionalWeakTable<byte[], TrueTypeFont> ParsedFaces = [];
+    private static readonly ConditionalWeakTable<byte[], ConcurrentDictionary<int, TrueTypeFont>> ParsedFaces = [];
 
     private readonly Dictionary<string, PdfEmbeddedFont?> fontsByKey = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, PdfEmbeddedFont> resolverFaces = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, PdfEmbeddedFont> resolverFacesByName = new(StringComparer.OrdinalIgnoreCase);
 
     public PdfFont Resolve(ReportFont font, double defaultSize)
     {
@@ -26,7 +29,7 @@ internal sealed class PdfFontManager(PdfDocumentWriter writer, IReportFontResolv
         if ((resolved is not null) && !String.IsNullOrWhiteSpace(resolved.FaceName))
         {
             nameToUse = resolved.FaceName;
-            face = GetResolverFace(resolved.FaceName);
+            face = GetResolverFace(resolved.FaceName, resolved.FaceIndex);
             if (face is not null)
             {
                 simulateBold = resolved.MustSimulateBold;
@@ -56,13 +59,18 @@ internal sealed class PdfFontManager(PdfDocumentWriter writer, IReportFontResolv
     public PdfFont? TryResolveByName(string name, double size)
     {
         // Same as the PDFsharp version: only faces already supplied by the resolver, then system fonts (resolver is not queried here)
-        var face = resolverFaces.GetValueOrDefault(name) ?? GetSystemFace(name, false, false, out _, out _);
+        var face = resolverFacesByName.GetValueOrDefault(name) ?? GetSystemFace(name, false, false, out _, out _);
         return face is null ? null : new PdfFont(face, size, false, false);
     }
 
-    private PdfEmbeddedFont? GetResolverFace(string faceName)
+    private static TrueTypeFont Parse(byte[] bytes, int faceIndex) =>
+        ParsedFaces.GetValue(bytes, static _ => new ConcurrentDictionary<int, TrueTypeFont>())
+            .GetOrAdd(faceIndex, index => TrueTypeFont.Load(bytes, index));
+
+    private PdfEmbeddedFont? GetResolverFace(string faceName, int? faceIndex)
     {
-        if (resolverFaces.TryGetValue(faceName, out var cached))
+        var key = faceIndex is null ? faceName : String.Create(CultureInfo.InvariantCulture, $"{faceName}\0{faceIndex}");
+        if (resolverFaces.TryGetValue(key, out var cached))
         {
             return cached;
         }
@@ -75,8 +83,12 @@ internal sealed class PdfFontManager(PdfDocumentWriter writer, IReportFontResolv
         var bytes = MemoryMarshal.TryGetArray(data, out var segment) && segment.Offset == 0 && segment.Count == segment.Array!.Length
             ? segment.Array
             : data.ToArray();
-        var face = writer.AddFont(ParsedFaces.GetValue(bytes, static b => TrueTypeFont.Load(b)));
-        resolverFaces[faceName] = face;
+
+        // Collections: explicit index, else the face named FaceName, else the first face
+        var index = faceIndex ?? TrueTypeFont.FindFaceIndex(bytes, faceName) ?? 0;
+        var face = writer.AddFont(Parse(bytes, index));
+        resolverFaces[key] = face;
+        resolverFacesByName.TryAdd(faceName, face);
         return face;
     }
 
@@ -84,23 +96,20 @@ internal sealed class PdfFontManager(PdfDocumentWriter writer, IReportFontResolv
     {
         simulateBold = false;
         simulateItalic = false;
-        if (resolverFaces.TryGetValue(family, out var registered))
+        if (resolverFacesByName.TryGetValue(family, out var registered))
         {
             return registered;
         }
 
-        if (!SystemFontCatalog.Default.TryResolve(family, bold, italic, out var entry, out simulateBold, out simulateItalic))
+        if (!locator.TryResolve(family, bold, italic, out var entry, out simulateBold, out simulateItalic))
         {
             return null;
         }
 
-        var key = $"{entry.Path}|{entry.FaceIndex}";
+        var key = String.Create(CultureInfo.InvariantCulture, $"{entry.Path}|{entry.FaceIndex}");
         if (!fontsByKey.TryGetValue(key, out var face))
         {
-            var file = SystemFontCatalog.Default.LoadFile(entry);
-            face = writer.AddFont(entry.FaceIndex == 0
-                ? ParsedFaces.GetValue(file, static b => TrueTypeFont.Load(b))
-                : TrueTypeFont.Load(file, entry.FaceIndex));
+            face = writer.AddFont(Parse(SystemFontCatalog.LoadFile(entry), entry.FaceIndex));
             fontsByKey[key] = face;
         }
 

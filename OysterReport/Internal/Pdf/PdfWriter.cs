@@ -3,14 +3,21 @@
 //   lib/mixins/vector.js (path ops), lib/image/png.js + lib/image/jpeg.js (image XObjects).
 namespace OysterReport.Internal.Pdf;
 
+using System.Buffers.Binary;
 using System.Globalization;
 using System.IO.Compression;
 using System.Text;
 
+// Offsets are tracked internally, so the output stream does not need to be seekable
 internal sealed class PdfDocumentWriter
 {
     private readonly Stream output;
     private readonly bool compress;
+    private long position;
+
+    // Two 64-bit FNV-1a style lanes over the written bytes; the file ID only needs to be stable and unlikely to collide
+    private ulong hashLow = 0xCBF29CE484222325UL;
+    private ulong hashHigh = 0x84222325CBF29CE4UL;
     private readonly List<long> offsets = [0];
     private readonly List<int> pageIds = [];
     private readonly List<PdfEmbeddedFont> fonts = [];
@@ -27,6 +34,10 @@ internal sealed class PdfDocumentWriter
 
     public string? Title { get; set; }
 
+    public DateTimeOffset? CreationDate { get; set; }
+
+    public IReadOnlyList<PdfEmbeddedFont> Fonts => fonts;
+
     public int Reserve()
     {
         offsets.Add(-1);
@@ -35,7 +46,7 @@ internal sealed class PdfDocumentWriter
 
     public void WriteObject(int id, string body)
     {
-        offsets[id] = output.Position;
+        offsets[id] = position;
         Write(string.Create(CultureInfo.InvariantCulture, $"{id} 0 obj\n{body}\nendobj\n"));
     }
 
@@ -48,9 +59,9 @@ internal sealed class PdfDocumentWriter
             filter = "/Filter /FlateDecode ";
         }
 
-        offsets[id] = output.Position;
+        offsets[id] = position;
         Write(string.Create(CultureInfo.InvariantCulture, $"{id} 0 obj\n<< {filter}{dict} /Length {data.Length} >>\nstream\n"));
-        output.Write(data);
+        WriteBytes(data);
         Write("\nendstream\nendobj\n");
     }
 
@@ -114,10 +125,16 @@ internal sealed class PdfDocumentWriter
         var catalogId = Reserve();
         WriteObject(catalogId, string.Create(CultureInfo.InvariantCulture, $"<< /Type /Catalog /Pages {pagesId} 0 R >>"));
         var infoId = Reserve();
-        var title = Title is null ? string.Empty : "/Title " + TextString(Title);
-        WriteObject(infoId, $"<< /Producer {TextString("OysterReport")} {title} >>");
+        var title = Title is null ? string.Empty : " /Title " + TextString(Title);
+        var created = CreationDate is { } date ? " /CreationDate " + DateString(date) : string.Empty;
+        WriteObject(infoId, $"<< /Producer {TextString("OysterReport")}{title}{created} >>");
 
-        var xref = output.Position;
+        // File identifier derived from the content written so far (same input => same ID)
+        Span<byte> digest = stackalloc byte[16];
+        BinaryPrimitives.WriteUInt64BigEndian(digest, hashHigh);
+        BinaryPrimitives.WriteUInt64BigEndian(digest[8..], hashLow);
+        var id = Convert.ToHexString(digest);
+        var xref = position;
         var sb = new StringBuilder();
         sb.Append(CultureInfo.InvariantCulture, $"xref\n0 {offsets.Count}\n0000000000 65535 f \n");
         for (var i = 1; i < offsets.Count; i++)
@@ -125,14 +142,34 @@ internal sealed class PdfDocumentWriter
             sb.Append(CultureInfo.InvariantCulture, $"{offsets[i]:D10} 00000 n \n");
         }
 
-        sb.Append(CultureInfo.InvariantCulture, $"trailer\n<< /Size {offsets.Count} /Root {catalogId} 0 R /Info {infoId} 0 R >>\nstartxref\n{xref}\n%%EOF\n");
+        sb.Append(CultureInfo.InvariantCulture, $"trailer\n<< /Size {offsets.Count} /Root {catalogId} 0 R /Info {infoId} 0 R /ID [<{id}> <{id}>] >>\nstartxref\n{xref}\n%%EOF\n");
         Write(sb.ToString());
     }
 
     internal static string TextString(string s) =>
         "<FEFF" + Convert.ToHexString(Encoding.BigEndianUnicode.GetBytes(s)) + ">";
 
-    private void Write(string s) => output.Write(Encoding.Latin1.GetBytes(s));
+    // PDF date: (D:YYYYMMDDHHmmSS+HH'mm')
+    internal static string DateString(DateTimeOffset value)
+    {
+        var offset = value.Offset.Duration();
+        var sign = value.Offset < TimeSpan.Zero ? '-' : '+';
+        return string.Create(CultureInfo.InvariantCulture, $"(D:{value:yyyyMMddHHmmss}{sign}{offset.Hours:00}'{offset.Minutes:00}')");
+    }
+
+    private void Write(string s) => WriteBytes(Encoding.Latin1.GetBytes(s));
+
+    private void WriteBytes(ReadOnlySpan<byte> bytes)
+    {
+        output.Write(bytes);
+        foreach (var b in bytes)
+        {
+            hashLow = (hashLow ^ b) * 0x100000001B3UL;
+            hashHigh = (hashHigh ^ b) * 0x9E3779B97F4A7C15UL;
+        }
+
+        position += bytes.Length;
+    }
 }
 
 internal sealed class PdfPageCanvas

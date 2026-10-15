@@ -16,19 +16,24 @@ public sealed class TemplateWorkbook : IDisposable
     //--------------------------------------------------------------------------------
 
     public TemplateWorkbook(string filePath)
+        : this(filePath, null)
     {
-        ReportWorkbook = OpenXmlLoader.Load(filePath);
-#pragma warning disable IDE0028
-        sheets = ReportWorkbook.Sheets.Select(x => new TemplateSheet(ReportWorkbook, x)).ToList();
-#pragma warning restore IDE0028
     }
 
     public TemplateWorkbook(Stream stream)
+        : this(stream, null)
     {
-        ReportWorkbook = OpenXmlLoader.Load(stream);
-#pragma warning disable IDE0028
-        sheets = ReportWorkbook.Sheets.Select(x => new TemplateSheet(ReportWorkbook, x)).ToList();
-#pragma warning restore IDE0028
+    }
+
+    // renderOption supplies the font settings (system fonts, font directories, aliases) used to measure column widths
+    public TemplateWorkbook(string filePath, ReportRenderOption? renderOption)
+        : this(OpenXmlLoader.Load(filePath, renderOption))
+    {
+    }
+
+    public TemplateWorkbook(Stream stream, ReportRenderOption? renderOption)
+        : this(OpenXmlLoader.Load(stream, renderOption))
+    {
     }
 
     private TemplateWorkbook(ReportWorkbook reportWorkbook)

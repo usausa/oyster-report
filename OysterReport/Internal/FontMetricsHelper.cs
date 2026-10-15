@@ -9,25 +9,25 @@ internal static class FontMetricsHelper
     private const double ReferenceScreenDpi = 96d;
     private const double PointsPerInch = 72d;
 
-    private static readonly ConcurrentDictionary<string, TrueTypeFont?> FontCache = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly ConcurrentDictionary<FontFaceEntry, TrueTypeFont?> FontCache = new();
 
-    public static double? MeasureMaxDigitWidth(string fontFamilyName, double fontSizePoints)
+    public static double? MeasureMaxDigitWidth(string fontFamilyName, double fontSizePoints, FontLocator? locator = null)
     {
         if (String.IsNullOrWhiteSpace(fontFamilyName) || (fontSizePoints <= 0d))
         {
             return null;
         }
 
-        var font = FontCache.GetOrAdd(fontFamilyName, static name =>
+        if (!(locator ?? FontLocator.Default).TryResolve(fontFamilyName, false, false, out var face, out _, out _))
         {
-            if (!SystemFontCatalog.Default.TryResolve(name, false, false, out var face, out _, out _))
-            {
-                return null;
-            }
+            return null;
+        }
 
+        var font = FontCache.GetOrAdd(face, static entry =>
+        {
             try
             {
-                return TrueTypeFont.Load(SystemFontCatalog.Default.LoadFile(face), face.FaceIndex);
+                return TrueTypeFont.Load(SystemFontCatalog.LoadFile(entry), entry.FaceIndex);
             }
             catch (Exception ex) when (ex is InvalidDataException or ArgumentException or IndexOutOfRangeException)
             {

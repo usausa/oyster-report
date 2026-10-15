@@ -1,5 +1,6 @@
 namespace OysterReport;
 
+using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
 
 [ExcludeFromCodeCoverage]
@@ -53,6 +54,30 @@ public sealed record ReportRenderOption
 
     // Invoked when a non-fatal rendering problem is skipped (e.g. an image that fails to decode)
     public Action<ReportRenderWarning>? OnRenderWarning { get; set; }
+
+    // Converts images the built-in decoders cannot handle (e.g. WebP) to PNG or JPEG; return null to skip the image
+    public Func<ReadOnlyMemory<byte>, ReadOnlyMemory<byte>?>? ImageConverter { get; set; }
+
+    // Uses fonts in the OS font directories when a font is not supplied by the font resolver
+    public bool UseSystemFonts { get; set; } = true;
+
+    // Additional font directories, searched before the OS font directories
+    public IReadOnlyList<string> FontDirectories { get; set; } = [];
+
+    // Substitute families tried when a font family is not found (keys are case-insensitive)
+    public IReadOnlyDictionary<string, IReadOnlyList<string>> FontAliases { get; set; } = DefaultFontAliases;
+
+    // Metric-compatible substitutes for common Office fonts (same idea as fontconfig's metric aliases)
+    public static IReadOnlyDictionary<string, IReadOnlyList<string>> DefaultFontAliases { get; } =
+        new ReadOnlyDictionary<string, IReadOnlyList<string>>(new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Calibri"] = ["Carlito"],
+            ["Cambria"] = ["Caladea"],
+            ["Arial"] = ["Liberation Sans", "Arimo"],
+            ["Helvetica"] = ["Liberation Sans", "Arimo"],
+            ["Times New Roman"] = ["Liberation Serif", "Tinos"],
+            ["Courier New"] = ["Liberation Mono", "Cousine"]
+        });
 
     private static (double Width, double Height) ResolveDefaultPageSize(PaperSize paperSize) =>
         paperSize switch

@@ -5,7 +5,8 @@ using System.Diagnostics.CodeAnalysis;
 public enum ReportRenderWarningKind
 {
     ImageDecodeFailed,
-    FontResolverNotInstalled
+    MissingGlyph,
+    FontEmbeddingRestricted
 }
 
 [ExcludeFromCodeCoverage]

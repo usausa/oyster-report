@@ -9,6 +9,19 @@ internal static class PdfImageWriter
 {
     public static int Write(PdfDocumentWriter doc, ReadOnlySpan<byte> bytes)
     {
+        try
+        {
+            return WriteCore(doc, bytes);
+        }
+        catch (Exception ex) when (ex is IndexOutOfRangeException or ArgumentOutOfRangeException or OverflowException)
+        {
+            // Truncated or malformed image data
+            throw new InvalidDataException("Corrupted image data.", ex);
+        }
+    }
+
+    private static int WriteCore(PdfDocumentWriter doc, ReadOnlySpan<byte> bytes)
+    {
         if (bytes.Length > 3 && bytes[0] == 0xFF && bytes[1] == 0xD8)
         {
             return WriteJpeg(doc, bytes.ToArray());

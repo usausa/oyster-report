@@ -9,6 +9,8 @@ internal static class PdfGenerator
 {
     private const double BoldSimulationOffset = 0.35d;
 
+    private const int MissingGlyphListLimit = 20;
+
     //--------------------------------------------------------------------------------
     // Write
     //--------------------------------------------------------------------------------
@@ -19,34 +21,105 @@ internal static class PdfGenerator
         if (context.EmbedDocumentMetadata)
         {
             writer.Title = context.Workbook.Metadata.TemplateName;
+            writer.CreationDate = DateTimeOffset.Now;
         }
 
-        var fonts = new PdfFontManager(writer, context.FontResolver);
+        var options = context.RenderingOptions;
+        var fonts = new PdfFontManager(writer, context.FontResolver, FontLocator.Create(options));
 
         for (var sheetIndex = 0; sheetIndex < context.SheetPlans.Count; sheetIndex++)
         {
             var sheetPlan = context.SheetPlans[sheetIndex];
             var sourceSheet = context.Workbook.Sheets[sheetIndex];
+            var missingGlyphs = new Dictionary<PdfEmbeddedFont, SortedSet<int>>();
             foreach (var pagePlan in sheetPlan.Pages)
             {
                 var page = writer.BeginPage(pagePlan.PageBounds.Width, pagePlan.PageBounds.Height);
                 page.FillRect(PdfColor.White, pagePlan.PageBounds.X, pagePlan.PageBounds.Y, pagePlan.PageBounds.Width, pagePlan.PageBounds.Height);
-                DrawCells(page, fonts, sourceSheet, pagePlan.Cells, context);
-                DrawBorders(page, sourceSheet, pagePlan.Cells, context.RenderingOptions);
-                DrawImages(page, writer, sheetPlan.SheetName, sheetPlan.Images, context.RenderingOptions);
-                DrawHeaderFooter(page, fonts, pagePlan.HeaderFooter, pagePlan.PageNumber, sheetPlan.Pages.Count, context.RenderingOptions);
+                DrawCells(page, fonts, missingGlyphs, sourceSheet, pagePlan.Cells, context);
+                DrawBorders(page, sourceSheet, pagePlan.Cells, options);
+                DrawImages(page, writer, sheetPlan.SheetName, sheetPlan.Images, options);
+                DrawHeaderFooter(page, fonts, missingGlyphs, pagePlan.HeaderFooter, pagePlan.PageNumber, sheetPlan.Pages.Count, options);
                 writer.EndPage(page);
             }
+
+            ReportMissingGlyphs(sheetPlan.SheetName, missingGlyphs, options);
         }
 
         writer.Close();
+        ReportEmbeddingRestrictions(writer.Fonts, options);
+    }
+
+    //--------------------------------------------------------------------------------
+    // Warnings
+    //--------------------------------------------------------------------------------
+
+    private static void CollectMissingGlyphs(PdfFont font, string text, Dictionary<PdfEmbeddedFont, SortedSet<int>> missingGlyphs)
+    {
+        foreach (var rune in text.EnumerateRunes())
+        {
+            if ((rune.Value < 0x20) || font.Face.Font.HasGlyph(rune.Value))
+            {
+                continue;
+            }
+
+            if (!missingGlyphs.TryGetValue(font.Face, out var codePoints))
+            {
+                codePoints = [];
+                missingGlyphs[font.Face] = codePoints;
+            }
+
+            codePoints.Add(rune.Value);
+        }
+    }
+
+    private static void ReportMissingGlyphs(string sheetName, Dictionary<PdfEmbeddedFont, SortedSet<int>> missingGlyphs, ReportRenderOption renderOption)
+    {
+        foreach (var (face, codePoints) in missingGlyphs)
+        {
+            var name = face.Font.PostScriptName;
+            var characters = String.Concat(codePoints.Take(MissingGlyphListLimit).Select(Char.ConvertFromUtf32));
+            var more = codePoints.Count > MissingGlyphListLimit ? String.Create(CultureInfo.InvariantCulture, $" (+{codePoints.Count - MissingGlyphListLimit})") : string.Empty;
+            renderOption.OnRenderWarning?.Invoke(new ReportRenderWarning
+            {
+                Kind = ReportRenderWarningKind.MissingGlyph,
+                SheetName = sheetName,
+                Source = name,
+                Message = $"Glyphs not found in font. font=[{name}], characters=[{characters}]{more}"
+            });
+        }
+    }
+
+    private static void ReportEmbeddingRestrictions(IEnumerable<PdfEmbeddedFont> fonts, ReportRenderOption renderOption)
+    {
+        foreach (var face in fonts.Where(static x => x.IsUsed))
+        {
+            // OS/2 fsType: usage permission in bits 0-3, 0x0100 no subsetting, 0x0200 bitmap embedding only
+            var fsType = face.Font.FsType;
+            var reason = (fsType & 0x000F) == 0x0002 ? "restricted license"
+                : (fsType & 0x0200) != 0 ? "bitmap embedding only"
+                : (fsType & 0x0100) != 0 ? "no subsetting"
+                : null;
+            if (reason is null)
+            {
+                continue;
+            }
+
+            var name = face.Font.PostScriptName;
+            renderOption.OnRenderWarning?.Invoke(new ReportRenderWarning
+            {
+                Kind = ReportRenderWarningKind.FontEmbeddingRestricted,
+                Source = name,
+                Message = $"Font license restricts embedding ({reason}); the font is embedded anyway. font=[{name}]"
+            });
+        }
     }
 
     //--------------------------------------------------------------------------------
     // Cell
     //--------------------------------------------------------------------------------
 
-    private static void DrawCells(PdfPageCanvas page, PdfFontManager fonts, ReportSheet sourceSheet, IReadOnlyList<PdfCellRenderInfo> cells, ReportRenderContext context)
+    private static void DrawCells(PdfPageCanvas page, PdfFontManager fonts, Dictionary<PdfEmbeddedFont, SortedSet<int>> missingGlyphs, ReportSheet sourceSheet, IReadOnlyList<PdfCellRenderInfo> cells, ReportRenderContext context)
     {
         var sourceCellsByAddress = sourceSheet.Cells.ToDictionary(static x => x.Address, StringComparer.Ordinal);
 
@@ -92,6 +165,7 @@ internal static class PdfGenerator
             }
 
             var font = fonts.Resolve(sourceCell.Style.Font, context.RenderingOptions.DefaultCellFontSize);
+            CollectMissingGlyphs(font, sourceCell.DisplayText, missingGlyphs);
             var fontColor = ToColor(sourceCell.Style.Font.ColorHex);
             var content = renderCell.ContentBounds;
             var text = renderCell.TextBounds;
@@ -307,7 +381,7 @@ internal static class PdfGenerator
 
             try
             {
-                var id = AddImage(writer, image.ImageBytes);
+                var id = AddImage(writer, image.ImageBytes, renderOption);
                 page.DrawImage(id, image.Bounds.X, image.Bounds.Y, image.Bounds.Width, image.Bounds.Height);
             }
             catch (Exception ex) when (ex is InvalidOperationException or ArgumentException or NotSupportedException or InvalidDataException)
@@ -324,14 +398,25 @@ internal static class PdfGenerator
         }
     }
 
-    private static int AddImage(PdfDocumentWriter writer, ReadOnlyMemory<byte> bytes) =>
-        PdfImageWriter.Write(writer, bytes.Span);
+    private static int AddImage(PdfDocumentWriter writer, ReadOnlyMemory<byte> bytes, ReportRenderOption renderOption)
+    {
+        try
+        {
+            return PdfImageWriter.Write(writer, bytes.Span);
+        }
+        catch (Exception ex) when ((ex is NotSupportedException or InvalidDataException) && (renderOption.ImageConverter is not null))
+        {
+            // Formats outside the built-in decoders (e.g. WebP) can be converted by the caller
+            var converted = renderOption.ImageConverter(bytes) ?? throw new NotSupportedException("Image converter returned no image.", ex);
+            return PdfImageWriter.Write(writer, converted.Span);
+        }
+    }
 
     //--------------------------------------------------------------------------------
     // Header / Footer
     //--------------------------------------------------------------------------------
 
-    private static void DrawHeaderFooter(PdfPageCanvas page, PdfFontManager fonts, PdfHeaderFooterRenderInfo headerFooter, int pageNumber, int totalPages, ReportRenderOption renderOption)
+    private static void DrawHeaderFooter(PdfPageCanvas page, PdfFontManager fonts, Dictionary<PdfEmbeddedFont, SortedSet<int>> missingGlyphs, PdfHeaderFooterRenderInfo headerFooter, int pageNumber, int totalPages, ReportRenderOption renderOption)
     {
         var headerSections = ResolveHeaderFooterSections(headerFooter.HeaderText, pageNumber, totalPages);
         var footerSections = ResolveHeaderFooterSections(headerFooter.FooterText, pageNumber, totalPages);
@@ -341,6 +426,11 @@ internal static class PdfGenerator
         if (headerSections.IsEmpty && footerSections.IsEmpty)
         {
             return;
+        }
+
+        foreach (var sections in new[] { headerSections, footerSections })
+        {
+            CollectMissingGlyphs(font, sections.Left + sections.Center + sections.Right, missingGlyphs);
         }
 
         DrawHeaderFooterSections(page, headerSections, headerFooter.HeaderBounds, font);
