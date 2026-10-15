@@ -55,5 +55,6 @@ engine.GeneratePdf(workbook, output);
 ## Dependencies
 
 - DocumentFormat.OpenXml
-- [PDFsharp](https://github.com/empira/PDFsharp)
-- [SkiaSharp](https://github.com/mono/SkiaSharp)
+
+PDF generation (font subsetting, images, text layout) is implemented in managed code without native libraries.
+Some parts are ported from MIT-licensed projects; see [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
