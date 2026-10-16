@@ -52,8 +52,34 @@ engine.GeneratePdf(workbook, output);
 | **Print area** | Defined print area |
 | **Embedded fonts** | Custom font resolver |
 
+## Fonts
+
+Fonts are resolved in this order:
+
+1. `OysterReportEngine.FontResolver`
+2. `ReportRenderOption.FontDirectories`
+3. OS font directories when `UseSystemFonts` is `true` (default)
+
+Use the same options for `TemplateWorkbook` and `OysterReportEngine`:
+
+```csharp
+var options = new ReportRenderOption { FontDirectories = ["/app/fonts"] };
+using var workbook = new TemplateWorkbook("Invoice.xlsx", options);
+var engine = new OysterReportEngine { RenderingOptions = options };
+```
+
+## Images
+
+JPEG, PNG, BMP and GIF are embedded directly. Other formats (e.g. WebP) can be converted to PNG or JPEG by `ReportRenderOption.ImageConverter`.
+
+## Warnings
+
+| Kind | Description |
+|---|---|
+| `ImageDecodeFailed` | The image could not be decoded and was skipped |
+| `MissingGlyph` | Characters not contained in the font |
+| `FontEmbeddingRestricted` | The font license restricts embedding |
+
 ## Dependencies
 
 - DocumentFormat.OpenXml
-- [PDFsharp](https://github.com/empira/PDFsharp)
-- [SkiaSharp](https://github.com/mono/SkiaSharp)

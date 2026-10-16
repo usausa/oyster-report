@@ -59,8 +59,7 @@ public sealed partial class FeatureTests
     [Fact]
     public void ImageShouldEmbedPngInsideUsedRange()
     {
-        // OnePxPng is a grayscale PNG that PDFsharp cannot import directly;
-        // it must be embedded through the SkiaSharp transcode fallback
+        // OnePxPng is a grayscale PNG; it is embedded as-is (DeviceGray) without decoding
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
         {
             var sheet = workbook.AddWorksheet("Report");

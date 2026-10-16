@@ -8,6 +8,8 @@ public sealed record FontResolveInfo
 
     public bool MustSimulateItalic { get; set; }
 
+    public int? FaceIndex { get; set; }
+
     public FontResolveInfo(string faceName)
     {
         FaceName = faceName;

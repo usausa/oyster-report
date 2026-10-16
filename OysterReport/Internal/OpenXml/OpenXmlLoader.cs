@@ -148,7 +148,7 @@ internal static class OpenXmlLoader
             return renderOption.FallbackMaxDigitWidth;
         }
 
-        var directMeasured = FontMetricsHelper.MeasureMaxDigitWidth(fontName, fontSize);
+        var directMeasured = FontMetricsHelper.MeasureMaxDigitWidth(fontName, fontSize, FontLocator.Create(renderOption));
         if (directMeasured is > 0d)
         {
             return Math.Max(renderOption.FallbackMaxDigitWidth, directMeasured.Value);

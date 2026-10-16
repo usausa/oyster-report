@@ -15,20 +15,14 @@ public sealed class TemplateWorkbook : IDisposable
     // Constructor
     //--------------------------------------------------------------------------------
 
-    public TemplateWorkbook(string filePath)
+    public TemplateWorkbook(string filePath, ReportRenderOption? renderOption = null)
+        : this(OpenXmlLoader.Load(filePath, renderOption))
     {
-        ReportWorkbook = OpenXmlLoader.Load(filePath);
-#pragma warning disable IDE0028
-        sheets = ReportWorkbook.Sheets.Select(x => new TemplateSheet(ReportWorkbook, x)).ToList();
-#pragma warning restore IDE0028
     }
 
-    public TemplateWorkbook(Stream stream)
+    public TemplateWorkbook(Stream stream, ReportRenderOption? renderOption = null)
+        : this(OpenXmlLoader.Load(stream, renderOption))
     {
-        ReportWorkbook = OpenXmlLoader.Load(stream);
-#pragma warning disable IDE0028
-        sheets = ReportWorkbook.Sheets.Select(x => new TemplateSheet(ReportWorkbook, x)).ToList();
-#pragma warning restore IDE0028
     }
 
     private TemplateWorkbook(ReportWorkbook reportWorkbook)
