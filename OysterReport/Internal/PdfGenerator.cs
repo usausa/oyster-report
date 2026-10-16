@@ -27,6 +27,7 @@ internal static class PdfGenerator
 
         var options = context.RenderingOptions;
         var fonts = new PdfFontManager(writer, context.FontResolver, FontLocator.Create(options));
+        var images = new PdfImageCache();
 
         for (var sheetIndex = 0; sheetIndex < context.SheetPlans.Count; sheetIndex++)
         {
@@ -39,7 +40,7 @@ internal static class PdfGenerator
                 page.FillRect(PdfColor.White, pagePlan.PageBounds.X, pagePlan.PageBounds.Y, pagePlan.PageBounds.Width, pagePlan.PageBounds.Height);
                 DrawCells(page, fonts, missingGlyphs, pagePlan.Cells, context);
                 DrawBorders(page, sourceSheet, pagePlan.Cells, options);
-                DrawImages(page, writer, sheetPlan.SheetName, sheetPlan.Images, options);
+                DrawImages(page, writer, images, sheetPlan.SheetName, sheetPlan.Images, options);
                 DrawHeaderFooter(page, fonts, missingGlyphs, pagePlan.HeaderFooter, pagePlan.PageNumber, sheetPlan.Pages.Count, options);
                 writer.EndPage(page);
             }
@@ -387,7 +388,7 @@ internal static class PdfGenerator
     // Image
     //--------------------------------------------------------------------------------
 
-    private static void DrawImages(PdfPageCanvas page, PdfDocumentWriter writer, string sheetName, IEnumerable<PdfImageRenderInfo> images, ReportRenderOption renderOption)
+    private static void DrawImages(PdfPageCanvas page, PdfDocumentWriter writer, PdfImageCache cache, string sheetName, IEnumerable<PdfImageRenderInfo> images, ReportRenderOption renderOption)
     {
         foreach (var image in images)
         {
@@ -398,7 +399,12 @@ internal static class PdfGenerator
 
             try
             {
-                var id = AddImage(writer, image.ImageBytes, renderOption);
+                if (!cache.TryGet(image.ImageBytes, out var id))
+                {
+                    id = AddImage(writer, image.ImageBytes, renderOption);
+                    cache.Add(image.ImageBytes, id);
+                }
+
                 page.DrawImage(id, image.Bounds.X, image.Bounds.Y, image.Bounds.Width, image.Bounds.Height);
             }
             catch (Exception ex) when (ex is InvalidOperationException or ArgumentException or NotSupportedException or InvalidDataException)

@@ -17,18 +17,20 @@ internal static class DrawingLoader
     private static readonly XNamespace A = "http://schemas.openxmlformats.org/drawingml/2006/main";
     private static readonly XNamespace R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
 
-    public static IEnumerable<ReportImage> Load(WorksheetPart worksheetPart)
+    public static IEnumerable<ReportImage> Load(WorksheetPart worksheetPart) => Load(worksheetPart, []);
+
+    public static IEnumerable<ReportImage> Load(WorksheetPart worksheetPart, Dictionary<Uri, byte[]> imageBytesByPart)
     {
         foreach (var drawingsPart in worksheetPart.DrawingsPart is null ? [] : new[] { worksheetPart.DrawingsPart })
         {
-            foreach (var img in LoadFromDrawings(drawingsPart))
+            foreach (var img in LoadFromDrawings(drawingsPart, imageBytesByPart))
             {
                 yield return img;
             }
         }
     }
 
-    private static IEnumerable<ReportImage> LoadFromDrawings(DrawingsPart drawingsPart)
+    private static IEnumerable<ReportImage> LoadFromDrawings(DrawingsPart drawingsPart, Dictionary<Uri, byte[]> imageBytesByPart)
     {
         using var stream = drawingsPart.GetStream();
         var doc = XDocument.Load(stream);
@@ -40,7 +42,7 @@ internal static class DrawingLoader
 
         foreach (var anchor in root.Elements())
         {
-            var image = ReadAnchor(anchor, drawingsPart);
+            var image = ReadAnchor(anchor, drawingsPart, imageBytesByPart);
             if (image is not null)
             {
                 yield return image;
@@ -48,7 +50,7 @@ internal static class DrawingLoader
         }
     }
 
-    private static ReportImage? ReadAnchor(XElement anchor, DrawingsPart drawingsPart)
+    private static ReportImage? ReadAnchor(XElement anchor, DrawingsPart drawingsPart, Dictionary<Uri, byte[]> imageBytesByPart)
     {
         var localName = anchor.Name.LocalName;
         if (localName is not ("twoCellAnchor" or "oneCellAnchor" or "absoluteAnchor"))
@@ -74,12 +76,13 @@ internal static class DrawingLoader
             return null;
         }
 
-        byte[] bytes;
-        using (var s = imgPart.GetStream())
-        using (var ms = new MemoryStream())
+        if (!imageBytesByPart.TryGetValue(imgPart.Uri, out var bytes))
         {
+            using var s = imgPart.GetStream();
+            using var ms = new MemoryStream();
             s.CopyTo(ms);
             bytes = ms.ToArray();
+            imageBytesByPart[imgPart.Uri] = bytes;
         }
 
         var name = pic.Element(Xdr + "nvPicPr")?.Element(Xdr + "cNvPr")?.Attribute("name")?.Value ?? string.Empty;

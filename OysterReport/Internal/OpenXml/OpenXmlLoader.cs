@@ -83,6 +83,7 @@ internal static class OpenXmlLoader
         }
 
         var sheetIndex = 0;
+        var imageBytesByPart = new Dictionary<Uri, byte[]>();
         foreach (var sheetRef in workbookPart.Workbook.Sheets.Elements<DocumentFormat.OpenXml.Spreadsheet.Sheet>())
         {
             if (sheetRef.Id?.Value is not { } relId)
@@ -101,7 +102,7 @@ internal static class OpenXmlLoader
             var tables = BuildTables(wsPart, styles.ColorResolver);
             var reportSheet = loader.Load(wsPart, name, printArea, tables);
 
-            foreach (var img in DrawingLoader.Load(wsPart))
+            foreach (var img in DrawingLoader.Load(wsPart, imageBytesByPart))
             {
                 reportSheet.AddImage(img);
             }
