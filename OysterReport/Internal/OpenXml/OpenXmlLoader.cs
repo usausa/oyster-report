@@ -1,5 +1,9 @@
 namespace OysterReport.Internal.OpenXml;
 
+using System.Diagnostics.CodeAnalysis;
+using System.IO.Packaging;
+using System.Xml;
+
 using DocumentFormat.OpenXml.Packaging;
 
 internal static class OpenXmlLoader
@@ -7,6 +11,17 @@ internal static class OpenXmlLoader
     public static ReportWorkbook Load(Stream stream, ReportRenderOption? renderOption = null)
     {
         var effectiveOptions = renderOption ?? new ReportRenderOption();
+        if (stream.CanSeek)
+        {
+            var start = stream.Position;
+            if (TryLoadReadOnlyPackage(() => Package.Open(stream, FileMode.Open, FileAccess.Read), effectiveOptions, out var workbook))
+            {
+                return workbook;
+            }
+
+            stream.Position = start;
+        }
+
         using var doc = SpreadsheetDocument.Open(stream, isEditable: false);
         return Build(doc, effectiveOptions);
     }
@@ -14,8 +29,30 @@ internal static class OpenXmlLoader
     public static ReportWorkbook Load(string path, ReportRenderOption? renderOption = null)
     {
         var effectiveOptions = renderOption ?? new ReportRenderOption();
+        if (TryLoadReadOnlyPackage(() => Package.Open(path, FileMode.Open, FileAccess.Read, FileShare.Read), effectiveOptions, out var workbook))
+        {
+            return workbook;
+        }
+
         using var doc = SpreadsheetDocument.Open(path, isEditable: false);
         return Build(doc, effectiveOptions);
+    }
+
+    private static bool TryLoadReadOnlyPackage(Func<Package> open, ReportRenderOption renderOption, [NotNullWhen(true)] out ReportWorkbook? workbook)
+    {
+        try
+        {
+            using var package = open();
+            using var doc = SpreadsheetDocument.Open(package);
+            workbook = Build(doc, renderOption);
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or UriFormatException or FormatException or XmlException or InvalidDataException or
+                                   OpenXmlPackageException or InvalidOperationException or ArgumentException or NotSupportedException)
+        {
+            workbook = null;
+            return false;
+        }
     }
 
     private static ReportWorkbook Build(SpreadsheetDocument doc, ReportRenderOption renderOption)

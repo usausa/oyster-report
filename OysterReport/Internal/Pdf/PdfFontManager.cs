@@ -13,7 +13,25 @@ internal sealed class PdfFontManager(PdfDocumentWriter writer, IReportFontResolv
     private readonly Dictionary<string, PdfEmbeddedFont> resolverFaces = [with(StringComparer.OrdinalIgnoreCase)];
     private readonly Dictionary<string, PdfEmbeddedFont> resolverFacesByName = [with(StringComparer.OrdinalIgnoreCase)];
 
+    private readonly Dictionary<ReportFont, PdfFont> resolvedFonts = [with(ReferenceEqualityComparer.Instance)];
+
     public PdfFont Resolve(ReportFont font, double defaultSize)
+    {
+        if (font.Size <= 0)
+        {
+            return ResolveCore(font, defaultSize);
+        }
+
+        if (!resolvedFonts.TryGetValue(font, out var resolved))
+        {
+            resolved = ResolveCore(font, defaultSize);
+            resolvedFonts[font] = resolved;
+        }
+
+        return resolved;
+    }
+
+    private PdfFont ResolveCore(ReportFont font, double defaultSize)
     {
         var size = font.Size <= 0 ? defaultSize : font.Size;
         var nameToUse = font.Name;

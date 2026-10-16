@@ -7,7 +7,7 @@ internal sealed class TrueTypeFont
 {
     private readonly byte[] data;
     private readonly Dictionary<string, (int Offset, int Length)> tables = [with(StringComparer.Ordinal)];
-    private readonly Dictionary<int, ushort> cmap = [];
+    private readonly CharacterMap cmap = new();
     private uint[] loca = [];
     private bool hasPostScriptName;
     private ushort[] advanceWidths = [];
@@ -294,7 +294,7 @@ internal sealed class TrueTypeFont
                 uint start = U32(data, g), end = U32(data, g + 4), gid = U32(data, g + 8);
                 for (var c = start; c <= end; c++)
                 {
-                    cmap[(int)c] = (ushort)(gid + (c - start));
+                    cmap.Set((int)c, (ushort)(gid + (c - start)));
                 }
             }
 
@@ -330,7 +330,7 @@ internal sealed class TrueTypeFont
 
                 if (gid != 0)
                 {
-                    cmap[c] = (ushort)gid;
+                    cmap.Set(c, (ushort)gid);
                 }
             }
         }
@@ -393,9 +393,9 @@ internal sealed class TrueTypeFont
         return result;
     }
 
-    public ushort GetGlyphId(int codePoint) => cmap.GetValueOrDefault(codePoint, (ushort)0);
+    public ushort GetGlyphId(int codePoint) => cmap.TryGet(codePoint, out var glyphId) ? glyphId : (ushort)0;
 
-    public bool HasGlyph(int codePoint) => cmap.ContainsKey(codePoint);
+    public bool HasGlyph(int codePoint) => cmap.TryGet(codePoint, out _);
 
     public int GetAdvanceWidth(int glyphId) => advanceWidths[glyphId];
 
@@ -414,4 +414,60 @@ internal sealed class TrueTypeFont
     internal static short S16(ReadOnlySpan<byte> d, int o) => BinaryPrimitives.ReadInt16BigEndian(d[o..]);
 
     internal static uint U32(ReadOnlySpan<byte> d, int o) => BinaryPrimitives.ReadUInt32BigEndian(d[o..]);
+}
+
+internal sealed class CharacterMap
+{
+    private const int PageShift = 8;
+    private const int PageMask = (1 << PageShift) - 1;
+    private const int MaxCodePoint = 0x10FFFF;
+
+    private readonly ushort[]?[] pages = new ushort[]?[(MaxCodePoint >> PageShift) + 1];
+
+    private Dictionary<int, ushort>? overflow;
+
+    public void Set(int codePoint, ushort glyphId)
+    {
+        if (((uint)codePoint > MaxCodePoint) || (glyphId == UInt16.MaxValue))
+        {
+            overflow ??= [];
+            overflow[codePoint] = glyphId;
+            if ((uint)codePoint <= MaxCodePoint)
+            {
+                var existing = pages[codePoint >> PageShift];
+                existing?[codePoint & PageMask] = 0;
+            }
+
+            return;
+        }
+
+        overflow?.Remove(codePoint);
+        var page = pages[codePoint >> PageShift] ??= new ushort[PageMask + 1];
+        page[codePoint & PageMask] = (ushort)(glyphId + 1);
+    }
+
+    public bool TryGet(int codePoint, out ushort glyphId)
+    {
+        if ((uint)codePoint <= MaxCodePoint)
+        {
+            var page = pages[codePoint >> PageShift];
+            if (page is not null)
+            {
+                var value = page[codePoint & PageMask];
+                if (value != 0)
+                {
+                    glyphId = (ushort)(value - 1);
+                    return true;
+                }
+            }
+        }
+
+        if ((overflow is not null) && overflow.TryGetValue(codePoint, out glyphId))
+        {
+            return true;
+        }
+
+        glyphId = 0;
+        return false;
+    }
 }

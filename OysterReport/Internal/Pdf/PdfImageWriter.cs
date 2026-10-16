@@ -36,28 +36,32 @@ internal static class PdfImageWriter
 
         if (bytes.Length > 6 && bytes[0] == (byte)'G' && bytes[1] == (byte)'I' && bytes[2] == (byte)'F')
         {
-            return WriteRaster(doc, GifDecoder.Decode(bytes));
+            using var raster = GifDecoder.DecodePooled(bytes);
+            return WriteRaster(doc, raster.Width, raster.Height, raster.Colors, raster.Color, raster.HasAlpha, raster.Alpha);
         }
 
         throw new NotSupportedException("Unsupported image format (JPEG/PNG/BMP/GIF only).");
     }
 
-    private static int WriteRaster(PdfDocumentWriter doc, RasterImage image)
+    private static int WriteRaster(PdfDocumentWriter doc, RasterImage image) =>
+        WriteRaster(doc, image.Width, image.Height, image.Colors, image.Color, image.Alpha is not null, image.Alpha);
+
+    private static int WriteRaster(PdfDocumentWriter doc, int width, int height, int colors, ReadOnlySpan<byte> color, bool hasAlpha, ReadOnlySpan<byte> alpha)
     {
         var id = doc.Reserve();
         var smask = string.Empty;
-        if (image.Alpha is not null)
+        if (hasAlpha)
         {
             var maskId = doc.Reserve();
-            doc.WriteStream(maskId, string.Create(CultureInfo.InvariantCulture,
-                $"/Type /XObject /Subtype /Image /Width {image.Width} /Height {image.Height} /BitsPerComponent 8 /ColorSpace /DeviceGray /Filter /FlateDecode"),
-                PdfDocumentWriter.Deflate(image.Alpha), alreadyEncoded: true);
+            doc.WriteDeflatedStream(maskId, string.Create(CultureInfo.InvariantCulture,
+                $"/Type /XObject /Subtype /Image /Width {width} /Height {height} /BitsPerComponent 8 /ColorSpace /DeviceGray /Filter /FlateDecode"),
+                alpha);
             smask = string.Create(CultureInfo.InvariantCulture, $" /SMask {maskId} 0 R");
         }
 
-        doc.WriteStream(id, string.Create(CultureInfo.InvariantCulture,
-            $"/Type /XObject /Subtype /Image /Width {image.Width} /Height {image.Height} /BitsPerComponent 8 /ColorSpace {(image.Colors == 3 ? "/DeviceRGB" : "/DeviceGray")}{smask} /Filter /FlateDecode"),
-            PdfDocumentWriter.Deflate(image.Color), alreadyEncoded: true);
+        doc.WriteDeflatedStream(id, string.Create(CultureInfo.InvariantCulture,
+            $"/Type /XObject /Subtype /Image /Width {width} /Height {height} /BitsPerComponent 8 /ColorSpace {(colors == 3 ? "/DeviceRGB" : "/DeviceGray")}{smask} /Filter /FlateDecode"),
+            color);
         return id;
     }
 

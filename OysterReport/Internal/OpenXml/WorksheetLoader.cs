@@ -395,8 +395,18 @@ internal sealed class WorksheetLoader
         }
 
         var cellLookup = rawCells.ToDictionary(rc => (rc.Row, rc.Column));
+
+        // Rows without raw cells only materialize blanks through a visible column style, a merge or a table
+        var anyVisibleBlankStyle = blankStylesByColumn.Any(HasVisibleStyle);
+        var rowsWithRawCells = new HashSet<int>(rawCells.Select(static rc => rc.Row));
+        var coveredRows = BuildCoveredRows(range.Value, merges, sheet.Tables);
         for (var r = range.Value.StartRow; r <= range.Value.EndRow; r++)
         {
+            if (!anyVisibleBlankStyle && !coveredRows[r - range.Value.StartRow] && !rowsWithRawCells.Contains(r))
+            {
+                continue;
+            }
+
             for (var c = range.Value.StartColumn; c <= range.Value.EndColumn; c++)
             {
                 if (cellLookup.TryGetValue((r, c), out var raw))
@@ -464,6 +474,30 @@ internal sealed class WorksheetLoader
 
         sheet.RecalculateLayout();
         ApplyMerges(sheet);
+    }
+
+    private static bool[] BuildCoveredRows(ReportRange range, List<ReportRange> merges, IEnumerable<ReportTable> tables)
+    {
+        var covered = new bool[range.EndRow - range.StartRow + 1];
+        void Mark(ReportRange target)
+        {
+            for (var r = Math.Max(target.StartRow, range.StartRow); r <= Math.Min(target.EndRow, range.EndRow); r++)
+            {
+                covered[r - range.StartRow] = true;
+            }
+        }
+
+        foreach (var merge in merges)
+        {
+            Mark(merge);
+        }
+
+        foreach (var table in tables)
+        {
+            Mark(table.Range);
+        }
+
+        return covered;
     }
 
     private static bool ShouldMaterializeBlankCell(ReportCellStyle style, int row, int column, List<ReportRange> merges, IEnumerable<ReportTable> tables)

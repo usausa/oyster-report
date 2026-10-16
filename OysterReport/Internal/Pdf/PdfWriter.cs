@@ -1,14 +1,17 @@
 namespace OysterReport.Internal.Pdf;
 
 using System.Buffers.Binary;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO.Compression;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 internal sealed class PdfDocumentWriter
 {
     private readonly Stream output;
     private readonly bool compress;
+    private readonly CompressionLevel compressionLevel;
     private long position;
 
     // Two 64-bit FNV-1a style lanes over the written bytes; the file ID only needs to be stable and unlikely to collide
@@ -20,10 +23,11 @@ internal sealed class PdfDocumentWriter
     private readonly Dictionary<byte, int> alphaStates = [];
     private readonly int pagesId;
 
-    public PdfDocumentWriter(Stream output, bool compress)
+    public PdfDocumentWriter(Stream output, bool compress, CompressionLevel compressionLevel = CompressionLevel.Optimal)
     {
         this.output = output;
         this.compress = compress;
+        this.compressionLevel = compressionLevel;
         Write("%PDF-1.7\n%\u00E2\u00E3\u00CF\u00D3\n");
         pagesId = Reserve();
     }
@@ -43,33 +47,55 @@ internal sealed class PdfDocumentWriter
     public void WriteObject(int id, string body)
     {
         offsets[id] = position;
-        Write(string.Create(CultureInfo.InvariantCulture, $"{id} 0 obj\n{body}\nendobj\n"));
+        using var header = new PdfByteBuffer(body.Length + 32);
+        header.WriteInteger(id);
+        header.Write(" 0 obj\n"u8);
+        header.WriteLatin1(body);
+        header.Write("\nendobj\n"u8);
+        WriteBytes(header.WrittenSpan);
     }
 
-    public void WriteStream(int id, string dictionary, byte[] data, bool alreadyEncoded = false)
+    public void WriteStream(int id, string dictionary, ReadOnlySpan<byte> data, bool alreadyEncoded = false)
     {
-        var filter = string.Empty;
         if (compress && !alreadyEncoded)
         {
-            data = Deflate(data);
-            filter = "/Filter /FlateDecode ";
+            using var compressed = new PdfByteBuffer(Math.Max(256, data.Length / 2));
+            DeflateTo(data, compressed);
+            WriteStreamCore(id, "/Filter /FlateDecode ", dictionary, compressed.WrittenSpan);
+            return;
         }
 
-        offsets[id] = position;
-        Write(string.Create(CultureInfo.InvariantCulture, $"{id} 0 obj\n<< {filter}{dictionary} /Length {data.Length} >>\nstream\n"));
-        WriteBytes(data);
-        Write("\nendstream\nendobj\n");
+        WriteStreamCore(id, string.Empty, dictionary, data);
     }
 
-    public static byte[] Deflate(ReadOnlySpan<byte> data)
+    public void WriteDeflatedStream(int id, string dictionary, ReadOnlySpan<byte> data)
     {
-        using var ms = new MemoryStream();
-        using (var z = new ZLibStream(ms, CompressionLevel.Optimal, leaveOpen: true))
-        {
-            z.Write(data);
-        }
+        using var compressed = new PdfByteBuffer(Math.Max(256, data.Length / 2));
+        DeflateTo(data, compressed);
+        WriteStreamCore(id, string.Empty, dictionary, compressed.WrittenSpan);
+    }
 
-        return ms.ToArray();
+    private void WriteStreamCore(int id, string filter, string dictionary, ReadOnlySpan<byte> data)
+    {
+        offsets[id] = position;
+        using var header = new PdfByteBuffer(filter.Length + dictionary.Length + 64);
+        header.WriteInteger(id);
+        header.Write(" 0 obj\n<< "u8);
+        header.WriteLatin1(filter);
+        header.WriteLatin1(dictionary);
+        header.Write(" /Length "u8);
+        header.WriteInteger(data.Length);
+        header.Write(" >>\nstream\n"u8);
+        WriteBytes(header.WrittenSpan);
+        WriteBytes(data);
+        WriteBytes("\nendstream\nendobj\n"u8);
+    }
+
+    private void DeflateTo(ReadOnlySpan<byte> data, PdfByteBuffer destination)
+    {
+        using var stream = new PdfByteBufferStream(destination);
+        using var z = new ZLibStream(stream, compressionLevel, leaveOpen: true);
+        z.Write(data);
     }
 
     public PdfEmbeddedFont AddFont(TrueTypeFont font)
@@ -97,7 +123,8 @@ internal sealed class PdfDocumentWriter
     internal void EndPage(PdfPageCanvas page)
     {
         var contentId = Reserve();
-        WriteStream(contentId, string.Empty, Encoding.ASCII.GetBytes(page.Content.ToString()));
+        WriteStream(contentId, string.Empty, page.Content.WrittenSpan);
+        page.Content.Dispose();
         var fontRes = string.Join(' ', page.UsedFonts.Select(static f => string.Create(CultureInfo.InvariantCulture, $"/{f.Name} {f.Id} 0 R")));
         var xobjRes = string.Join(' ', page.UsedImages.Select(static i => string.Create(CultureInfo.InvariantCulture, $"/Im{i} {i} 0 R")));
         var gsRes = string.Join(' ', page.UsedStates.Select(static i => string.Create(CultureInfo.InvariantCulture, $"/GS{i} {i} 0 R")));
@@ -131,15 +158,19 @@ internal sealed class PdfDocumentWriter
         BinaryPrimitives.WriteUInt64BigEndian(digest[8..], hashLow);
         var id = Convert.ToHexString(digest);
         var xref = position;
-        var sb = new StringBuilder();
-        sb.Append(CultureInfo.InvariantCulture, $"xref\n0 {offsets.Count}\n0000000000 65535 f \n");
+        using var trailer = new PdfByteBuffer((offsets.Count * 20) + 256);
+        trailer.Write("xref\n0 "u8);
+        trailer.WriteInteger(offsets.Count);
+        trailer.Write("\n0000000000 65535 f \n"u8);
         for (var i = 1; i < offsets.Count; i++)
         {
-            sb.Append(CultureInfo.InvariantCulture, $"{offsets[i]:D10} 00000 n \n");
+            offsets[i].TryFormat(trailer.GetSpan(20), out var written, "D10", CultureInfo.InvariantCulture);
+            trailer.Advance(written);
+            trailer.Write(" 00000 n \n"u8);
         }
 
-        sb.Append(CultureInfo.InvariantCulture, $"trailer\n<< /Size {offsets.Count} /Root {catalogId} 0 R /Info {infoId} 0 R /ID [<{id}> <{id}>] >>\nstartxref\n{xref}\n%%EOF\n");
-        Write(sb.ToString());
+        trailer.WriteLatin1(string.Create(CultureInfo.InvariantCulture, $"trailer\n<< /Size {offsets.Count} /Root {catalogId} 0 R /Info {infoId} 0 R /ID [<{id}> <{id}>] >>\nstartxref\n{xref}\n%%EOF\n"));
+        WriteBytes(trailer.WrittenSpan);
     }
 
     internal static string TextString(string s) =>
@@ -152,7 +183,12 @@ internal sealed class PdfDocumentWriter
         return string.Create(CultureInfo.InvariantCulture, $"(D:{value:yyyyMMddHHmmss}{sign}{offset.Hours:00}'{offset.Minutes:00}')");
     }
 
-    private void Write(string s) => WriteBytes(Encoding.Latin1.GetBytes(s));
+    private void Write(string s)
+    {
+        using var bytes = new PdfByteBuffer(s.Length);
+        bytes.WriteLatin1(s);
+        WriteBytes(bytes.WrittenSpan);
+    }
 
     private void WriteBytes(ReadOnlySpan<byte> bytes)
     {
@@ -169,6 +205,8 @@ internal sealed class PdfDocumentWriter
 
 internal sealed class PdfPageCanvas
 {
+    private static readonly byte[][] ColorComponents = CreateColorComponents();
+
     private readonly PdfDocumentWriter document;
 
     public PdfPageCanvas(PdfDocumentWriter document, double width, double height)
@@ -182,7 +220,7 @@ internal sealed class PdfPageCanvas
 
     public double Height { get; }
 
-    public StringBuilder Content { get; } = new();
+    public PdfByteBuffer Content { get; } = new(16 * 1024);
 
     public HashSet<PdfEmbeddedFont> UsedFonts { get; } = [];
 
@@ -190,26 +228,48 @@ internal sealed class PdfPageCanvas
 
     public HashSet<int> UsedStates { get; } = [];
 
-    private void Op(FormattableString s) => Content.Append(FormattableString.Invariant(s)).Append('\n');
+    private static byte[][] CreateColorComponents()
+    {
+        var result = new byte[256][];
+        for (var i = 0; i < result.Length; i++)
+        {
+            result[i] = Encoding.ASCII.GetBytes((i / 255d).ToString("0.####", CultureInfo.InvariantCulture));
+        }
 
-    public void Save() => Op($"q");
+        return result;
+    }
 
-    public void Restore() => Op($"Q");
+    private static void Op(PdfByteBuffer content, [InterpolatedStringHandlerArgument(nameof(content))] ref PdfOperatorHandler handler) => handler.EndOperator(content);
+
+    public void Save() => Content.Write("q\n"u8);
+
+    public void Restore() => Content.Write("Q\n"u8);
 
     private double Y(double y) => Height - y;
 
-    public void ClipRect(double x, double y, double w, double h) => Op($"{x:0.####} {Y(y + h):0.####} {w:0.####} {h:0.####} re W n");
+    public void ClipRect(double x, double y, double w, double h) => Op(Content, $"{x} {Y(y + h)} {w} {h} re W n");
 
     private void SetFill(PdfColor c)
     {
-        Op($"{c.R / 255d:0.####} {c.G / 255d:0.####} {c.B / 255d:0.####} rg");
+        WriteColor(c);
+        Content.Write(" rg\n"u8);
         SetAlpha(c.A);
     }
 
     private void SetStroke(PdfColor c)
     {
-        Op($"{c.R / 255d:0.####} {c.G / 255d:0.####} {c.B / 255d:0.####} RG");
+        WriteColor(c);
+        Content.Write(" RG\n"u8);
         SetAlpha(c.A);
+    }
+
+    private void WriteColor(PdfColor c)
+    {
+        Content.Write(ColorComponents[c.R]);
+        Content.Write((byte)' ');
+        Content.Write(ColorComponents[c.G]);
+        Content.Write((byte)' ');
+        Content.Write(ColorComponents[c.B]);
     }
 
     private void SetAlpha(byte alpha)
@@ -221,19 +281,19 @@ internal sealed class PdfPageCanvas
 
         var id = document.GetAlphaState(alpha);
         UsedStates.Add(id);
-        Op($"/GS{id} gs");
+        Op(Content, $"/GS{id} gs");
     }
 
-    public void FillRects(PdfColor color, IEnumerable<ReportRect> rects)
+    public void FillRects(PdfColor color, ReadOnlySpan<ReportRect> rects)
     {
         Save();
         SetFill(color);
-        foreach (var r in rects)
+        foreach (ref readonly var r in rects)
         {
-            Op($"{r.X:0.####} {Y(r.Y + r.Height):0.####} {r.Width:0.####} {r.Height:0.####} re");
+            Op(Content, $"{r.X} {Y(r.Y + r.Height)} {r.Width} {r.Height} re");
         }
 
-        Op($"f");
+        Content.Write("f\n"u8);
         Restore();
     }
 
@@ -241,36 +301,82 @@ internal sealed class PdfPageCanvas
     {
         Save();
         SetFill(color);
-        Op($"{x:0.####} {Y(y + h):0.####} {w:0.####} {h:0.####} re f");
+        Op(Content, $"{x} {Y(y + h)} {w} {h} re f");
         Restore();
     }
 
-    // ReSharper disable once ParameterTypeCanBeEnumerable.Global
-    public void StrokeLine(PdfColor color, double width, double[] dash, double x1, double y1, double x2, double y2)
+    public void StrokeLine(PdfColor color, double width, ReadOnlySpan<double> dash, double x1, double y1, double x2, double y2)
     {
         Save();
         SetStroke(color);
-        var pattern = string.Join(' ', dash.Select(static d => d.ToString("0.####", CultureInfo.InvariantCulture)));
-        Op($"{width:0.####} w 0 J 0 j [{pattern}]0 d {x1:0.####} {Y(y1):0.####} m {x2:0.####} {Y(y2):0.####} l S");
+        Content.WriteNumber(width);
+        Content.Write(" w 0 J 0 j ["u8);
+        for (var i = 0; i < dash.Length; i++)
+        {
+            if (i > 0)
+            {
+                Content.Write((byte)' ');
+            }
+
+            Content.WriteNumber(dash[i]);
+        }
+
+        Op(Content, $"]0 d {x1} {Y(y1)} m {x2} {Y(y2)} l S");
         Restore();
     }
 
     public void DrawImage(int imageId, double x, double y, double w, double h)
     {
         UsedImages.Add(imageId);
-        Op($"q {w:0.####} 0 0 {h:0.####} {x:0.####} {Y(y + h):0.####} cm /Im{imageId} Do Q");
+        Op(Content, $"q {w} 0 0 {h} {x} {Y(y + h)} cm /Im{imageId} Do Q");
     }
 
     // skew: 0 for upright, sin(20deg) for PDFsharp-compatible italic simulation
     public void ShowText(PdfEmbeddedFont font, double size, PdfColor color, double x, double baseline, string text, double skew)
     {
         UsedFonts.Add(font);
-        var hex = font.Encode(text);
         _ = font.Id;
         Save();
         SetFill(color);
-        Op($"BT /{font.Name} {size:0.####} Tf 1 0 {skew:0.####} 1 {x:0.####} {Y(baseline):0.####} Tm <{hex}> Tj ET");
+        Content.Write("BT /"u8);
+        Content.WriteAscii(font.Name);
+        Content.Write((byte)' ');
+        Content.WriteNumber(size);
+        Content.Write(" Tf 1 0 "u8);
+        Content.WriteNumber(skew);
+        Content.Write(" 1 "u8);
+        Content.WriteNumber(x);
+        Content.Write((byte)' ');
+        Content.WriteNumber(Y(baseline));
+        Content.Write(" Tm <"u8);
+        font.EncodeTo(text, Content);
+        Content.Write("> Tj ET\n"u8);
         Restore();
+    }
+}
+
+[InterpolatedStringHandler]
+internal readonly ref struct PdfOperatorHandler
+{
+    private readonly PdfByteBuffer buffer;
+
+    // ReSharper disable UnusedParameter.Local
+    public PdfOperatorHandler(int literalLength, int formattedCount, PdfByteBuffer content)
+    {
+        buffer = content;
+    }
+    // ReSharper restore UnusedParameter.Local
+
+    public void AppendLiteral(string value) => buffer.WriteAscii(value);
+
+    public void AppendFormatted(double value) => buffer.WriteNumber(value);
+
+    public void AppendFormatted(int value) => buffer.WriteInteger(value);
+
+    public void EndOperator(PdfByteBuffer content)
+    {
+        Debug.Assert(ReferenceEquals(buffer, content), "Handler target mismatch.");
+        buffer.Write((byte)'\n');
     }
 }
 
@@ -284,7 +390,7 @@ internal readonly record struct PdfColor(byte A, byte R, byte G, byte B)
 internal sealed class PdfEmbeddedFont(TrueTypeFont font, string name, PdfDocumentWriter owner)
 {
     private readonly IFontSubset subset = font.CompactFont is { } compactFont ? new CompactFontSubset(compactFont) : new TrueTypeSubset(font);
-    private readonly SortedDictionary<int, (int Width, int CodePoint)> codes = [];
+    private readonly List<(int Width, int CodePoint)> codes = [];
     private int? id;
 
     public string Name { get; } = name;
@@ -295,18 +401,41 @@ internal sealed class PdfEmbeddedFont(TrueTypeFont font, string name, PdfDocumen
 
     public TrueTypeFont Font { get; } = font;
 
-    public string Encode(string text)
+    public void EncodeTo(string text, PdfByteBuffer output)
     {
-        var sb = new StringBuilder(text.Length * 4);
         foreach (var rune in text.EnumerateRunes())
         {
             var gid = Font.GetGlyphId(rune.Value);
             var code = subset.IncludeGlyph(gid);
-            sb.Append(code.ToString("X4", CultureInfo.InvariantCulture));
-            codes.TryAdd(code, (Font.GetAdvanceWidth(gid) * 1000 / Font.UnitsPerEm, rune.Value));
+            ((ushort)code).TryFormat(output.GetSpan(4), out var written, "X4", CultureInfo.InvariantCulture);
+            output.Advance(written);
+            AddCode(code, gid, rune.Value);
+        }
+    }
+
+    private void AddCode(int code, int gid, int codePoint)
+    {
+        while (codes.Count <= code)
+        {
+            codes.Add((-1, 0));
         }
 
-        return sb.ToString();
+        if (codes[code].Width < 0)
+        {
+            codes[code] = (Font.GetAdvanceWidth(gid) * 1000 / Font.UnitsPerEm, codePoint);
+        }
+    }
+
+    private IEnumerable<(int Code, int Width, int CodePoint)> UsedCodes()
+    {
+        for (var code = 1; code < codes.Count; code++)
+        {
+            var (width, codePoint) = codes[code];
+            if (width >= 0)
+            {
+                yield return (code, width, codePoint);
+            }
+        }
     }
 
     public void Embed(PdfDocumentWriter doc)
@@ -354,7 +483,7 @@ internal sealed class PdfEmbeddedFont(TrueTypeFont font, string name, PdfDocumen
             $"/ItalicAngle {Font.ItalicAngle:0.###} /Ascent {Font.CellAscent * scale:0.###} /Descent {descent:0.###} " +
             $"/CapHeight {Font.CapHeight * scale:0.###} /XHeight {Font.XHeight * scale:0.###} /StemV 0 /{fontFileKey} {fontFileId} 0 R >>"));
 
-        var w = string.Join(' ', codes.Where(static c => c.Key != 0).Select(static c => string.Create(CultureInfo.InvariantCulture, $"{c.Key} [{c.Value.Width}]")));
+        var w = string.Join(' ', UsedCodes().Select(static c => string.Create(CultureInfo.InvariantCulture, $"{c.Code} [{c.Width}]")));
         var subtype = Font.IsCompactFont ? "/CIDFontType0" : "/CIDFontType2 /CIDToGIDMap /Identity";
         var cidFontId = doc.Reserve();
         doc.WriteObject(cidFontId, string.Create(CultureInfo.InvariantCulture,
@@ -382,7 +511,7 @@ internal sealed class PdfEmbeddedFont(TrueTypeFont font, string name, PdfDocumen
             return Hex(((v >> 10) & 0x3FF) | 0xD800) + Hex(0xDC00 | (v & 0x3FF));
         }
 
-        var entries = codes.Where(static c => c.Key != 0).Select(static c => $"<{Hex(c.Key)}> <{Utf16(c.Value.CodePoint)}>").ToList();
+        var entries = UsedCodes().Select(static c => $"<{Hex(c.Code)}> <{Utf16(c.CodePoint)}>").ToList();
         var sb = new StringBuilder();
         sb.Append("/CIDInit /ProcSet findresource begin\n12 dict begin\nbegincmap\n");
         sb.Append("/CIDSystemInfo << /Registry (Adobe) /Ordering (UCS) /Supplement 0 >> def\n");

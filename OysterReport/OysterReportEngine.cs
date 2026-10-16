@@ -1,5 +1,7 @@
 namespace OysterReport;
 
+using System.IO.Compression;
+
 using OysterReport.Internal;
 
 public sealed class OysterReportEngine
@@ -11,6 +13,12 @@ public sealed class OysterReportEngine
     public bool EmbedDocumentMetadata { get; set; } = true;
 
     public bool CompressContentStreams { get; set; } = true;
+
+    public CompressionLevel CompressionLevel
+    {
+        get;
+        set => field = Enum.IsDefined(value) ? value : throw new ArgumentOutOfRangeException(nameof(value), value, "Unknown compression level.");
+    }
 
     public void GeneratePdf(TemplateWorkbook workbook, Stream output)
     {
@@ -30,7 +38,8 @@ public sealed class OysterReportEngine
             FontResolver = FontResolver,
             RenderingOptions = RenderingOptions,
             EmbedDocumentMetadata = EmbedDocumentMetadata,
-            CompressContentStreams = CompressContentStreams
+            CompressContentStreams = CompressContentStreams,
+            CompressionLevel = CompressionLevel
         };
     }
 
@@ -58,7 +67,8 @@ public sealed class OysterReportEngine
             FontResolver = FontResolver,
             RenderingOptions = RenderingOptions,
             EmbedDocumentMetadata = EmbedDocumentMetadata,
-            CompressContentStreams = CompressContentStreams
+            CompressContentStreams = CompressContentStreams,
+            CompressionLevel = CompressionLevel
         };
     }
 }

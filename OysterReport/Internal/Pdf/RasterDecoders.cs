@@ -1,5 +1,6 @@
 namespace OysterReport.Internal.Pdf;
 
+using System.Buffers;
 using System.IO.Compression;
 using System.Text;
 
@@ -235,18 +236,27 @@ internal static class BmpDecoder
 
 internal static class GifDecoder
 {
+    private const int MaxCodes = 4096;
+
     // First frame only (Excel pictures are static)
     public static RasterImage Decode(ReadOnlySpan<byte> gif)
+    {
+        using var raster = DecodePooled(gif);
+        return raster.ToRasterImage();
+    }
+
+    // Planes are rented from ArrayPool; the caller disposes the result to return them
+    public static PooledRaster DecodePooled(ReadOnlySpan<byte> gif)
     {
         var width = BitConverter.ToUInt16(gif[6..]);
         var height = BitConverter.ToUInt16(gif[8..]);
         var flags = gif[10];
         var pos = 13;
-        byte[] globalTable = [];
+        var globalTable = ReadOnlySpan<byte>.Empty;
         if ((flags & 0x80) != 0)
         {
             var size = 3 << ((flags & 7) + 1);
-            globalTable = [.. gif.Slice(pos, size)];
+            globalTable = gif.Slice(pos, size);
             pos += size;
         }
 
@@ -286,145 +296,263 @@ internal static class GifDecoder
             if ((imageFlags & 0x80) != 0)
             {
                 var size = 3 << ((imageFlags & 7) + 1);
-                table = [.. gif.Slice(pos, size)];
+                table = gif.Slice(pos, size);
                 pos += size;
             }
 
             int minCodeSize = gif[pos++];
-            using var data = new MemoryStream();
-            while (gif[pos] != 0)
+            var dataLength = MeasureSubBlocks(gif, pos);
+            var pixelCount = iw * ih;
+            var data = ArrayPool<byte>.Shared.Rent(dataLength);
+            var indices = ArrayPool<byte>.Shared.Rent(pixelCount);
+            try
             {
-                data.Write(gif.Slice(pos + 1, gif[pos]));
-                pos += gif[pos] + 1;
-            }
+                var dataSpan = data.AsSpan(0, dataLength);
+                CopySubBlocks(gif, pos, dataSpan);
+                var indexSpan = indices.AsSpan(0, pixelCount);
+                var written = Lzw(dataSpan, minCodeSize, indexSpan);
 
-            var indices = Lzw(data.ToArray(), minCodeSize, iw * ih);
-            var color = new byte[width * height * 3];
-            var alpha = transparent >= 0 ? new byte[width * height] : null;
-            var interlaced = (imageFlags & 0x40) != 0;
-            var rows = interlaced ? InterlacedRows(ih) : [.. Enumerable.Range(0, ih)];
-            for (var r = 0; r < ih; r++)
-            {
-                var y = top + rows[r];
-                for (var x = 0; x < iw; x++)
+                indexSpan[written..].Clear();
+
+                PooledRaster? raster = null;
+                try
                 {
-                    var index = indices[(r * iw) + x];
-                    var i = (y * width) + left + x;
-                    color[i * 3] = table[index * 3];
-                    color[(i * 3) + 1] = table[(index * 3) + 1];
-                    color[(i * 3) + 2] = table[(index * 3) + 2];
-                    alpha?[i] = index == transparent ? (byte)0 : (byte)255;
+                    raster = new PooledRaster(width, height, 3, transparent >= 0);
+                    var coversCanvas = (left == 0) && (top == 0) && (iw == width) && (ih == height);
+                    if (!coversCanvas)
+                    {
+                        raster.Color.Clear();
+                        raster.Alpha.Clear();
+                    }
+
+                    var interlaced = (imageFlags & 0x40) != 0;
+                    WritePixels(indexSpan, table, transparent, raster, left, top, iw, ih, interlaced);
+                    var result = raster;
+                    raster = null;
+                    return result;
+                }
+                finally
+                {
+                    raster?.Dispose();
                 }
             }
-
-            return new RasterImage(width, height, 3, color, alpha);
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(indices);
+                ArrayPool<byte>.Shared.Return(data);
+            }
         }
 
         throw new InvalidDataException("GIF has no image.");
     }
 
-    private static int[] InterlacedRows(int height)
+    private static int MeasureSubBlocks(ReadOnlySpan<byte> gif, int pos)
     {
-        var rows = new List<int>();
-        foreach (var (start, step) in new[] { (0, 8), (4, 8), (2, 4), (1, 2) })
+        var length = 0;
+        while (gif[pos] != 0)
         {
-            for (var y = start; y < height; y += step)
-            {
-                rows.Add(y);
-            }
+            length += gif.Slice(pos + 1, gif[pos]).Length;
+            pos += gif[pos] + 1;
         }
 
-        return [.. rows];
+        return length;
     }
 
-    private static byte[] Lzw(byte[] data, int minCodeSize, int pixelCount)
+    private static void CopySubBlocks(ReadOnlySpan<byte> gif, int pos, Span<byte> destination)
     {
-        var output = new byte[pixelCount];
-        var clear = 1 << minCodeSize;
-        var end = clear + 1;
-        var prefix = new int[4096];
-        var suffix = new byte[4096];
-        for (var i = 0; i < clear; i++)
+        var offset = 0;
+        while (gif[pos] != 0)
         {
-            suffix[i] = (byte)i;
+            var block = gif.Slice(pos + 1, gif[pos]);
+            block.CopyTo(destination[offset..]);
+            offset += block.Length;
+            pos += gif[pos] + 1;
+        }
+    }
+
+    private static void WritePixels(ReadOnlySpan<byte> indices, ReadOnlySpan<byte> table, int transparent, PooledRaster raster, int left, int top, int iw, int ih, bool interlaced)
+    {
+        if (!interlaced)
+        {
+            for (var r = 0; r < ih; r++)
+            {
+                WriteRow(indices.Slice(r * iw, iw), table, transparent, raster, ((top + r) * raster.Width) + left);
+            }
+
+            return;
         }
 
-        int codeSize = minCodeSize + 1, next = end + 1, prev = -1, outPos = 0, bitPos = 0;
-        var stack = new byte[4096];
-        while (outPos < pixelCount && (bitPos + codeSize) <= data.Length * 8)
+        ReadOnlySpan<(int Start, int Step)> passes = [(0, 8), (4, 8), (2, 4), (1, 2)];
+        var source = 0;
+        foreach (var (start, step) in passes)
         {
-            var code = 0;
-            for (var b = 0; b < codeSize; b++, bitPos++)
+            for (var y = start; y < ih; y += step)
             {
-                code |= ((data[bitPos >> 3] >> (bitPos & 7)) & 1) << b;
+                WriteRow(indices.Slice(source * iw, iw), table, transparent, raster, ((top + y) * raster.Width) + left);
+                source++;
+            }
+        }
+    }
+
+    private static void WriteRow(ReadOnlySpan<byte> row, ReadOnlySpan<byte> table, int transparent, PooledRaster raster, int start)
+    {
+        var color = raster.Color;
+        var alpha = raster.Alpha;
+        var hasAlpha = raster.HasAlpha;
+        for (var x = 0; x < row.Length; x++)
+        {
+            var index = row[x];
+            var i = start + x;
+            color[i * 3] = table[index * 3];
+            color[(i * 3) + 1] = table[(index * 3) + 1];
+            color[(i * 3) + 2] = table[(index * 3) + 2];
+            if (hasAlpha)
+            {
+                alpha[i] = index == transparent ? (byte)0 : (byte)255;
+            }
+        }
+    }
+
+    private static int Lzw(ReadOnlySpan<byte> data, int minCodeSize, Span<byte> output)
+    {
+        var clear = 1 << minCodeSize;
+        var end = clear + 1;
+
+        var prefixArray = ArrayPool<ushort>.Shared.Rent(MaxCodes);
+        var bytesArray = ArrayPool<byte>.Shared.Rent(MaxCodes * 2);
+        try
+        {
+            var prefix = prefixArray.AsSpan(0, MaxCodes);
+            var suffix = bytesArray.AsSpan(0, MaxCodes);
+            var stack = bytesArray.AsSpan(MaxCodes, MaxCodes);
+            prefix.Clear();
+            suffix.Clear();
+            for (var i = 0; i < clear; i++)
+            {
+                suffix[i] = (byte)i;
             }
 
-            if (code == clear)
-            {
-                codeSize = minCodeSize + 1;
-                next = end + 1;
-                prev = -1;
-                continue;
-            }
+            int codeSize = minCodeSize + 1, next = end + 1, prev = -1, outPos = 0;
 
-            if (code == end)
+            uint accumulator = 0;
+            int bits = 0, dataPos = 0;
+            var pixelCount = output.Length;
+            while (outPos < pixelCount && ((long)(data.Length - dataPos) * 8) + bits >= codeSize)
             {
-                break;
-            }
+                while (bits < codeSize)
+                {
+                    accumulator |= (uint)data[dataPos++] << bits;
+                    bits += 8;
+                }
 
-            if (prev < 0)
-            {
-                output[outPos++] = suffix[code];
-                prev = code;
-                continue;
-            }
+                var code = (int)(accumulator & ((1u << codeSize) - 1));
+                accumulator >>= codeSize;
+                bits -= codeSize;
 
-            // Expand current into stack
-            var len = 0;
-            var c = code < next ? code : prev;
-            while (c >= clear)
-            {
+                if (code == clear)
+                {
+                    codeSize = minCodeSize + 1;
+                    next = end + 1;
+                    prev = -1;
+                    continue;
+                }
+
+                if (code == end)
+                {
+                    break;
+                }
+
+                if (prev < 0)
+                {
+                    output[outPos++] = suffix[code];
+                    prev = code;
+                    continue;
+                }
+
+                var len = 0;
+                var c = code < next ? code : prev;
+                while (c >= clear)
+                {
+                    stack[len++] = suffix[c];
+                    c = prefix[c];
+                }
+
                 stack[len++] = suffix[c];
-                c = prefix[c];
-            }
-
-            stack[len++] = suffix[c];
-            var first = suffix[c];
-            if (code >= next)
-            {
-                // append first char of prev expansion
+                var first = suffix[c];
                 for (var i = len - 1; i >= 0 && outPos < pixelCount; i--)
                 {
                     output[outPos++] = stack[i];
                 }
 
-                if (outPos < pixelCount)
+                if ((code >= next) && (outPos < pixelCount))
                 {
                     output[outPos++] = first;
                 }
-            }
-            else
-            {
-                for (var i = len - 1; i >= 0 && outPos < pixelCount; i--)
+
+                if (next < MaxCodes)
                 {
-                    output[outPos++] = stack[i];
+                    prefix[next] = (ushort)prev;
+                    suffix[next] = first;
+                    next++;
+                    if (next == (1 << codeSize) && codeSize < 12)
+                    {
+                        codeSize++;
+                    }
                 }
+
+                prev = code;
             }
 
-            if (next < 4096)
-            {
-                prefix[next] = prev;
-                suffix[next] = first;
-                next++;
-                if (next == (1 << codeSize) && codeSize < 12)
-                {
-                    codeSize++;
-                }
-            }
+            return outPos;
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(bytesArray);
+            ArrayPool<ushort>.Shared.Return(prefixArray);
+        }
+    }
+}
 
-            prev = code;
+internal sealed class PooledRaster : IDisposable
+{
+    private byte[]? color;
+    private byte[]? alpha;
+
+    public PooledRaster(int width, int height, int colors, bool hasAlpha)
+    {
+        Width = width;
+        Height = height;
+        Colors = colors;
+        color = ArrayPool<byte>.Shared.Rent(width * height * colors);
+        alpha = hasAlpha ? ArrayPool<byte>.Shared.Rent(width * height) : null;
+    }
+
+    public int Width { get; }
+
+    public int Height { get; }
+
+    public int Colors { get; }
+
+    public bool HasAlpha => alpha is not null;
+
+    public Span<byte> Color => color.AsSpan(0, Width * Height * Colors);
+
+    public Span<byte> Alpha => alpha is null ? [] : alpha.AsSpan(0, Width * Height);
+
+    public RasterImage ToRasterImage() => new(Width, Height, Colors, [.. Color], HasAlpha ? [.. Alpha] : null);
+
+    public void Dispose()
+    {
+        if (color is not null)
+        {
+            ArrayPool<byte>.Shared.Return(color);
+            color = null;
         }
 
-        return output;
+        if (alpha is not null)
+        {
+            ArrayPool<byte>.Shared.Return(alpha);
+            alpha = null;
+        }
     }
 }

@@ -1,6 +1,7 @@
 namespace OysterReport.Internal;
 
 using System.Globalization;
+using System.Runtime.InteropServices;
 using System.Text;
 
 using OysterReport.Internal.Pdf;
@@ -17,7 +18,7 @@ internal static class PdfGenerator
 
     internal static void WritePdf(ReportRenderContext context, Stream output)
     {
-        var writer = new PdfDocumentWriter(output, context.CompressContentStreams);
+        var writer = new PdfDocumentWriter(output, context.CompressContentStreams, context.CompressionLevel);
         if (context.EmbedDocumentMetadata)
         {
             writer.Title = context.Workbook.Metadata.TemplateName;
@@ -36,7 +37,7 @@ internal static class PdfGenerator
             {
                 var page = writer.BeginPage(pagePlan.PageBounds.Width, pagePlan.PageBounds.Height);
                 page.FillRect(PdfColor.White, pagePlan.PageBounds.X, pagePlan.PageBounds.Y, pagePlan.PageBounds.Width, pagePlan.PageBounds.Height);
-                DrawCells(page, fonts, missingGlyphs, sourceSheet, pagePlan.Cells, context);
+                DrawCells(page, fonts, missingGlyphs, pagePlan.Cells, context);
                 DrawBorders(page, sourceSheet, pagePlan.Cells, options);
                 DrawImages(page, writer, sheetPlan.SheetName, sheetPlan.Images, options);
                 DrawHeaderFooter(page, fonts, missingGlyphs, pagePlan.HeaderFooter, pagePlan.PageNumber, sheetPlan.Pages.Count, options);
@@ -119,10 +120,8 @@ internal static class PdfGenerator
     // Cell
     //--------------------------------------------------------------------------------
 
-    private static void DrawCells(PdfPageCanvas page, PdfFontManager fonts, Dictionary<PdfEmbeddedFont, SortedSet<int>> missingGlyphs, ReportSheet sourceSheet, IReadOnlyList<PdfCellRenderInfo> cells, ReportRenderContext context)
+    private static void DrawCells(PdfPageCanvas page, PdfFontManager fonts, Dictionary<PdfEmbeddedFont, SortedSet<int>> missingGlyphs, IReadOnlyList<PdfCellRenderInfo> cells, ReportRenderContext context)
     {
-        var sourceCellsByAddress = sourceSheet.Cells.ToDictionary(static x => x.Address, StringComparer.Ordinal);
-
         // Backgrounds are batched by color (one path per color)
         var backgroundGroups = new Dictionary<string, List<ReportRect>>(StringComparer.Ordinal);
         foreach (var renderCell in cells)
@@ -144,16 +143,12 @@ internal static class PdfGenerator
 
         foreach (var (colorHex, rects) in backgroundGroups)
         {
-            page.FillRects(ToColor(colorHex), rects);
+            page.FillRects(ToColor(colorHex), CollectionsMarshal.AsSpan(rects));
         }
 
         foreach (var renderCell in cells)
         {
-            if (!sourceCellsByAddress.TryGetValue(renderCell.CellAddress, out var sourceCell))
-            {
-                continue;
-            }
-
+            var sourceCell = renderCell.Cell;
             if (!renderCell.IsMergedOwner && (sourceCell.Merge is not null))
             {
                 continue;
@@ -266,18 +261,13 @@ internal static class PdfGenerator
     // Border
     //--------------------------------------------------------------------------------
 
-    private static void DrawBorders(PdfPageCanvas page, ReportSheet sourceSheet, IEnumerable<PdfCellRenderInfo> cells, ReportRenderOption renderOption)
+    private static void DrawBorders(PdfPageCanvas page, ReportSheet sourceSheet, IReadOnlyList<PdfCellRenderInfo> cells, ReportRenderOption renderOption)
     {
-        var sourceCellsByAddress = sourceSheet.Cells.ToDictionary(static x => x.Address, StringComparer.Ordinal);
-        var collectedLines = new Dictionary<string, (ReportLine Line, ReportBorder Border)>(StringComparer.Ordinal);
+        var collectedLines = new Dictionary<LineKey, (ReportLine Line, ReportBorder Border)>(EstimateBorderSegments(cells));
 
         foreach (var renderCell in cells)
         {
-            if (!sourceCellsByAddress.TryGetValue(renderCell.CellAddress, out var sourceCell))
-            {
-                continue;
-            }
-
+            var sourceCell = renderCell.Cell;
             if ((sourceCell.Merge is not null) && !renderCell.IsMergedOwner)
             {
                 continue;
@@ -291,27 +281,48 @@ internal static class PdfGenerator
             CollectBorderSide(borders.Left, new ReportLine { X1 = b.X, Y1 = b.Bottom, X2 = b.X, Y2 = b.Y }, collectedLines);
         }
 
-        foreach (var (line, border) in collectedLines.Values.OrderBy(static x => GetBorderPriority(x.Border.Style)))
+        // Stable by priority (same order as a stable sort of the insertion order)
+        for (var priority = MinBorderPriority; priority <= MaxBorderPriority; priority++)
         {
-            DrawBorderLine(page, border, line, renderOption);
+            foreach (var (line, border) in collectedLines.Values)
+            {
+                if (GetBorderPriority(border.Style) == priority)
+                {
+                    DrawBorderLine(page, border, line, renderOption);
+                }
+            }
         }
     }
 
-    private static void CollectBorderSide(ReportBorder border, ReportLine line, Dictionary<string, (ReportLine Line, ReportBorder Border)> collectedLines)
+    private static int EstimateBorderSegments(IEnumerable<PdfCellRenderInfo> cells)
+    {
+        var sides = 0;
+        foreach (var renderCell in cells)
+        {
+            var borders = renderCell.Cell.Style.Borders;
+            sides += (borders.Top.Style != BorderLineStyle.None ? 1 : 0) +
+                (borders.Right.Style != BorderLineStyle.None ? 1 : 0) +
+                (borders.Bottom.Style != BorderLineStyle.None ? 1 : 0) +
+                (borders.Left.Style != BorderLineStyle.None ? 1 : 0);
+        }
+
+        return sides / 2;
+    }
+
+    private static void CollectBorderSide(ReportBorder border, ReportLine line, Dictionary<LineKey, (ReportLine Line, ReportBorder Border)> collectedLines)
     {
         if (border.Style == BorderLineStyle.None)
         {
             return;
         }
 
-        var lineKey = BuildLineKey(line);
-        if (collectedLines.TryGetValue(lineKey, out var existing) &&
-            (GetBorderPriority(existing.Border.Style) >= GetBorderPriority(border.Style)))
+        ref var entry = ref CollectionsMarshal.GetValueRefOrAddDefault(collectedLines, LineKey.Create(line), out var exists);
+        if (exists && (GetBorderPriority(entry.Border.Style) >= GetBorderPriority(border.Style)))
         {
             return;
         }
 
-        collectedLines[lineKey] = (line, border);
+        entry = (line, border);
     }
 
     private static void DrawBorderLine(PdfPageCanvas page, ReportBorder border, ReportLine line, ReportRenderOption renderOption)
@@ -330,15 +341,21 @@ internal static class PdfGenerator
             return;
         }
 
-        // PDFsharp XDashStyle patterns: dot = width, dash = 3 * width
-        var dash = border.Style switch
+        Span<double> dash = stackalloc double[4];
+        var dashLength = border.Style switch
         {
-            BorderLineStyle.Dashed => new[] { 3 * width, width },
-            BorderLineStyle.Dotted => [width],
-            BorderLineStyle.DashDot => [3 * width, width, width, width],
-            _ => []
+            BorderLineStyle.Dashed => SetDash(dash, 3 * width, width),
+            BorderLineStyle.Dotted => SetDash(dash, width),
+            BorderLineStyle.DashDot => SetDash(dash, 3 * width, width, width, width),
+            _ => 0
         };
-        page.StrokeLine(color, width, dash, line.X1, line.Y1, line.X2, line.Y2);
+        page.StrokeLine(color, width, dash[..dashLength], line.X1, line.Y1, line.X2, line.Y2);
+    }
+
+    private static int SetDash(Span<double> destination, params ReadOnlySpan<double> pattern)
+    {
+        pattern.CopyTo(destination);
+        return pattern.Length;
     }
 
     private static void DrawDoubleBorder(PdfPageCanvas page, PdfColor color, double width, ReportLine line)
@@ -521,9 +538,15 @@ internal static class PdfGenerator
     // Color / Style helpers
     //--------------------------------------------------------------------------------
 
+    // Same result as parsing ColorHelper.NormalizeHex(colorHex), without allocating the normalized string
     private static PdfColor ToColor(string colorHex)
     {
-        var hex = ColorHelper.NormalizeHex(colorHex).AsSpan().TrimStart('#');
+        if (String.IsNullOrWhiteSpace(colorHex))
+        {
+            return default;
+        }
+
+        var hex = colorHex.AsSpan().Trim().TrimStart('#');
         if (hex.Length == 8)
         {
             return new PdfColor(
@@ -536,8 +559,16 @@ internal static class PdfGenerator
         return PdfColor.Black;
     }
 
-    private static bool IsTransparentColor(string colorHex) =>
-        ColorHelper.NormalizeHex(colorHex).StartsWith("#00", StringComparison.Ordinal);
+    private static bool IsTransparentColor(string colorHex)
+    {
+        if (String.IsNullOrWhiteSpace(colorHex))
+        {
+            return true;
+        }
+
+        var trimmed = colorHex.AsSpan().Trim();
+        return (trimmed[0] == '#' ? trimmed[1..] : trimmed).StartsWith("00", StringComparison.Ordinal);
+    }
 
     private static double ResolveBorderWidth(BorderLineStyle style, ReportRenderOption renderOption) =>
         style switch
@@ -597,7 +628,7 @@ internal static class PdfGenerator
     private static ReportBorders ResolveMergedBorders(ReportSheet sourceSheet, ReportCell ownerCell)
     {
         var mergeInfo = ownerCell.Merge ?? throw new InvalidOperationException("Merged border resolution requires merge info.");
-        var mergedCells = sourceSheet.Cells.Where(cell => mergeInfo.Range.Contains(cell.Row, cell.Column)).ToList();
+        var mergedCells = CollectMergedCells(sourceSheet, mergeInfo.Range);
 
         return new ReportBorders
         {
@@ -606,6 +637,29 @@ internal static class PdfGenerator
             Bottom = ResolveMergedBorder(mergedCells, mergeInfo.Range.EndRow, mergeInfo.Range.StartColumn, mergeInfo.Range.EndColumn, static c => c.Row, static c => c.Column, static c => c.Style.Borders.Bottom),
             Left = ResolveMergedBorder(mergedCells, mergeInfo.Range.StartColumn, mergeInfo.Range.StartRow, mergeInfo.Range.EndRow, static c => c.Column, static c => c.Row, static c => c.Style.Borders.Left)
         };
+    }
+
+    private static List<ReportCell> CollectMergedCells(ReportSheet sheet, ReportRange range)
+    {
+        if (!sheet.IsCellOrderSorted)
+        {
+            return sheet.Cells.Where(cell => range.Contains(cell.Row, cell.Column)).ToList();
+        }
+
+        // Cells are in (row, column) order, so walking the range through the index yields the same sequence
+        var result = new List<ReportCell>();
+        for (var row = range.StartRow; row <= range.EndRow; row++)
+        {
+            for (var column = range.StartColumn; column <= range.EndColumn; column++)
+            {
+                if (sheet.FindCell(row, column) is { } cell)
+                {
+                    result.Add(cell);
+                }
+            }
+        }
+
+        return result;
     }
 
     private static ReportBorder ResolveMergedBorder(
@@ -630,6 +684,10 @@ internal static class PdfGenerator
         return bestBorder ?? new ReportBorder();
     }
 
+    private const int MinBorderPriority = 0;
+
+    private const int MaxBorderPriority = 6;
+
     private static int GetBorderPriority(BorderLineStyle style) =>
         style switch
         {
@@ -644,10 +702,16 @@ internal static class PdfGenerator
             _ => 0
         };
 
-    private static string BuildLineKey(ReportLine line) =>
-        String.Create(
-            CultureInfo.InvariantCulture,
-            $"{Math.Round(Math.Min(line.X1, line.X2), 4)}:{Math.Round(Math.Min(line.Y1, line.Y2), 4)}:{Math.Round(Math.Max(line.X1, line.X2), 4)}:{Math.Round(Math.Max(line.Y1, line.Y2), 4)}");
+    // Identifies a border segment by its rounded end points (bit patterns, so equality matches the rounded value text)
+    private readonly record struct LineKey(long Left, long Top, long Right, long Bottom)
+    {
+        public static LineKey Create(ReportLine line) =>
+            new(
+                BitConverter.DoubleToInt64Bits(Math.Round(Math.Min(line.X1, line.X2), 4)),
+                BitConverter.DoubleToInt64Bits(Math.Round(Math.Min(line.Y1, line.Y2), 4)),
+                BitConverter.DoubleToInt64Bits(Math.Round(Math.Max(line.X1, line.X2), 4)),
+                BitConverter.DoubleToInt64Bits(Math.Round(Math.Max(line.Y1, line.Y2), 4)));
+    }
 
     private sealed record HeaderFooterSections(string Left, string Center, string Right)
     {

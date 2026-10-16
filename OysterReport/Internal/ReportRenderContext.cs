@@ -1,5 +1,7 @@
 namespace OysterReport.Internal;
 
+using System.IO.Compression;
+
 internal sealed record ReportRenderContext
 {
     public ReportWorkbook Workbook { get; init; } = new();
@@ -13,4 +15,6 @@ internal sealed record ReportRenderContext
     public bool EmbedDocumentMetadata { get; init; } = true;
 
     public bool CompressContentStreams { get; init; } = true;
+
+    public CompressionLevel CompressionLevel { get; init; } = CompressionLevel.Optimal;
 }

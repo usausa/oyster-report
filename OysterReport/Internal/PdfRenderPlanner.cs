@@ -26,7 +26,9 @@ internal sealed record PdfHeaderFooterRenderInfo
 
 internal sealed record PdfCellRenderInfo
 {
-    public string CellAddress { get; init; } = string.Empty;
+    internal ReportCell Cell { get; init; } = default!;
+
+    public string CellAddress => Cell.Address;
 
     public string BackgroundColorHex { get; init; } = string.Empty;
 
@@ -146,7 +148,7 @@ internal static class PdfRenderPlanner
         AddImageAnchorRowOffsets(sheet, renderRange, rowsInRange, rowOffsets, printableBounds.Y + contentOffsetY, defaultRowHeight);
 
         // Build lookup dictionaries for merged ranges and columns; cells are resolved via sheet.FindCell
-        var mergedRanges = sheet.MergedRanges.ToDictionary(range => range.OwnerCellAddress, range => range);
+        var mergedRanges = sheet.MergedRanges.ToDictionary(static range => (range.Range.StartRow, range.Range.StartColumn), static range => range);
         var columnByIndex = visibleColumns.ToDictionary(c => c.Index);
         var rowByIndex = visibleRows.ToDictionary(r => r.Index);
         var mergedRangesByRow = BuildMergedRangesByRow(sheet.MergedRanges);
@@ -163,8 +165,7 @@ internal static class PdfRenderPlanner
                 Height = rowByIndex[cell.Row].HeightPoint
             };
 
-            var address = cell.Address;
-            var isMergedOwner = mergedRanges.TryGetValue(address, out var mergedRange);
+            var isMergedOwner = mergedRanges.TryGetValue((cell.Row, cell.Column), out var mergedRange);
             if (isMergedOwner && (mergedRange is not null))
             {
                 outerBounds = BuildMergedBounds(mergedRange, visibleRows, visibleColumns, rowOffsets, columnOffsets);
@@ -177,7 +178,7 @@ internal static class PdfRenderPlanner
             });
             pageCells.Add(new PdfCellRenderInfo
             {
-                CellAddress = address,
+                Cell = cell,
                 BackgroundColorHex = ResolveBackgroundColor(cell, sheet.Tables),
                 OuterBounds = outerBounds,
                 ContentBounds = contentBounds,

@@ -364,21 +364,48 @@ internal sealed class ReportSheet
     private readonly List<ReportCell> cells = [];
 
     private readonly Dictionary<(int Row, int Column), ReportCell> cellIndex = [];
+    private readonly Dictionary<int, ReportRow> rowIndex = [];
     private readonly List<ReportMergedRange> mergedRanges = [];
     private readonly List<ReportTable> tables = [];
     private readonly List<ReportImage> images = [];
     private readonly List<ReportPageBreak> horizontalPageBreaks = [];
     private readonly List<ReportPageBreak> verticalPageBreaks = [];
 
+    private bool layoutDirty;
+    private bool rowIndexDirty;
+
     public string Name { get; set; } = string.Empty;
 
     public ReportRange UsedRange { get; set; } = new() { StartRow = 1, StartColumn = 1, EndRow = 1, EndColumn = 1 };
 
-    public IReadOnlyList<ReportRow> Rows => rows;
+    public IReadOnlyList<ReportRow> Rows
+    {
+        get
+        {
+            EnsureLayout();
+            return rows;
+        }
+    }
 
-    public IReadOnlyList<ReportColumn> Columns => columns;
+    public IReadOnlyList<ReportColumn> Columns
+    {
+        get
+        {
+            EnsureLayout();
+            return columns;
+        }
+    }
 
-    public IReadOnlyList<ReportCell> Cells => cells;
+    public IReadOnlyList<ReportCell> Cells
+    {
+        get
+        {
+            EnsureLayout();
+            return cells;
+        }
+    }
+
+    public IReadOnlyList<ReportCell> CellsInStorageOrder => cells;
 
     public IReadOnlyList<ReportMergedRange> MergedRanges => mergedRanges;
 
@@ -398,15 +425,40 @@ internal sealed class ReportSheet
 
     public bool ShowGridLines { get; set; }
 
+    public bool IsCellOrderSorted
+    {
+        get
+        {
+            EnsureLayout();
+            return !field;
+        }
+
+        private set => field = !value;
+    }
+
     public double DefaultRowHeightPoint { get; set; } = 15d;
 
-    public void AddRowDefinition(ReportRow row) => rows.Add(row);
+    public void AddRowDefinition(ReportRow row)
+    {
+        rows.Add(row);
+        if (!rowIndexDirty)
+        {
+            rowIndex.TryAdd(row.Index, row);
+        }
+    }
 
     public void AddColumnDefinition(ReportColumn column) => columns.Add(column);
 
     public void AddCell(ReportCell cell)
     {
+        EnsureLayout();
         cells.Add(cell);
+        if ((cells.Count > 1) && IsCellOrderSorted)
+        {
+            var last = cells[^2];
+            IsCellOrderSorted = (cell.Row > last.Row) || ((cell.Row == last.Row) && (cell.Column > last.Column));
+        }
+
         cellIndex.TryAdd((cell.Row, cell.Column), cell);
     }
 
@@ -456,6 +508,46 @@ internal sealed class ReportSheet
         {
             cellIndex.TryAdd((cell.Row, cell.Column), cell);
         }
+
+        rowIndex.Clear();
+        foreach (var row in rows)
+        {
+            rowIndex.TryAdd(row.Index, row);
+        }
+
+        layoutDirty = false;
+        rowIndexDirty = false;
+        IsCellOrderSorted = true;
+    }
+
+    private void InvalidateLayout()
+    {
+        layoutDirty = true;
+        rowIndexDirty = true;
+    }
+
+    private void EnsureLayout()
+    {
+        if (layoutDirty)
+        {
+            RecalculateLayout();
+        }
+    }
+
+    private void EnsureRowIndex()
+    {
+        if (!rowIndexDirty)
+        {
+            return;
+        }
+
+        rowIndex.Clear();
+        foreach (var row in rows)
+        {
+            rowIndex.TryAdd(row.Index, row);
+        }
+
+        rowIndexDirty = false;
     }
 
     //--------------------------------------------------------------------------------
@@ -464,21 +556,15 @@ internal sealed class ReportSheet
 
     public ReportRow? GetRowDefinition(int row)
     {
-        foreach (var r in rows)
-        {
-            if (r.Index == row)
-            {
-                return r;
-            }
-        }
-        return null;
+        EnsureRowIndex();
+        return rowIndex.GetValueOrDefault(row);
     }
 
     public void EnsureRowDefinition(int row)
     {
         if (GetRowDefinition(row) is null)
         {
-            rows.Add(new ReportRow
+            AddRowDefinition(new ReportRow
             {
                 Index = row,
                 HeightPoint = DefaultRowHeightPoint
@@ -486,7 +572,11 @@ internal sealed class ReportSheet
         }
     }
 
-    public ReportCell? FindCell(int row, int column) => cellIndex.GetValueOrDefault((row, column));
+    public ReportCell? FindCell(int row, int column)
+    {
+        EnsureLayout();
+        return cellIndex.GetValueOrDefault((row, column));
+    }
 
     // Inserts `count` blank rows at `insertAtRow`, shifting existing rows/cells/merges/images/breaks down.
     public void InsertEmptyRowsAt(int insertAtRow, int count)
@@ -654,7 +744,7 @@ internal sealed class ReportSheet
             };
         }
 
-        RecalculateLayout();
+        InvalidateLayout();
     }
 
     // Deletes rows in [startRow, endRow] (inclusive) and shifts everything below up.
@@ -887,7 +977,7 @@ internal sealed class ReportSheet
             };
         }
 
-        RecalculateLayout();
+        InvalidateLayout();
     }
 
     // Copies the contents (cells, row height, and single-row merges) of sourceRow into destinationRow.
@@ -929,7 +1019,7 @@ internal sealed class ReportSheet
             }
         }
 
-        RecalculateLayout();
+        InvalidateLayout();
     }
 
     private static ReportMergeInfo? TranslateMergeForRowCopy(ReportMergeInfo? merge, int destinationRow)
@@ -964,6 +1054,7 @@ internal sealed class ReportSheet
 
     private ReportSheet CloneCore(string targetName)
     {
+        EnsureLayout();
         var copy = new ReportSheet
         {
             Name = targetName,

@@ -85,7 +85,7 @@ public sealed class TemplateSheet
             return false;
         }
 
-        foreach (var cell in UnderlyingSheet.Cells)
+        foreach (var cell in UnderlyingSheet.CellsInStorageOrder)
         {
             if (cell.Row != rowNum)
             {
@@ -115,7 +115,7 @@ public sealed class TemplateSheet
         var placeholder = "{{" + marker + "}}";
         var count = 0;
 
-        foreach (var cell in UnderlyingSheet.Cells)
+        foreach (var cell in UnderlyingSheet.CellsInStorageOrder)
         {
             var text = cell.DisplayText;
             if (text.Contains(placeholder, StringComparison.Ordinal))

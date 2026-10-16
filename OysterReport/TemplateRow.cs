@@ -54,7 +54,7 @@ public sealed class TemplateRow
         var placeholder = "{{" + markerName + "}}";
         var count = 0;
 
-        foreach (var cell in sheet.Cells)
+        foreach (var cell in sheet.CellsInStorageOrder)
         {
             if (cell.Row != RowNumber)
             {
