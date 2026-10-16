@@ -372,7 +372,6 @@ internal static class GifDecoder
                 break;
             }
 
-            int current;
             if (prev < 0)
             {
                 output[outPos++] = suffix[code];
@@ -380,18 +379,9 @@ internal static class GifDecoder
                 continue;
             }
 
-            if (code < next)
-            {
-                current = code;
-            }
-            else
-            {
-                current = prev; // KwKwK case
-            }
-
             // Expand current into stack
             var len = 0;
-            var c = current;
+            var c = code < next ? code : prev;
             while (c >= clear)
             {
                 stack[len++] = suffix[c];
