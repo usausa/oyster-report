@@ -29,8 +29,8 @@ internal static class PngDecoder
                     colorType = body[9];
                     interlace = body[12];
                     break;
-                case "PLTE": palette = body.ToArray(); break;
-                case "tRNS": trns = body.ToArray(); break;
+                case "PLTE": palette = [.. body]; break;
+                case "tRNS": trns = [.. body]; break;
                 case "IDAT": idat.Write(body); break;
             }
 
@@ -81,10 +81,7 @@ internal static class PngDecoder
             {
                 case 0:
                     color[i] = To8(samples[s]);
-                    if (alpha is not null)
-                    {
-                        alpha[i] = samples[s] == TrueTypeFont.U16(trns, 0) ? (byte)0 : (byte)255;
-                    }
+                    alpha?[i] = samples[s] == TrueTypeFont.U16(trns, 0) ? (byte)0 : (byte)255;
 
                     break;
                 case 2:
@@ -105,10 +102,7 @@ internal static class PngDecoder
                     color[i * 3] = palette[index * 3];
                     color[(i * 3) + 1] = palette[(index * 3) + 1];
                     color[(i * 3) + 2] = palette[(index * 3) + 2];
-                    if (alpha is not null)
-                    {
-                        alpha[i] = index < trns!.Length ? trns[index] : (byte)255;
-                    }
+                    alpha?[i] = index < trns!.Length ? trns[index] : (byte)255;
 
                     break;
                 case 4:
@@ -231,10 +225,7 @@ internal static class BmpDecoder
                 color[i * 3] = (byte)r;
                 color[(i * 3) + 1] = (byte)g;
                 color[(i * 3) + 2] = (byte)b;
-                if (alpha is not null)
-                {
-                    alpha[i] = (byte)a;
-                }
+                alpha?[i] = (byte)a;
             }
         }
 
@@ -255,7 +246,7 @@ internal static class GifDecoder
         if ((flags & 0x80) != 0)
         {
             var size = 3 << ((flags & 7) + 1);
-            globalTable = gif.Slice(pos, size).ToArray();
+            globalTable = [.. gif.Slice(pos, size)];
             pos += size;
         }
 
@@ -295,7 +286,7 @@ internal static class GifDecoder
             if ((imageFlags & 0x80) != 0)
             {
                 var size = 3 << ((imageFlags & 7) + 1);
-                table = gif.Slice(pos, size).ToArray();
+                table = [.. gif.Slice(pos, size)];
                 pos += size;
             }
 
@@ -311,7 +302,7 @@ internal static class GifDecoder
             var color = new byte[width * height * 3];
             var alpha = transparent >= 0 ? new byte[width * height] : null;
             var interlaced = (imageFlags & 0x40) != 0;
-            var rows = interlaced ? InterlacedRows(ih) : Enumerable.Range(0, ih).ToArray();
+            var rows = interlaced ? InterlacedRows(ih) : [.. Enumerable.Range(0, ih)];
             for (var r = 0; r < ih; r++)
             {
                 var y = top + rows[r];
@@ -322,10 +313,7 @@ internal static class GifDecoder
                     color[i * 3] = table[index * 3];
                     color[(i * 3) + 1] = table[(index * 3) + 1];
                     color[(i * 3) + 2] = table[(index * 3) + 2];
-                    if (alpha is not null)
-                    {
-                        alpha[i] = index == transparent ? (byte)0 : (byte)255;
-                    }
+                    alpha?[i] = index == transparent ? (byte)0 : (byte)255;
                 }
             }
 
@@ -356,11 +344,9 @@ internal static class GifDecoder
         var end = clear + 1;
         var prefix = new int[4096];
         var suffix = new byte[4096];
-        var lengths = new int[4096];
         for (var i = 0; i < clear; i++)
         {
             suffix[i] = (byte)i;
-            lengths[i] = 1;
         }
 
         int codeSize = minCodeSize + 1, next = end + 1, prev = -1, outPos = 0, bitPos = 0;
