@@ -1,3 +1,4 @@
+// ReSharper disable UseUtf8StringLiteral
 namespace OysterReport.Tests;
 
 using System.Buffers.Binary;

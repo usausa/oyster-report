@@ -1,3 +1,4 @@
+// ReSharper disable UseUtf8StringLiteral
 namespace OysterReport.Internal.Pdf;
 
 internal sealed class CompactFontSubset(CompactFont compactFont, bool inlineSubroutines = true)
