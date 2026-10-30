@@ -13,9 +13,7 @@ public sealed class RenderOptionTests
         "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+kZs8AAAAASUVORK5CYII=");
 
     // Not decodable by the built-in decoders (RIFF/WEBP container)
-#pragma warning disable IDE0028
     private static readonly byte[] FakeWebp = "RIFF\u0010\0\0\0WEBPVP8 \u0004\0\0\0\0\0\0\0"u8.ToArray();
-#pragma warning restore IDE0028
 
     //--------------------------------------------------------------------------------
     // Image converter

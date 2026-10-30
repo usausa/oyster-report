@@ -28,9 +28,7 @@ public sealed class TemplateWorkbook : IDisposable
     private TemplateWorkbook(ReportWorkbook reportWorkbook)
     {
         ReportWorkbook = reportWorkbook;
-#pragma warning disable IDE0028
         sheets = ReportWorkbook.Sheets.Select(x => new TemplateSheet(ReportWorkbook, x)).ToList();
-#pragma warning restore IDE0028
     }
 
     public void Dispose()
