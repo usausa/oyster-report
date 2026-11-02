@@ -94,4 +94,38 @@ public sealed class TemplateWorkbook : IDisposable
         }
         return count;
     }
+
+    //--------------------------------------------------------------------------------
+    // Image
+    //--------------------------------------------------------------------------------
+
+    public int ReplacePlaceholderWithImage(string marker, ReadOnlyMemory<byte> imageBytes, ReportImageFit fit = ReportImageFit.Contain)
+    {
+        var count = 0;
+        foreach (var sheet in sheets)
+        {
+            count += sheet.ReplacePlaceholderWithImage(marker, imageBytes, fit);
+        }
+        return count;
+    }
+
+    public int ReplaceImage(string name, ReadOnlyMemory<byte> imageBytes, ReportImageFit fit = ReportImageFit.Contain)
+    {
+        var count = 0;
+        foreach (var sheet in sheets)
+        {
+            count += sheet.ReplaceImage(name, imageBytes, fit);
+        }
+        return count;
+    }
+
+    public int RemoveImage(string name)
+    {
+        var count = 0;
+        foreach (var sheet in sheets)
+        {
+            count += sheet.RemoveImage(name);
+        }
+        return count;
+    }
 }

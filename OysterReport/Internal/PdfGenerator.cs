@@ -43,8 +43,10 @@ internal static class PdfGenerator
                 var page = writer.BeginPage(pagePlan.PageBounds.Width, pagePlan.PageBounds.Height);
                 page.FillRect(PdfColor.White, pagePlan.PageBounds.X, pagePlan.PageBounds.Y, pagePlan.PageBounds.Width, pagePlan.PageBounds.Height);
                 DrawCells(page, fonts, missingGlyphs, pagePlan.Cells, context);
+
+                DrawImages(page, writer, images, sheetPlan.SheetName, sheetPlan.Images.Where(static x => x.InCell), options);
                 DrawBorders(page, sourceSheet, pagePlan.Cells, options);
-                DrawImages(page, writer, images, sheetPlan.SheetName, sheetPlan.Images, options);
+                DrawImages(page, writer, images, sheetPlan.SheetName, sheetPlan.Images.Where(static x => !x.InCell), options);
                 var fields = new HeaderFooterFields(pagePlan.PageNumber, pagePlan.TotalPages, sheetPlan.SheetName, sheetPlan.FileName, now, culture);
                 DrawHeaderFooter(page, fonts, missingGlyphs, pagePlan.HeaderFooter, fields, options);
                 writer.EndPage(page);
@@ -404,13 +406,14 @@ internal static class PdfGenerator
 
             try
             {
-                if (!cache.TryGet(image.ImageBytes, out var id))
+                if (!cache.TryGet(image.ImageBytes, out var pdfImage))
                 {
-                    id = AddImage(writer, image.ImageBytes, renderOption);
-                    cache.Add(image.ImageBytes, id);
+                    pdfImage = AddImage(writer, image.ImageBytes, renderOption);
+                    cache.Add(image.ImageBytes, pdfImage);
                 }
 
-                page.DrawImage(id, image.Bounds.X, image.Bounds.Y, image.Bounds.Width, image.Bounds.Height);
+                var bounds = ResolveImageBounds(image, pdfImage.Width, pdfImage.Height);
+                page.DrawImage(pdfImage.Id, bounds.X, bounds.Y, bounds.Width, bounds.Height);
             }
             catch (Exception ex) when (ex is InvalidOperationException or ArgumentException or NotSupportedException or InvalidDataException)
             {
@@ -426,7 +429,7 @@ internal static class PdfGenerator
         }
     }
 
-    private static int AddImage(PdfDocumentWriter writer, ReadOnlyMemory<byte> bytes, ReportRenderOption renderOption)
+    private static PdfImage AddImage(PdfDocumentWriter writer, ReadOnlyMemory<byte> bytes, ReportRenderOption renderOption)
     {
         try
         {
@@ -438,6 +441,24 @@ internal static class PdfGenerator
             var converted = renderOption.ImageConverter(bytes) ?? throw new NotSupportedException("Image converter returned no image.", ex);
             return PdfImageWriter.Write(writer, converted.Span);
         }
+    }
+
+    private static ReportRect ResolveImageBounds(PdfImageRenderInfo image, int width, int height)
+    {
+        var bounds = image.Bounds;
+        if ((image.Fit != ReportImageFit.Contain) || (width <= 0) || (height <= 0))
+        {
+            return bounds;
+        }
+
+        var scale = Math.Min(bounds.Width / width, bounds.Height / height);
+        return new ReportRect
+        {
+            X = bounds.X + ((bounds.Width - (width * scale)) / 2d),
+            Y = bounds.Y + ((bounds.Height - (height * scale)) / 2d),
+            Width = width * scale,
+            Height = height * scale
+        };
     }
 
     //--------------------------------------------------------------------------------

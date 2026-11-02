@@ -45,7 +45,7 @@ engine.GeneratePdf(workbook, output);
 | **Borders** | Border width, Custom color |
 | **Text alignment** | Horizontal, Vertical |
 | **Merged cells** | Horizontal, Vertical |
-| **Images** | Cell-anchored and free-floating |
+| **Images** | Cell-anchored and free-floating, Placeholders |
 | **Page setup** | Paper size, Margins |
 | **Header / footer** | Header and Footer text, Page numbers, Placeholders |
 | **Multi-sheet** | Each sheet |
@@ -70,36 +70,27 @@ var engine = new OysterReportEngine { RenderingOptions = options };
 
 ## Header / footer
 
-Each sheet is one page. Pages are numbered through the workbook, so sheets made with `CopySheet` show `1 / 3`, `2 / 3`, `3 / 3` for `&P / &N`. The template's first page number applies to the first page only.
-
-To put several documents into one PDF, pass the workbooks together. The numbering restarts with each workbook:
+`&P` and `&N` are numbered through the workbook. Pass several workbooks to output them into one PDF, restarting the numbering for each workbook:
 
 ```csharp
-using var template = new TemplateWorkbook("Invoice.xlsx");
-var documents = invoices.Select(invoice =>
-{
-    var workbook = template.Clone();
-    Fill(workbook, invoice);
-    return workbook;
-}).ToList();
-
-using var output = File.Create("invoices.pdf");
-engine.GeneratePdf(documents, output);
+engine.GeneratePdf([invoice1, invoice2], output);
 ```
 
-| Code | Output |
-|---|---|
-| `&L` `&C` `&R` | Left, center and right section |
-| `&P` `&N` | Page number, Page count of the document |
-| `&A` `&F` | Sheet name, File name (empty when loaded from a non-file stream) |
-| `&D` `&T` | Date and time (`ReportRenderOption.HeaderFooterCulture`, `ReportRenderOption.TimeProvider`) |
-| `&&` | `&` |
-
-Font, size, color and style codes are not applied. `ReplacePlaceholder` and `ReplacePlaceholders` of `TemplateWorkbook` and `TemplateSheet` also replace placeholders in the header and footer.
+`&L` `&C` `&R` `&P` `&N` `&A` `&F` `&D` `&T` `&&` are supported. Placeholders in the header and footer are replaced by `ReplacePlaceholder` and `ReplacePlaceholders`.
 
 ## Images
 
 JPEG, PNG, BMP and GIF are embedded directly. Other formats (e.g. WebP) can be converted to PNG or JPEG by `ReportRenderOption.ImageConverter`.
+
+Images can be inserted from code:
+
+```csharp
+// Fits the image to the cell (or merged cells) of {{QR}}
+sheet.ReplacePlaceholderWithImage("QR", qrPng);
+
+// Replaces the template image named "Stamp"
+sheet.ReplaceImage("Stamp", stampPng);
+```
 
 ## Warnings
 

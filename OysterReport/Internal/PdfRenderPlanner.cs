@@ -10,6 +10,10 @@ internal sealed record PdfImageRenderInfo
 
     public ReportRect Bounds { get; init; }
 
+    public ReportImageFit Fit { get; init; } = ReportImageFit.Fill;
+
+    public bool InCell { get; init; }
+
     public ReadOnlyMemory<byte> ImageBytes { get; init; }
 }
 
@@ -247,7 +251,7 @@ internal static class PdfRenderPlanner
                     Cells = pageCells
                 }
             ],
-            Images = BuildImageInfos(sheet, rowOffsets, columnOffsets)
+            Images = BuildImageInfos(sheet, rowOffsets, columnOffsets, columnByIndex)
         };
     }
 
@@ -542,7 +546,8 @@ internal static class PdfRenderPlanner
     private static List<PdfImageRenderInfo> BuildImageInfos(
         ReportSheet sheet,
         Dictionary<int, double> rowOffsets,
-        Dictionary<int, double> columnOffsets)
+        Dictionary<int, double> columnOffsets,
+        Dictionary<int, ReportColumn> columnByIndex)
     {
         // Converts images in the sheet from cell coordinates to point coordinates and build list
         var results = new List<PdfImageRenderInfo>();
@@ -557,17 +562,57 @@ internal static class PdfRenderPlanner
             results.Add(new PdfImageRenderInfo
             {
                 Name = image.Name,
-                Bounds = new ReportRect
-                {
-                    X = left + image.Offset.X,
-                    Y = top + image.Offset.Y,
-                    Width = image.WidthPoint,
-                    Height = image.HeightPoint
-                },
+                Bounds = image.InCell
+                    ? BuildCellImageBounds(sheet, image, row, column, left, top, columnByIndex)
+                    : new ReportRect
+                    {
+                        X = left + image.Offset.X,
+                        Y = top + image.Offset.Y,
+                        Width = image.WidthPoint,
+                        Height = image.HeightPoint
+                    },
+                Fit = image.Fit,
+                InCell = image.InCell,
                 ImageBytes = image.ImageBytes
             });
         }
 
         return results;
+    }
+
+    private static ReportRect BuildCellImageBounds(
+        ReportSheet sheet,
+        ReportImage image,
+        int startRow,
+        int startColumn,
+        double left,
+        double top,
+        Dictionary<int, ReportColumn> columnByIndex)
+    {
+        var endRow = startRow;
+        var endColumn = startColumn;
+        if (image.ToCellAddress is not null)
+        {
+            AddressHelper.ParseAddress(image.ToCellAddress, out endRow, out endColumn);
+        }
+
+        var height = 0d;
+        for (var row = startRow; row <= endRow; row++)
+        {
+            height += sheet.GetRowDefinition(row) switch
+            {
+                null => sheet.DefaultRowHeightPoint,
+                { IsHidden: true } => 0d,
+                { } definition => definition.HeightPoint
+            };
+        }
+
+        var width = 0d;
+        for (var column = startColumn; column <= endColumn; column++)
+        {
+            width += columnByIndex.TryGetValue(column, out var definition) ? definition.WidthPoint : 0d;
+        }
+
+        return new ReportRect { X = left, Y = top, Width = width, Height = height };
     }
 }

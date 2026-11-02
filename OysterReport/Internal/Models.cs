@@ -340,7 +340,11 @@ internal sealed class ReportImage
 
     public double HeightPoint { get; init; }
 
-    public ReadOnlyMemory<byte> ImageBytes { get; init; }
+    public bool InCell { get; init; }
+
+    public ReportImageFit Fit { get; set; } = ReportImageFit.Fill;
+
+    public ReadOnlyMemory<byte> ImageBytes { get; set; }
 }
 
 [ExcludeFromCodeCoverage]
@@ -472,6 +476,8 @@ internal sealed class ReportSheet
     public void AddTable(ReportTable table) => tables.Add(table);
 
     public void AddImage(ReportImage image) => images.Add(image);
+
+    public int RemoveImages(Predicate<ReportImage> match) => images.RemoveAll(match);
 
     public void AddHorizontalPageBreak(ReportPageBreak pageBreak) => horizontalPageBreaks.Add(pageBreak);
 
@@ -903,14 +909,11 @@ internal sealed class ReportSheet
             if (fromRow.Value > endRow)
             {
                 img.FromCellAddress = ReplaceRow(img.FromCellAddress, fromRow.Value - count);
-                if (img.ToCellAddress is not null)
-                {
-                    var toRow = TryParseRow(img.ToCellAddress);
-                    if (toRow > endRow)
-                    {
-                        img.ToCellAddress = ReplaceRow(img.ToCellAddress, toRow.Value - count);
-                    }
-                }
+            }
+
+            if ((img.ToCellAddress is { } toAddress) && (TryParseRow(toAddress) is { } toRow) && (toRow >= startRow))
+            {
+                img.ToCellAddress = ReplaceRow(toAddress, toRow > endRow ? toRow - count : startRow - 1);
             }
         }
 
@@ -1131,6 +1134,8 @@ internal sealed class ReportSheet
                 Offset = img.Offset,
                 WidthPoint = img.WidthPoint,
                 HeightPoint = img.HeightPoint,
+                InCell = img.InCell,
+                Fit = img.Fit,
                 ImageBytes = img.ImageBytes
             });
         }

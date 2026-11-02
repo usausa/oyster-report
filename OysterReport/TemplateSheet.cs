@@ -222,4 +222,54 @@ public sealed class TemplateSheet
         };
         cell.DisplayText = value;
     }
+
+    //--------------------------------------------------------------------------------
+    // Image
+    //--------------------------------------------------------------------------------
+
+    public int ReplacePlaceholderWithImage(string marker, ReadOnlyMemory<byte> imageBytes, ReportImageFit fit = ReportImageFit.Contain)
+    {
+        return PlaceholderReplacer.ReplaceWithImageInRows(UnderlyingSheet, 1, Int32.MaxValue, marker, imageBytes, fit);
+    }
+
+    public void SetCellImage(int row, int column, ReadOnlyMemory<byte> imageBytes, ReportImageFit fit = ReportImageFit.Contain)
+    {
+        var merge = UnderlyingSheet.FindCell(row, column)?.Merge;
+        AddCellImage(UnderlyingSheet, row, column, merge, AddressHelper.ToAddress(row, column), imageBytes, fit);
+    }
+
+    public int ReplaceImage(string name, ReadOnlyMemory<byte> imageBytes, ReportImageFit fit = ReportImageFit.Contain)
+    {
+        var count = 0;
+        foreach (var image in UnderlyingSheet.Images)
+        {
+            if (String.Equals(image.Name, name, StringComparison.Ordinal))
+            {
+                image.ImageBytes = imageBytes;
+                image.Fit = fit;
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    public int RemoveImage(string name)
+    {
+        return UnderlyingSheet.RemoveImages(x => String.Equals(x.Name, name, StringComparison.Ordinal));
+    }
+
+    internal static void AddCellImage(ReportSheet sheet, int row, int column, ReportMergeInfo? merge, string name, ReadOnlyMemory<byte> imageBytes, ReportImageFit fit)
+    {
+        var range = merge?.Range ?? new ReportRange { StartRow = row, StartColumn = column, EndRow = row, EndColumn = column };
+        sheet.AddImage(new ReportImage
+        {
+            Name = name,
+            FromCellAddress = AddressHelper.ToAddress(range.StartRow, range.StartColumn),
+            ToCellAddress = AddressHelper.ToAddress(range.EndRow, range.EndColumn),
+            InCell = true,
+            Fit = fit,
+            ImageBytes = imageBytes
+        });
+    }
 }

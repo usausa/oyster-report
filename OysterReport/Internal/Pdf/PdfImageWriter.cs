@@ -3,9 +3,11 @@ namespace OysterReport.Internal.Pdf;
 using System.Globalization;
 using System.Text;
 
+internal readonly record struct PdfImage(int Id, int Width, int Height);
+
 internal static class PdfImageWriter
 {
-    public static int Write(PdfDocumentWriter doc, ReadOnlySpan<byte> bytes)
+    public static PdfImage Write(PdfDocumentWriter doc, ReadOnlySpan<byte> bytes)
     {
         try
         {
@@ -17,7 +19,7 @@ internal static class PdfImageWriter
         }
     }
 
-    private static int WriteCore(PdfDocumentWriter doc, ReadOnlySpan<byte> bytes)
+    private static PdfImage WriteCore(PdfDocumentWriter doc, ReadOnlySpan<byte> bytes)
     {
         if (bytes.Length > 3 && bytes[0] == 0xFF && bytes[1] == 0xD8)
         {
@@ -43,10 +45,10 @@ internal static class PdfImageWriter
         throw new NotSupportedException("Unsupported image format (JPEG/PNG/BMP/GIF only).");
     }
 
-    private static int WriteRaster(PdfDocumentWriter doc, RasterImage image) =>
+    private static PdfImage WriteRaster(PdfDocumentWriter doc, RasterImage image) =>
         WriteRaster(doc, image.Width, image.Height, image.Colors, image.Color, image.Alpha is not null, image.Alpha);
 
-    private static int WriteRaster(PdfDocumentWriter doc, int width, int height, int colors, ReadOnlySpan<byte> color, bool hasAlpha, ReadOnlySpan<byte> alpha)
+    private static PdfImage WriteRaster(PdfDocumentWriter doc, int width, int height, int colors, ReadOnlySpan<byte> color, bool hasAlpha, ReadOnlySpan<byte> alpha)
     {
         var id = doc.Reserve();
         var smask = string.Empty;
@@ -62,10 +64,10 @@ internal static class PdfImageWriter
         doc.WriteDeflatedStream(id, string.Create(CultureInfo.InvariantCulture,
             $"/Type /XObject /Subtype /Image /Width {width} /Height {height} /BitsPerComponent 8 /ColorSpace {(colors == 3 ? "/DeviceRGB" : "/DeviceGray")}{smask} /Filter /FlateDecode"),
             color);
-        return id;
+        return new PdfImage(id, width, height);
     }
 
-    private static int WriteJpeg(PdfDocumentWriter doc, byte[] jpeg)
+    private static PdfImage WriteJpeg(PdfDocumentWriter doc, byte[] jpeg)
     {
         var pos = 2;
         int width = 0, height = 0, components = 3, bits = 8;
@@ -113,10 +115,10 @@ internal static class PdfImageWriter
         var id = doc.Reserve();
         doc.WriteStream(id, string.Create(CultureInfo.InvariantCulture,
             $"/Type /XObject /Subtype /Image /Width {width} /Height {height} /BitsPerComponent {bits} /ColorSpace {cs}{decode} /Filter /DCTDecode"), jpeg, alreadyEncoded: true);
-        return id;
+        return new PdfImage(id, width, height);
     }
 
-    private static int WritePng(PdfDocumentWriter doc, ReadOnlySpan<byte> png)
+    private static PdfImage WritePng(PdfDocumentWriter doc, ReadOnlySpan<byte> png)
     {
         int width = 0, height = 0, bits = 8, colorType = 0, interlace = 0;
         byte[] palette = [];
@@ -189,6 +191,6 @@ internal static class PdfImageWriter
             $"/Type /XObject /Subtype /Image /Width {width} /Height {height} /BitsPerComponent {bits} /ColorSpace {cs}{mask} " +
             $"/Filter /FlateDecode /DecodeParms << /Predictor 15 /Colors {colors} /BitsPerComponent {bits} /Columns {width} >>"),
             idat.ToArray(), alreadyEncoded: true);
-        return id;
+        return new PdfImage(id, width, height);
     }
 }

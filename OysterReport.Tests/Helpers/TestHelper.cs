@@ -2,6 +2,7 @@ namespace OysterReport.Tests.Helpers;
 
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.Content;
+using UglyToad.PdfPig.Core;
 using UglyToad.PdfPig.DocumentLayoutAnalysis.WordExtractor;
 using UglyToad.PdfPig.Graphics.Operations.SpecialGraphicsState;
 
@@ -109,6 +110,19 @@ internal static class TestHelper
     {
         using var doc = PdfDocument.Open(pdfBytes);
         return doc.GetPage(pageNumber).GetImages().Count();
+    }
+
+    // PDF coordinates (origin at the bottom left)
+    public static IReadOnlyList<PdfRectangle> GetImageBounds(byte[] pdfBytes, int pageNumber = 1)
+    {
+        using var doc = PdfDocument.Open(pdfBytes);
+        return doc.GetPage(pageNumber).GetImages().Select(static x => x.BoundingBox).ToList();
+    }
+
+    public static IReadOnlyList<string> GetOperators(byte[] pdfBytes, int pageNumber = 1)
+    {
+        using var doc = PdfDocument.Open(pdfBytes);
+        return doc.GetPage(pageNumber).Operations.Select(static x => x.Operator).ToList();
     }
 
     public static bool IsValidPdf(byte[] pdfBytes)

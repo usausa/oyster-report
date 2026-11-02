@@ -77,4 +77,9 @@ public sealed class TemplateRow
     {
         return PlaceholderReplacer.ReplaceInRows(sheet, RowNumber, RowNumber, values);
     }
+
+    public int ReplacePlaceholderWithImage(string markerName, ReadOnlyMemory<byte> imageBytes, ReportImageFit fit = ReportImageFit.Contain)
+    {
+        return PlaceholderReplacer.ReplaceWithImageInRows(sheet, RowNumber, RowNumber, markerName, imageBytes, fit);
+    }
 }

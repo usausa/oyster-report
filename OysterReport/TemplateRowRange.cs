@@ -117,6 +117,11 @@ public sealed class TemplateRowRange
         return count;
     }
 
+    public int ReplacePlaceholderWithImage(string markerName, ReadOnlyMemory<byte> imageBytes, ReportImageFit fit = ReportImageFit.Contain)
+    {
+        return PlaceholderReplacer.ReplaceWithImageInRows(sheet, StartRow, EndRow, markerName, imageBytes, fit);
+    }
+
     private bool TryFindMarkerPosition(string marker, out (int Row, int Column) position)
     {
         var placeholder = "{{" + marker + "}}";

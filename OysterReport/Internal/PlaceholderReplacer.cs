@@ -41,6 +41,31 @@ internal static class PlaceholderReplacer
         return count;
     }
 
+    public static int ReplaceWithImageInRows(ReportSheet sheet, int startRow, int endRow, string marker, ReadOnlyMemory<byte> imageBytes, ReportImageFit fit)
+    {
+        var placeholder = "{{" + marker + "}}";
+        var count = 0;
+        foreach (var cell in sheet.CellsInStorageOrder)
+        {
+            if ((cell.Row < startRow) || (cell.Row > endRow))
+            {
+                continue;
+            }
+
+            var text = cell.DisplayText;
+            if (!text.Contains(placeholder, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            TemplateSheet.SetCellText(cell, text.Replace(placeholder, string.Empty, StringComparison.Ordinal));
+            TemplateSheet.AddCellImage(sheet, cell.Row, cell.Column, cell.Merge, marker, imageBytes, fit);
+            count++;
+        }
+
+        return count;
+    }
+
     public static int ReplaceInHeaderFooter(ReportSheet sheet, string marker, string value)
     {
         if (!ContainsPlaceholder(sheet.HeaderFooter))

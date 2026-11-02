@@ -281,6 +281,223 @@ public sealed partial class FeatureTests
         Assert.Equal(["First", "Second"], warnings.Select(static x => x.Source));
     }
 
+    //--------------------------------------------------------------------------------
+    // Insertion
+    //--------------------------------------------------------------------------------
+
+    [Fact]
+    public void ImageShouldReplacePlaceholderAndFitMergedCells()
+    {
+        // Arrange
+        using var stream = CreatePlaceholderImageWorkbook();
+        using var workbook = new TemplateWorkbook(stream);
+        var sheet = workbook.GetSheet("Report");
+
+        // Act
+        var count = sheet.ReplacePlaceholderWithImage("QR", CreatePng(SKColors.Black));
+        var pdfBytes = TestHelper.GeneratePdfAndSave(nameof(ImageShouldReplacePlaceholderAndFitMergedCells), workbook);
+
+        // Assert: the square image keeps its aspect ratio in the center of B2:C3
+        Assert.Equal(1, count);
+        Assert.Equal(string.Empty, sheet.GetCellText(2, 2));
+        var cell = GetCellBounds(workbook, "B2");
+        var image = Assert.Single(TestHelper.GetImageBounds(pdfBytes));
+        var size = Math.Min(cell.Width, cell.Height);
+        var pageHeight = TestHelper.GetPageSize(pdfBytes).Height;
+        Assert.Equal(size, image.Width, 2);
+        Assert.Equal(size, image.Height, 2);
+        Assert.Equal(cell.X + (cell.Width / 2), image.Left + (image.Width / 2), 2);
+        Assert.Equal(pageHeight - (cell.Y + (cell.Height / 2)), image.Bottom + (image.Height / 2), 2);
+    }
+
+    [Fact]
+    public void ImageShouldFillCellWhenFitIsFill()
+    {
+        // Arrange
+        using var stream = CreatePlaceholderImageWorkbook();
+        using var workbook = new TemplateWorkbook(stream);
+
+        // Act
+        workbook.GetSheet("Report").SetCellImage(1, 1, CreatePng(SKColors.Red), ReportImageFit.Fill);
+        var pdfBytes = TestHelper.GeneratePdfAndSave(nameof(ImageShouldFillCellWhenFitIsFill), workbook);
+
+        // Assert
+        var cell = GetCellBounds(workbook, "A1");
+        var image = Assert.Single(TestHelper.GetImageBounds(pdfBytes));
+        Assert.Equal(cell.Width, image.Width, 2);
+        Assert.Equal(cell.Height, image.Height, 2);
+    }
+
+    [Fact]
+    public void ImageInCellShouldBeDrawnUnderBorders()
+    {
+        // Arrange
+        using var stream = CreatePlaceholderImageWorkbook();
+        using var workbook = new TemplateWorkbook(stream);
+        workbook.ReplacePlaceholderWithImage("QR", CreatePng(SKColors.Black));
+
+        // Act
+        var pdfBytes = TestHelper.GeneratePdfAndSave(nameof(ImageInCellShouldBeDrawnUnderBorders), workbook);
+
+        // Assert: the borders of B2:C3 are filled rectangles drawn after the image
+        var operators = TestHelper.GetOperators(pdfBytes);
+        var imageIndex = operators.ToList().IndexOf("Do");
+        Assert.True(imageIndex >= 0);
+        Assert.Contains("f", operators.Skip(imageIndex + 1));
+    }
+
+    [Fact]
+    public void ImageShouldReplacePlaceholderInEachCopiedRow()
+    {
+        // Arrange
+        using var stream = TestWorkbookFactory.CreateWorkbook(static workbook =>
+        {
+            var sheet = workbook.AddWorksheet("Report");
+            sheet.Cell("A1").Value = "Item";
+            sheet.Cell("B1").Value = "{{Photo}}";
+            sheet.Cell("C10").Value = "End";
+        });
+        using var workbook = new TemplateWorkbook(stream);
+        var templateRow = workbook.GetSheet("Report").GetRow(1);
+
+        // Act
+        var last = templateRow;
+        foreach (var color in new[] { SKColors.Red, SKColors.Green, SKColors.Blue })
+        {
+            var row = templateRow.InsertCopyAfter(last);
+            row.ReplacePlaceholderWithImage("Photo", CreatePng(color));
+            last = row;
+        }
+
+        templateRow.Delete();
+        var pdfBytes = TestHelper.GeneratePdfAndSave(nameof(ImageShouldReplacePlaceholderInEachCopiedRow), workbook);
+
+        // Assert
+        Assert.Equal(3, TestHelper.GetImageCount(pdfBytes));
+        Assert.DoesNotContain("{{Photo}}", TestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ImageShouldReplacePlaceholderOnEverySheet()
+    {
+        // Arrange
+        using var stream = CreatePlaceholderImageWorkbook();
+        using var workbook = new TemplateWorkbook(stream);
+        workbook.CopySheet("Report", "Copy");
+
+        // Act
+        var count = workbook.ReplacePlaceholderWithImage("QR", CreatePng(SKColors.Black));
+        var pdfBytes = TestHelper.GeneratePdfAndSave(nameof(ImageShouldReplacePlaceholderOnEverySheet), workbook);
+
+        // Assert
+        Assert.Equal(2, count);
+        Assert.Equal(1, TestHelper.GetImageCount(pdfBytes, 1));
+        Assert.Equal(1, TestHelper.GetImageCount(pdfBytes, 2));
+    }
+
+    [Fact]
+    public void ImageShouldKeepCellPlacementWhenSheetIsCopied()
+    {
+        // Arrange
+        using var stream = CreatePlaceholderImageWorkbook();
+        using var workbook = new TemplateWorkbook(stream);
+        workbook.GetSheet("Report").ReplacePlaceholderWithImage("QR", CreatePng(SKColors.Black), ReportImageFit.Fill);
+
+        // Act
+        var copy = workbook.CopySheet("Report", "Copy");
+
+        // Assert
+        var image = Assert.Single(copy.UnderlyingSheet.Images);
+        Assert.True(image.InCell);
+        Assert.Equal(ReportImageFit.Fill, image.Fit);
+        Assert.Equal("B2", image.FromCellAddress);
+        Assert.Equal("C3", image.ToCellAddress);
+    }
+
+    [Fact]
+    public void ImageShouldShrinkWhenRowsInsideItsCellsAreDeleted()
+    {
+        // Arrange
+        using var stream = TestWorkbookFactory.CreateWorkbook(static workbook =>
+        {
+            var sheet = workbook.AddWorksheet("Report");
+            sheet.Cell("B2").Value = "{{QR}}";
+            sheet.Range("B2:C5").Merge();
+            sheet.Cell("E8").Value = "End";
+        });
+        using var workbook = new TemplateWorkbook(stream);
+        var sheet = workbook.GetSheet("Report");
+        sheet.ReplacePlaceholderWithImage("QR", CreatePng(SKColors.Black));
+
+        // Act
+        sheet.DeleteRows(3, 4);
+
+        // Assert
+        var image = Assert.Single(sheet.UnderlyingSheet.Images);
+        Assert.Equal("B2", image.FromCellAddress);
+        Assert.Equal("C3", image.ToCellAddress);
+    }
+
+    [Fact]
+    public void ImageShouldReplaceNamedImageInItsFrame()
+    {
+        // Arrange
+        using var stream = CreateNamedImageWorkbook();
+        using var workbook = new TemplateWorkbook(stream);
+        var frame = workbook.ReportWorkbook.Sheets[0].Images[0];
+
+        // Act
+        var count = workbook.ReplaceImage("Stamp", CreatePng(SKColors.Red, 4, 2));
+        var pdfBytes = TestHelper.GeneratePdfAndSave(nameof(ImageShouldReplaceNamedImageInItsFrame), workbook);
+
+        // Assert: the 2:1 image is scaled to the frame width
+        Assert.Equal(1, count);
+        var image = Assert.Single(TestHelper.GetImageBounds(pdfBytes));
+        Assert.Equal(frame.WidthPoint, image.Width, 2);
+        Assert.Equal(frame.WidthPoint / 2, image.Height, 2);
+    }
+
+    [Fact]
+    public void ImageShouldRemoveNamedImage()
+    {
+        // Arrange
+        using var stream = CreateNamedImageWorkbook();
+        using var workbook = new TemplateWorkbook(stream);
+
+        // Act
+        var count = workbook.RemoveImage("Stamp");
+        var pdfBytes = TestHelper.GeneratePdfAndSave(nameof(ImageShouldRemoveNamedImage), workbook);
+
+        // Assert
+        Assert.Equal(1, count);
+        Assert.Equal(0, TestHelper.GetImageCount(pdfBytes));
+    }
+
+    // B2:C3 is merged, holds {{QR}} and has an outside border
+    private static MemoryStream CreatePlaceholderImageWorkbook() =>
+        TestWorkbookFactory.CreateWorkbook(static workbook =>
+        {
+            var sheet = workbook.AddWorksheet("Report");
+            sheet.Cell("A1").Value = "Start";
+            sheet.Cell("B2").Value = "{{QR}}";
+            sheet.Range("B2:C3").Merge();
+            sheet.Range("B2:C3").Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            sheet.Cell("E6").Value = "End";
+        });
+
+    private static MemoryStream CreateNamedImageWorkbook() =>
+        TestWorkbookFactory.CreateWorkbook(static workbook =>
+        {
+            var sheet = workbook.AddWorksheet("Report");
+            sheet.Cell("A1").Value = "Start";
+            sheet.Cell("F8").Value = "End";
+            using var image = new MemoryStream(OnePxPng, writable: false);
+            sheet.AddPicture(image, XLPictureFormat.Png, "Stamp").MoveTo(sheet.Cell("B2")).WithSize(40, 30);
+        });
+
+    private static ReportRect GetCellBounds(TemplateWorkbook workbook, string address) =>
+        PdfRenderPlanner.BuildPlan(workbook.ReportWorkbook)[0].Pages[0].Cells.Single(x => x.CellAddress == address).OuterBounds;
+
     private static byte[] GenerateImagePdf(params (byte[] Image, string Sheet, string Cell)[] placements)
     {
         using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
@@ -316,9 +533,9 @@ public sealed partial class FeatureTests
         return count;
     }
 
-    private static byte[] CreatePng(SKColor color)
+    private static byte[] CreatePng(SKColor color, int width = 2, int height = 2)
     {
-        using var bitmap = new SKBitmap(2, 2);
+        using var bitmap = new SKBitmap(width, height);
         bitmap.Erase(color);
         using var image = SKImage.FromBitmap(bitmap);
         using var data = image.Encode(SKEncodedImageFormat.Png, 100);

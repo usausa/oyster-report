@@ -4,6 +4,8 @@ using System.Globalization;
 
 using OysterReport;
 
+using QRCoder;
+
 using Smart.CommandLine.Hosting;
 
 //--------------------------------------------------------------------------------
@@ -15,6 +17,7 @@ public static class CommandBuilderExtensions
     {
         commands.AddCommand<InvoiceCommand>();
         commands.AddCommand<EmbeddedCommand>();
+        commands.AddCommand<QrCodeCommand>();
     }
 }
 
@@ -100,6 +103,39 @@ public sealed class EmbeddedCommand : ICommandHandler
         };
 
         using var output = File.Create("embedded.pdf");
+        engine.GeneratePdf(workbook, output);
+
+        return ValueTask.CompletedTask;
+    }
+}
+
+//--------------------------------------------------------------------------------
+// qrcode
+//--------------------------------------------------------------------------------
+[Command("qrcode", "QR code example")]
+public sealed class QrCodeCommand : ICommandHandler
+{
+    public ValueTask ExecuteAsync(CommandContext context)
+    {
+        using var workbook = new TemplateWorkbook("QrCode.xlsx");
+        var sheet = workbook.Sheets[0];
+        sheet.ReplacePlaceholders(new Dictionary<string, string?>
+        {
+            ["Number"] = "A-0001",
+            ["Name"] = "うさうさ 太郎",
+            ["Date"] = "2025-04-11 10:00",
+            ["Place"] = "第1会議室"
+        });
+
+        var qrCode = PngByteQRCodeHelper.GetQRCode("https://example.com/reception/A-0001", QRCodeGenerator.ECCLevel.M, 10);
+        sheet.ReplacePlaceholderWithImage("QR", qrCode);
+
+        var engine = new OysterReportEngine
+        {
+            FontResolver = new EmbeddedFontResolver()
+        };
+
+        using var output = File.Create("QrCode.pdf");
         engine.GeneratePdf(workbook, output);
 
         return ValueTask.CompletedTask;
