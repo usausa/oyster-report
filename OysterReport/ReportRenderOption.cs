@@ -2,6 +2,7 @@ namespace OysterReport;
 
 using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 
 [ExcludeFromCodeCoverage]
 public sealed record ReportRenderOption
@@ -27,6 +28,12 @@ public sealed record ReportRenderOption
         "Liberation Sans",
         "DejaVu Sans"
     ];
+
+    // Culture used to format header/footer dates and times (&D, &T); null uses the current culture
+    public CultureInfo? HeaderFooterCulture { get; set; }
+
+    // Clock for header/footer dates and times (&D, &T) and the PDF creation date
+    public TimeProvider TimeProvider { get; set; } = TimeProvider.System;
 
     // Drawing width for Thick borders (pt)
     public double ThickBorderWidth { get; set; } = 2.25d;

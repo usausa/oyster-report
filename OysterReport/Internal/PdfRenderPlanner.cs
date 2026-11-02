@@ -45,6 +45,8 @@ internal sealed record PdfRenderPagePlan
 {
     public int PageNumber { get; init; }
 
+    public int TotalPages { get; init; }
+
     public ReportRect PageBounds { get; init; }
 
     public ReportRect PrintableBounds { get; init; }
@@ -57,6 +59,8 @@ internal sealed record PdfRenderPagePlan
 internal sealed record PdfRenderSheetPlan
 {
     public string SheetName { get; init; } = string.Empty;
+
+    public string FileName { get; init; } = string.Empty;
 
     public IReadOnlyList<PdfRenderPagePlan> Pages { get; init; } = [];
 
@@ -73,13 +77,48 @@ internal static class PdfRenderPlanner
     // Build
     //--------------------------------------------------------------------------------
 
-    public static IReadOnlyList<PdfRenderSheetPlan> BuildPlan(ReportWorkbook workbook, ReportRenderOption? renderOption = null)
+    public static IReadOnlyList<PdfRenderSheetPlan> BuildPlan(ReportWorkbook workbook, ReportRenderOption? renderOption = null) =>
+        BuildPlan([workbook], renderOption);
+
+    public static IReadOnlyList<PdfRenderSheetPlan> BuildPlan(IEnumerable<ReportWorkbook> documents, ReportRenderOption? renderOption = null)
     {
         var effectiveOptions = renderOption ?? new ReportRenderOption();
-        return workbook.Sheets.Select((x, i) => BuildSheetPlan(x, i + 1, effectiveOptions)).ToList();
+        var results = new List<PdfRenderSheetPlan>();
+        foreach (var document in documents)
+        {
+            AddDocumentPlans(document, effectiveOptions, results);
+        }
+
+        return results;
     }
 
-    private static PdfRenderSheetPlan BuildSheetPlan(ReportSheet sheet, int sheetNumber, ReportRenderOption renderOption)
+    private static void AddDocumentPlans(ReportWorkbook document, ReportRenderOption renderOption, List<PdfRenderSheetPlan> results)
+    {
+        var sheetPlans = document.Sheets.Select(x => BuildSheetPlan(x, renderOption)).ToList();
+        var totalPages = sheetPlans.Sum(static x => x.Pages.Count);
+
+        var firstPageNumber = (document.Sheets.Count > 0 ? document.Sheets[0].PageSetup.FirstPageNumber : null) ?? 1;
+        var pageNumber = firstPageNumber;
+        for (var i = 0; i < sheetPlans.Count; i++)
+        {
+            var sheet = document.Sheets[i];
+            var pages = new List<PdfRenderPagePlan>(sheetPlans[i].Pages.Count);
+            foreach (var page in sheetPlans[i].Pages)
+            {
+                pages.Add(page with
+                {
+                    PageNumber = pageNumber,
+                    TotalPages = totalPages,
+                    HeaderFooter = BuildHeaderFooter(sheet, page.PageBounds, page.PrintableBounds, pageNumber, pageNumber == firstPageNumber)
+                });
+                pageNumber++;
+            }
+
+            results.Add(sheetPlans[i] with { FileName = document.Metadata.FileName, Pages = pages });
+        }
+    }
+
+    private static PdfRenderSheetPlan BuildSheetPlan(ReportSheet sheet, ReportRenderOption renderOption)
     {
         // Resolve page bounding rectangle from paper size and orientation
         var pageBounds = ResolvePageBounds(sheet.PageSetup, renderOption);
@@ -203,10 +242,8 @@ internal static class PdfRenderPlanner
             [
                 new PdfRenderPagePlan
                 {
-                    PageNumber = sheetNumber,
                     PageBounds = pageBounds,
                     PrintableBounds = printableBounds,
-                    HeaderFooter = BuildHeaderFooter(sheet, pageBounds, printableBounds, sheetNumber),
                     Cells = pageCells
                 }
             ],
@@ -402,14 +439,14 @@ internal static class PdfRenderPlanner
     // Header / Footer
     //--------------------------------------------------------------------------------
 
-    private static PdfHeaderFooterRenderInfo BuildHeaderFooter(ReportSheet sheet, ReportRect pageBounds, ReportRect printableBounds, int pageNumber)
+    private static PdfHeaderFooterRenderInfo BuildHeaderFooter(ReportSheet sheet, ReportRect pageBounds, ReportRect printableBounds, int pageNumber, bool isFirstPage)
     {
-        var headerText = sheet.HeaderFooter.DifferentFirst && (pageNumber == 1)
+        var headerText = sheet.HeaderFooter.DifferentFirst && isFirstPage
             ? sheet.HeaderFooter.FirstHeader
             : sheet.HeaderFooter.DifferentOddEven && (pageNumber % 2 == 0)
                 ? sheet.HeaderFooter.EvenHeader
                 : sheet.HeaderFooter.OddHeader;
-        var footerText = sheet.HeaderFooter.DifferentFirst && (pageNumber == 1)
+        var footerText = sheet.HeaderFooter.DifferentFirst && isFirstPage
             ? sheet.HeaderFooter.FirstFooter
             : sheet.HeaderFooter.DifferentOddEven && (pageNumber % 2 == 0)
                 ? sheet.HeaderFooter.EvenFooter

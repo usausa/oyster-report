@@ -106,7 +106,8 @@ internal sealed class WorksheetLoader
                     Orientation = EnumMaps.ToPageOrientation(ps.Orientation?.Value),
                     ScalePercent = (int)(ps.Scale?.Value ?? 100u),
                     FitToPagesWide = wide == 0u ? null : (int)wide,
-                    FitToPagesTall = tall == 0u ? null : (int)tall
+                    FitToPagesTall = tall == 0u ? null : (int)tall,
+                    FirstPageNumber = (ps.UseFirstPageNumber?.Value ?? false) ? (int)(ps.FirstPageNumber?.Value ?? 1u) : null
                 };
             }
             else if (t == typeof(PageMargins))

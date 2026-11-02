@@ -34,6 +34,8 @@ internal sealed record ReportMetadata
 {
     public string TemplateName { get; init; } = string.Empty;
 
+    public string FileName { get; init; } = string.Empty;
+
     public ReportMetadata DeepClone() => this with { };
 }
 
@@ -251,6 +253,9 @@ internal sealed record ReportPageSetup
     public bool CenterHorizontally { get; init; }
 
     public bool CenterVertically { get; init; }
+
+    // Page number of the first page (null for Auto); applied to the first sheet of a document only
+    public int? FirstPageNumber { get; init; }
 
     public ReportPageSetup DeepClone() => this with { };
 }

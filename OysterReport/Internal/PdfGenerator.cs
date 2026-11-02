@@ -18,14 +18,18 @@ internal static class PdfGenerator
 
     internal static void WritePdf(ReportRenderContext context, Stream output)
     {
+        var options = context.RenderingOptions;
+
+        var now = options.TimeProvider.GetLocalNow();
+        var culture = options.HeaderFooterCulture ?? CultureInfo.CurrentCulture;
+
         var writer = new PdfDocumentWriter(output, context.CompressContentStreams, context.CompressionLevel);
         if (context.EmbedDocumentMetadata)
         {
             writer.Title = context.Workbook.Metadata.TemplateName;
-            writer.CreationDate = DateTimeOffset.Now;
+            writer.CreationDate = now;
         }
 
-        var options = context.RenderingOptions;
         var fonts = new PdfFontManager(writer, context.FontResolver, FontLocator.Create(options));
         var images = new PdfImageCache();
 
@@ -41,7 +45,8 @@ internal static class PdfGenerator
                 DrawCells(page, fonts, missingGlyphs, pagePlan.Cells, context);
                 DrawBorders(page, sourceSheet, pagePlan.Cells, options);
                 DrawImages(page, writer, images, sheetPlan.SheetName, sheetPlan.Images, options);
-                DrawHeaderFooter(page, fonts, missingGlyphs, pagePlan.HeaderFooter, pagePlan.PageNumber, sheetPlan.Pages.Count, options);
+                var fields = new HeaderFooterFields(pagePlan.PageNumber, pagePlan.TotalPages, sheetPlan.SheetName, sheetPlan.FileName, now, culture);
+                DrawHeaderFooter(page, fonts, missingGlyphs, pagePlan.HeaderFooter, fields, options);
                 writer.EndPage(page);
             }
 
@@ -439,10 +444,10 @@ internal static class PdfGenerator
     // Header / Footer
     //--------------------------------------------------------------------------------
 
-    private static void DrawHeaderFooter(PdfPageCanvas page, PdfFontManager fonts, Dictionary<PdfEmbeddedFont, SortedSet<int>> missingGlyphs, PdfHeaderFooterRenderInfo headerFooter, int pageNumber, int totalPages, ReportRenderOption renderOption)
+    private static void DrawHeaderFooter(PdfPageCanvas page, PdfFontManager fonts, Dictionary<PdfEmbeddedFont, SortedSet<int>> missingGlyphs, PdfHeaderFooterRenderInfo headerFooter, HeaderFooterFields fields, ReportRenderOption renderOption)
     {
-        var headerSections = ResolveHeaderFooterSections(headerFooter.HeaderText, pageNumber, totalPages);
-        var footerSections = ResolveHeaderFooterSections(headerFooter.FooterText, pageNumber, totalPages);
+        var headerSections = ResolveHeaderFooterSections(headerFooter.HeaderText, fields);
+        var footerSections = ResolveHeaderFooterSections(headerFooter.FooterText, fields);
 
         // Resolved even when there is nothing to draw, so a missing fallback font is reported as before
         var font = CreateFallbackFont(fonts, renderOption.HeaderFooterFontSize, renderOption.HeaderFooterFallbackFonts);
@@ -491,7 +496,7 @@ internal static class PdfGenerator
         throw new InvalidOperationException("No appropriate fallback font found for header or image drawing.");
     }
 
-    private static HeaderFooterSections ResolveHeaderFooterSections(string? text, int pageNumber, int totalPages)
+    private static HeaderFooterSections ResolveHeaderFooterSections(string? text, HeaderFooterFields fields)
     {
         if (String.IsNullOrWhiteSpace(text))
         {
@@ -502,7 +507,7 @@ internal static class PdfGenerator
         var center = new StringBuilder();
         var right = new StringBuilder();
         var current = center;
-        Span<char> scratch = stackalloc char[16];
+        Span<char> scratch = stackalloc char[64];
 
         for (var index = 0; index < text.Length; index++)
         {
@@ -520,19 +525,48 @@ internal static class PdfGenerator
                 case 'C': current = center; break;
                 case 'R': current = right; break;
                 case 'P':
-                    if (pageNumber.TryFormat(scratch, out var pn, default, CultureInfo.InvariantCulture))
+                    if (fields.PageNumber.TryFormat(scratch, out var pn, default, CultureInfo.InvariantCulture))
                     {
                         current.Append(scratch[..pn]);
                     }
                     break;
                 case 'N':
-                    if (totalPages.TryFormat(scratch, out var tp, default, CultureInfo.InvariantCulture))
+                    if (fields.TotalPages.TryFormat(scratch, out var tp, default, CultureInfo.InvariantCulture))
                     {
                         current.Append(scratch[..tp]);
                     }
                     break;
+                case 'D':
+                    if (fields.Now.TryFormat(scratch, out var date, "d", fields.Culture))
+                    {
+                        current.Append(scratch[..date]);
+                    }
+                    break;
+                case 'T':
+                    if (fields.Now.TryFormat(scratch, out var time, "t", fields.Culture))
+                    {
+                        current.Append(scratch[..time]);
+                    }
+                    break;
+                case 'A': current.Append(fields.SheetName); break;
+                case 'F': current.Append(fields.FileName); break;
                 case '&':
                     current.Append('&');
+                    break;
+                case '"':
+                    // Font name and style (&"name,style") are not applied: skip to the closing quote
+                    var closingQuote = text.IndexOf('"', index + 1);
+                    index = closingQuote < 0 ? text.Length - 1 : closingQuote;
+                    break;
+                case 'K':
+                    // Font color (&KRRGGBB, or &KTTSNNN for a theme color) is not applied
+                    index = Math.Min(index + 6, text.Length - 1);
+                    break;
+                case >= '0' and <= '9':
+                    while ((index + 1 < text.Length) && Char.IsAsciiDigit(text[index + 1]))
+                    {
+                        index++;
+                    }
                     break;
             }
         }
@@ -725,4 +759,6 @@ internal static class PdfGenerator
 
         public bool IsEmpty => Left.Length == 0 && Center.Length == 0 && Right.Length == 0;
     }
+
+    private readonly record struct HeaderFooterFields(int PageNumber, int TotalPages, string SheetName, string FileName, DateTimeOffset Now, CultureInfo Culture);
 }

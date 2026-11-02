@@ -62,6 +62,13 @@ internal static class TestHelper
         return String.Join(" ", parts);
     }
 
+    // Letters of one page in drawing order (spaces included)
+    public static string GetPageText(byte[] pdfBytes, int pageNumber = 1)
+    {
+        using var doc = PdfDocument.Open(pdfBytes);
+        return doc.GetPage(pageNumber).Text;
+    }
+
     public static int GetPageCount(byte[] pdfBytes)
     {
         using var doc = PdfDocument.Open(pdfBytes);

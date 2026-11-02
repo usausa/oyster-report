@@ -10,6 +10,8 @@ public sealed class TemplateSheet
 
     internal ReportMeasurementProfile WorkbookMeasurementProfile => workbook.MeasurementProfile;
 
+    internal ReportMetadata WorkbookMetadata => workbook.Metadata;
+
     public string Name => UnderlyingSheet.Name;
 
     //--------------------------------------------------------------------------------
@@ -126,12 +128,13 @@ public sealed class TemplateSheet
             }
         }
 
-        return count;
+        return count + PlaceholderReplacer.ReplaceInHeaderFooter(UnderlyingSheet, marker, value);
     }
 
     public int ReplacePlaceholders(IReadOnlyDictionary<string, string?> values)
     {
-        return PlaceholderReplacer.ReplaceInRows(UnderlyingSheet, 1, Int32.MaxValue, values);
+        return PlaceholderReplacer.ReplaceInRows(UnderlyingSheet, 1, Int32.MaxValue, values) +
+               PlaceholderReplacer.ReplaceInHeaderFooter(UnderlyingSheet, values);
     }
 
     public int ReplacePlaceholders(IEnumerable<IReadOnlyDictionary<string, string?>> rows)

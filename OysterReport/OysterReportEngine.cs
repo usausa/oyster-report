@@ -29,18 +29,30 @@ public sealed class OysterReportEngine
     internal ReportRenderContext CreateRenderContext(TemplateWorkbook template)
     {
         var workbook = template.ReportWorkbook;
-        var sheetPlans = PdfRenderPlanner.BuildPlan(workbook, RenderingOptions);
+        return CreateRenderContext(workbook, PdfRenderPlanner.BuildPlan(workbook, RenderingOptions));
+    }
 
-        return new ReportRenderContext
+    public void GeneratePdf(IEnumerable<TemplateWorkbook> workbooks, Stream output)
+    {
+        var context = CreateRenderContext(workbooks);
+        PdfGenerator.WritePdf(context, output);
+    }
+
+    internal ReportRenderContext CreateRenderContext(IEnumerable<TemplateWorkbook> templates)
+    {
+        var documents = templates.Select(static x => x.ReportWorkbook).ToList();
+        var first = documents.Count > 0 ? documents[0] : new ReportWorkbook();
+        var combinedWorkbook = new ReportWorkbook
         {
-            Workbook = workbook,
-            SheetPlans = sheetPlans,
-            FontResolver = FontResolver,
-            RenderingOptions = RenderingOptions,
-            EmbedDocumentMetadata = EmbedDocumentMetadata,
-            CompressContentStreams = CompressContentStreams,
-            CompressionLevel = CompressionLevel
+            Metadata = first.Metadata,
+            MeasurementProfile = first.MeasurementProfile
         };
+        foreach (var sheet in documents.SelectMany(static x => x.Sheets))
+        {
+            combinedWorkbook.AddSheet(sheet);
+        }
+
+        return CreateRenderContext(combinedWorkbook, PdfRenderPlanner.BuildPlan(documents, RenderingOptions));
     }
 
     public void GeneratePdf(TemplateSheet sheet, Stream output)
@@ -53,16 +65,18 @@ public sealed class OysterReportEngine
     {
         var singleSheetWorkbook = new ReportWorkbook
         {
-            Metadata = new ReportMetadata { TemplateName = template.Name },
+            Metadata = template.WorkbookMetadata with { TemplateName = template.Name },
             MeasurementProfile = template.WorkbookMeasurementProfile
         };
         singleSheetWorkbook.AddSheet(template.UnderlyingSheet);
 
-        var sheetPlans = PdfRenderPlanner.BuildPlan(singleSheetWorkbook, RenderingOptions);
+        return CreateRenderContext(singleSheetWorkbook, PdfRenderPlanner.BuildPlan(singleSheetWorkbook, RenderingOptions));
+    }
 
-        return new ReportRenderContext
+    private ReportRenderContext CreateRenderContext(ReportWorkbook workbook, IReadOnlyList<PdfRenderSheetPlan> sheetPlans) =>
+        new()
         {
-            Workbook = singleSheetWorkbook,
+            Workbook = workbook,
             SheetPlans = sheetPlans,
             FontResolver = FontResolver,
             RenderingOptions = RenderingOptions,
@@ -70,5 +84,4 @@ public sealed class OysterReportEngine
             CompressContentStreams = CompressContentStreams,
             CompressionLevel = CompressionLevel
         };
-    }
 }

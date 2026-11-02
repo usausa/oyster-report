@@ -11,10 +11,11 @@ internal static class OpenXmlLoader
     public static ReportWorkbook Load(Stream stream, ReportRenderOption? renderOption = null)
     {
         var effectiveOptions = renderOption ?? new ReportRenderOption();
+        var fileName = stream is FileStream fileStream ? Path.GetFileName(fileStream.Name) : string.Empty;
         if (stream.CanSeek)
         {
             var start = stream.Position;
-            if (TryLoadReadOnlyPackage(() => Package.Open(stream, FileMode.Open, FileAccess.Read), effectiveOptions, out var workbook))
+            if (TryLoadReadOnlyPackage(() => Package.Open(stream, FileMode.Open, FileAccess.Read), effectiveOptions, fileName, out var workbook))
             {
                 return workbook;
             }
@@ -23,28 +24,29 @@ internal static class OpenXmlLoader
         }
 
         using var doc = SpreadsheetDocument.Open(stream, isEditable: false);
-        return Build(doc, effectiveOptions);
+        return Build(doc, effectiveOptions, fileName);
     }
 
     public static ReportWorkbook Load(string path, ReportRenderOption? renderOption = null)
     {
         var effectiveOptions = renderOption ?? new ReportRenderOption();
-        if (TryLoadReadOnlyPackage(() => Package.Open(path, FileMode.Open, FileAccess.Read, FileShare.Read), effectiveOptions, out var workbook))
+        var fileName = Path.GetFileName(path);
+        if (TryLoadReadOnlyPackage(() => Package.Open(path, FileMode.Open, FileAccess.Read, FileShare.Read), effectiveOptions, fileName, out var workbook))
         {
             return workbook;
         }
 
         using var doc = SpreadsheetDocument.Open(path, isEditable: false);
-        return Build(doc, effectiveOptions);
+        return Build(doc, effectiveOptions, fileName);
     }
 
-    private static bool TryLoadReadOnlyPackage(Func<Package> open, ReportRenderOption renderOption, [NotNullWhen(true)] out ReportWorkbook? workbook)
+    private static bool TryLoadReadOnlyPackage(Func<Package> open, ReportRenderOption renderOption, string fileName, [NotNullWhen(true)] out ReportWorkbook? workbook)
     {
         try
         {
             using var package = open();
             using var doc = SpreadsheetDocument.Open(package);
-            workbook = Build(doc, renderOption);
+            workbook = Build(doc, renderOption, fileName);
             return true;
         }
         catch (Exception ex) when (ex is IOException or UriFormatException or FormatException or XmlException or InvalidDataException or
@@ -55,7 +57,7 @@ internal static class OpenXmlLoader
         }
     }
 
-    private static ReportWorkbook Build(SpreadsheetDocument doc, ReportRenderOption renderOption)
+    private static ReportWorkbook Build(SpreadsheetDocument doc, ReportRenderOption renderOption, string fileName)
     {
         var workbookPart = doc.WorkbookPart ?? throw new InvalidOperationException("Workbook part missing.");
         var styles = StyleCatalog.Load(workbookPart);
@@ -65,7 +67,8 @@ internal static class OpenXmlLoader
 
         var metadata = new ReportMetadata
         {
-            TemplateName = doc.PackageProperties.Title ?? "Workbook"
+            TemplateName = doc.PackageProperties.Title ?? "Workbook",
+            FileName = fileName
         };
 
         var workbook = new ReportWorkbook

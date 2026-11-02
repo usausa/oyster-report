@@ -47,7 +47,7 @@ engine.GeneratePdf(workbook, output);
 | **Merged cells** | Horizontal, Vertical |
 | **Images** | Cell-anchored and free-floating |
 | **Page setup** | Paper size, Margins |
-| **Header / footer** | Header and Footer text |
+| **Header / footer** | Header and Footer text, Page numbers, Placeholders |
 | **Multi-sheet** | Each sheet |
 | **Print area** | Defined print area |
 | **Embedded fonts** | Custom font resolver |
@@ -67,6 +67,35 @@ var options = new ReportRenderOption { FontDirectories = ["/app/fonts"] };
 using var workbook = new TemplateWorkbook("Invoice.xlsx", options);
 var engine = new OysterReportEngine { RenderingOptions = options };
 ```
+
+## Header / footer
+
+Each sheet is one page. Pages are numbered through the workbook, so sheets made with `CopySheet` show `1 / 3`, `2 / 3`, `3 / 3` for `&P / &N`. The template's first page number applies to the first page only.
+
+To put several documents into one PDF, pass the workbooks together. The numbering restarts with each workbook:
+
+```csharp
+using var template = new TemplateWorkbook("Invoice.xlsx");
+var documents = invoices.Select(invoice =>
+{
+    var workbook = template.Clone();
+    Fill(workbook, invoice);
+    return workbook;
+}).ToList();
+
+using var output = File.Create("invoices.pdf");
+engine.GeneratePdf(documents, output);
+```
+
+| Code | Output |
+|---|---|
+| `&L` `&C` `&R` | Left, center and right section |
+| `&P` `&N` | Page number, Page count of the document |
+| `&A` `&F` | Sheet name, File name (empty when loaded from a non-file stream) |
+| `&D` `&T` | Date and time (`ReportRenderOption.HeaderFooterCulture`, `ReportRenderOption.TimeProvider`) |
+| `&&` | `&` |
+
+Font, size, color and style codes are not applied. `ReplacePlaceholder` and `ReplacePlaceholders` of `TemplateWorkbook` and `TemplateSheet` also replace placeholders in the header and footer.
 
 ## Images
 

@@ -1,5 +1,6 @@
 namespace OysterReport.Internal;
 
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 
@@ -39,6 +40,65 @@ internal static class PlaceholderReplacer
 
         return count;
     }
+
+    public static int ReplaceInHeaderFooter(ReportSheet sheet, string marker, string value)
+    {
+        if (!ContainsPlaceholder(sheet.HeaderFooter))
+        {
+            return 0;
+        }
+
+        return ReplaceInHeaderFooter(sheet, new Dictionary<string, string?>(StringComparer.Ordinal) { [marker] = value });
+    }
+
+    public static int ReplaceInHeaderFooter(ReportSheet sheet, IReadOnlyDictionary<string, string?> values)
+    {
+        var headerFooter = sheet.HeaderFooter;
+        if ((values.Count == 0) || !ContainsPlaceholder(headerFooter))
+        {
+            return 0;
+        }
+
+        var escaped = new Dictionary<string, string?>(values.Count, StringComparer.Ordinal);
+        foreach (var (key, value) in values)
+        {
+            escaped[key] = value?.Replace("&", "&&", StringComparison.Ordinal);
+        }
+
+        var replacedKeys = new List<string>();
+        var count = 0;
+        sheet.HeaderFooter = headerFooter with
+        {
+            OddHeader = Replace(headerFooter.OddHeader),
+            OddFooter = Replace(headerFooter.OddFooter),
+            EvenHeader = Replace(headerFooter.EvenHeader),
+            EvenFooter = Replace(headerFooter.EvenFooter),
+            FirstHeader = Replace(headerFooter.FirstHeader),
+            FirstFooter = Replace(headerFooter.FirstFooter)
+        };
+
+        return count;
+
+        string? Replace(string? text)
+        {
+            if (!ContainsPlaceholder(text))
+            {
+                return text;
+            }
+
+            replacedKeys.Clear();
+            var replaced = ReplaceText(text, escaped, replacedKeys);
+            count += replacedKeys.Count;
+            return replaced;
+        }
+    }
+
+    private static bool ContainsPlaceholder(ReportHeaderFooter headerFooter) =>
+        ContainsPlaceholder(headerFooter.OddHeader) || ContainsPlaceholder(headerFooter.OddFooter) ||
+        ContainsPlaceholder(headerFooter.EvenHeader) || ContainsPlaceholder(headerFooter.EvenFooter) ||
+        ContainsPlaceholder(headerFooter.FirstHeader) || ContainsPlaceholder(headerFooter.FirstFooter);
+
+    private static bool ContainsPlaceholder([NotNullWhen(true)] string? text) => (text is not null) && text.Contains("{{", StringComparison.Ordinal);
 
     // Keeps the ordinal marker comparison used by the single-key replacement API
     private static Dictionary<string, string?> EnsureOrdinalLookup(IReadOnlyDictionary<string, string?> values)
