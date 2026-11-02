@@ -41,7 +41,7 @@ public sealed class RenderOptionTests
         // Assert
         Assert.Equal(new[] { FakeWebp.Length }, converted);
         Assert.Empty(warnings);
-        Assert.Equal(1, TestHelper.GetImageCount(pdf));
+        Assert.Equal(1, TestHelper.GetImageCount(pdf, 1));
     }
 
     [Fact]
@@ -56,7 +56,7 @@ public sealed class RenderOptionTests
 
         // Assert
         Assert.Contains(warnings, static x => x.Kind == ReportRenderWarningKind.ImageDecodeFailed);
-        Assert.Equal(0, TestHelper.GetImageCount(pdf));
+        Assert.Equal(0, TestHelper.GetImageCount(pdf, 1));
     }
 
     //--------------------------------------------------------------------------------

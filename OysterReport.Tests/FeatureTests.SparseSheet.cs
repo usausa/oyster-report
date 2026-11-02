@@ -67,7 +67,7 @@ public sealed partial class FeatureTests
 
         // Assert
         Assert.True(TestHelper.IsValidPdf(pdfBytes));
-        Assert.Equal(1, TestHelper.GetImageCount(pdfBytes));
+        Assert.Equal(1, TestHelper.GetImageCount(pdfBytes, 1));
     }
 
     [Fact]

@@ -87,7 +87,7 @@ public sealed partial class FeatureTests
         Assert.True(
             warnings.Count == 0,
             "warnings: " + String.Join("; ", warnings.Select(static w => $"{w.Source} {w.Exception?.GetType().Name}: {w.Exception?.Message}")));
-        Assert.Equal(1, TestHelper.GetImageCount(pdfBytes));
+        Assert.Equal(1, TestHelper.GetImageCount(pdfBytes, 1));
     }
 
     [Fact]
@@ -128,7 +128,7 @@ public sealed partial class FeatureTests
         // Assert
         Assert.True(TestHelper.IsValidPdf(pdfBytes));
         Assert.Empty(warnings);
-        Assert.Equal(1, TestHelper.GetImageCount(pdfBytes));
+        Assert.Equal(1, TestHelper.GetImageCount(pdfBytes, 1));
     }
 
     [Fact]
@@ -208,7 +208,7 @@ public sealed partial class FeatureTests
         // Assert — one XObject set, drawn three times
         Assert.True(TestHelper.IsValidPdf(pdfBytes));
         Assert.Equal(CountImageXObjects(single), CountImageXObjects(pdfBytes));
-        Assert.Equal(3, TestHelper.GetImageCount(pdfBytes));
+        Assert.Equal(3, TestHelper.GetImageCount(pdfBytes, 1));
     }
 
     [Fact]
@@ -224,7 +224,7 @@ public sealed partial class FeatureTests
         // Assert
         Assert.True(TestHelper.IsValidPdf(pdfBytes));
         Assert.Equal(CountImageXObjects(single), CountImageXObjects(pdfBytes));
-        Assert.Equal(1, TestHelper.GetImageCount(pdfBytes));
+        Assert.Equal(1, TestHelper.GetImageCount(pdfBytes, 1));
         Assert.Equal(1, TestHelper.GetImageCount(pdfBytes, 2));
     }
 
@@ -301,9 +301,9 @@ public sealed partial class FeatureTests
         Assert.Equal(1, count);
         Assert.Equal(string.Empty, sheet.GetCellText(2, 2));
         var cell = GetCellBounds(workbook, "B2");
-        var image = Assert.Single(TestHelper.GetImageBounds(pdfBytes));
+        var image = Assert.Single(TestHelper.GetImageBounds(pdfBytes, 1));
         var size = Math.Min(cell.Width, cell.Height);
-        var pageHeight = TestHelper.GetPageSize(pdfBytes).Height;
+        var pageHeight = TestHelper.GetPageSize(pdfBytes, 1).Height;
         Assert.Equal(size, image.Width, 2);
         Assert.Equal(size, image.Height, 2);
         Assert.Equal(cell.X + (cell.Width / 2), image.Left + (image.Width / 2), 2);
@@ -323,7 +323,7 @@ public sealed partial class FeatureTests
 
         // Assert
         var cell = GetCellBounds(workbook, "A1");
-        var image = Assert.Single(TestHelper.GetImageBounds(pdfBytes));
+        var image = Assert.Single(TestHelper.GetImageBounds(pdfBytes, 1));
         Assert.Equal(cell.Width, image.Width, 2);
         Assert.Equal(cell.Height, image.Height, 2);
     }
@@ -340,7 +340,7 @@ public sealed partial class FeatureTests
         var pdfBytes = TestHelper.GeneratePdfAndSave(nameof(ImageInCellShouldBeDrawnUnderBorders), workbook);
 
         // Assert: the borders of B2:C3 are filled rectangles drawn after the image
-        var operators = TestHelper.GetOperators(pdfBytes);
+        var operators = TestHelper.GetOperators(pdfBytes, 1);
         var imageIndex = operators.ToList().IndexOf("Do");
         Assert.True(imageIndex >= 0);
         Assert.Contains("f", operators.Skip(imageIndex + 1));
@@ -373,7 +373,7 @@ public sealed partial class FeatureTests
         var pdfBytes = TestHelper.GeneratePdfAndSave(nameof(ImageShouldReplacePlaceholderInEachCopiedRow), workbook);
 
         // Assert
-        Assert.Equal(3, TestHelper.GetImageCount(pdfBytes));
+        Assert.Equal(3, TestHelper.GetImageCount(pdfBytes, 1));
         Assert.DoesNotContain("{{Photo}}", TestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
     }
 
@@ -447,12 +447,12 @@ public sealed partial class FeatureTests
         var frame = workbook.ReportWorkbook.Sheets[0].Images[0];
 
         // Act
-        var count = workbook.ReplaceImage("Stamp", CreatePng(SKColors.Red, 4, 2));
+        var count = workbook.ReplaceImage("Stamp", CreatePng(SKColors.Red, 4));
         var pdfBytes = TestHelper.GeneratePdfAndSave(nameof(ImageShouldReplaceNamedImageInItsFrame), workbook);
 
         // Assert: the 2:1 image is scaled to the frame width
         Assert.Equal(1, count);
-        var image = Assert.Single(TestHelper.GetImageBounds(pdfBytes));
+        var image = Assert.Single(TestHelper.GetImageBounds(pdfBytes, 1));
         Assert.Equal(frame.WidthPoint, image.Width, 2);
         Assert.Equal(frame.WidthPoint / 2, image.Height, 2);
     }
@@ -470,7 +470,7 @@ public sealed partial class FeatureTests
 
         // Assert
         Assert.Equal(1, count);
-        Assert.Equal(0, TestHelper.GetImageCount(pdfBytes));
+        Assert.Equal(0, TestHelper.GetImageCount(pdfBytes, 1));
     }
 
     // B2:C3 is merged, holds {{QR}} and has an outside border

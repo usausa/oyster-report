@@ -72,7 +72,7 @@ public sealed partial class FeatureTests
 
         // Assert
         Assert.True(TestHelper.IsValidPdf(pdfBytes));
-        var fillColors = TestHelper.GetFillColors(pdfBytes);
+        var fillColors = TestHelper.GetFillColors(pdfBytes, 1);
         Assert.Equal(4, fillColors.Count(static x => x == (0d, 1d, 0d)));
         Assert.DoesNotContain((0d, 0d, 0d), fillColors);
     }

@@ -179,7 +179,7 @@ public sealed partial class FeatureTests
         var pdfBytes = TestHelper.GeneratePdfAndSave(nameof(HeaderFooterShouldNotRenderFormattingCodes), workbook);
 
         // Assert
-        var text = TestHelper.GetPageText(pdfBytes);
+        var text = TestHelper.GetPageText(pdfBytes, 1);
         Assert.Contains("Title", text, StringComparison.Ordinal);
         Assert.Contains("Red", text, StringComparison.Ordinal);
         Assert.Contains("Theme", text, StringComparison.Ordinal);
@@ -211,7 +211,7 @@ public sealed partial class FeatureTests
         TestHelper.SavePdf(nameof(HeaderFooterShouldRenderSheetNameDateAndTime), pdfBytes);
 
         // Assert
-        var text = TestHelper.GetPageText(pdfBytes);
+        var text = TestHelper.GetPageText(pdfBytes, 1);
         Assert.Contains(HeaderFooterTemplateName, text, StringComparison.Ordinal);
         Assert.Contains("11/02/2026 14:05", text, StringComparison.Ordinal);
     }
@@ -234,7 +234,7 @@ public sealed partial class FeatureTests
             var pdfBytes = TestHelper.GeneratePdfAndSave(nameof(HeaderFooterShouldRenderFileName), workbook);
 
             // Assert
-            Assert.Contains(Path.GetFileName(path), TestHelper.GetPageText(pdfBytes), StringComparison.Ordinal);
+            Assert.Contains(Path.GetFileName(path), TestHelper.GetPageText(pdfBytes, 1), StringComparison.Ordinal);
         }
         finally
         {
@@ -259,7 +259,7 @@ public sealed partial class FeatureTests
 
         // Assert: '&' in a value is printed instead of starting a format code
         Assert.Equal(2, count);
-        var text = TestHelper.GetPageText(pdfBytes);
+        var text = TestHelper.GetPageText(pdfBytes, 1);
         Assert.Contains("AT&T", text, StringComparison.Ordinal);
         Assert.Contains("INV-001", text, StringComparison.Ordinal);
         Assert.DoesNotContain("{{", text, StringComparison.Ordinal);
@@ -278,7 +278,7 @@ public sealed partial class FeatureTests
 
         // Assert
         Assert.Equal(1, count);
-        Assert.Contains("R&D 1", TestHelper.GetPageText(pdfBytes), StringComparison.Ordinal);
+        Assert.Contains("R&D 1", TestHelper.GetPageText(pdfBytes, 1), StringComparison.Ordinal);
     }
 
     //--------------------------------------------------------------------------------

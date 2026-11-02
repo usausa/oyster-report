@@ -73,9 +73,9 @@ public sealed partial class FeatureTests
 
         // Assert
         Assert.True(TestHelper.IsValidPdf(pdfBytes));
-        var letters = TestHelper.GetLetters(pdfBytes);
+        var letters = TestHelper.GetLetters(pdfBytes, 1);
         Assert.Contains(letters, static x => x.FillColor.ToRGBValues() == (0d, 0d, 1d));
         Assert.Contains(letters, static x => x.FillColor.ToRGBValues() == (1d, 0d, 0d));
-        Assert.False(TestHelper.HasTransparency(pdfBytes));
+        Assert.False(TestHelper.HasTransparency(pdfBytes, 1));
     }
 }

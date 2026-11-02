@@ -19,7 +19,7 @@ public sealed partial class FeatureTests
 
         // Assert
         Assert.True(TestHelper.IsValidPdf(pdfBytes));
-        var (width, height) = TestHelper.GetPageSize(pdfBytes);
+        var (width, height) = TestHelper.GetPageSize(pdfBytes, 1);
         Assert.Equal(595.28d, width, 0);
         Assert.Equal(841.89d, height, 0);
     }
@@ -41,7 +41,7 @@ public sealed partial class FeatureTests
 
         // Assert
         Assert.True(TestHelper.IsValidPdf(pdfBytes));
-        var (width, height) = TestHelper.GetPageSize(pdfBytes);
+        var (width, height) = TestHelper.GetPageSize(pdfBytes, 1);
         Assert.Equal(841.89d, width, 0);
         Assert.Equal(595.28d, height, 0);
     }

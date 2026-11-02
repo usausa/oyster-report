@@ -24,7 +24,7 @@ public sealed partial class FeatureTests
 
         // Assert
         Assert.True(TestHelper.IsValidPdf(pdfBytes));
-        var letters = TestHelper.GetLetters(pdfBytes);
+        var letters = TestHelper.GetLetters(pdfBytes, 1);
         Assert.Contains(
             letters,
             static l => (l.FontName is not null) && l.FontName.Contains("IPAex", StringComparison.OrdinalIgnoreCase));

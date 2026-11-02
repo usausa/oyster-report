@@ -64,7 +64,7 @@ internal static class TestHelper
     }
 
     // Letters of one page in drawing order (spaces included)
-    public static string GetPageText(byte[] pdfBytes, int pageNumber = 1)
+    public static string GetPageText(byte[] pdfBytes, int pageNumber)
     {
         using var doc = PdfDocument.Open(pdfBytes);
         return doc.GetPage(pageNumber).Text;
@@ -76,14 +76,14 @@ internal static class TestHelper
         return doc.NumberOfPages;
     }
 
-    public static IReadOnlyList<Letter> GetLetters(byte[] pdfBytes, int pageNumber = 1)
+    public static IReadOnlyList<Letter> GetLetters(byte[] pdfBytes, int pageNumber)
     {
         using var doc = PdfDocument.Open(pdfBytes);
         return doc.GetPage(pageNumber).Letters;
     }
 
     // One entry per filled subpath (cell backgrounds and solid borders are drawn as rectangles)
-    public static IReadOnlyList<(double R, double G, double B)> GetFillColors(byte[] pdfBytes, int pageNumber = 1)
+    public static IReadOnlyList<(double R, double G, double B)> GetFillColors(byte[] pdfBytes, int pageNumber)
     {
         using var doc = PdfDocument.Open(pdfBytes);
         return doc.GetPage(pageNumber).Paths
@@ -93,33 +93,33 @@ internal static class TestHelper
     }
 
     // The writer sets a graphics state only to draw with an alpha below 1
-    public static bool HasTransparency(byte[] pdfBytes, int pageNumber = 1)
+    public static bool HasTransparency(byte[] pdfBytes, int pageNumber)
     {
         using var doc = PdfDocument.Open(pdfBytes);
         return doc.GetPage(pageNumber).Operations.OfType<SetGraphicsStateParametersFromDictionary>().Any();
     }
 
-    public static (double Width, double Height) GetPageSize(byte[] pdfBytes, int pageNumber = 1)
+    public static (double Width, double Height) GetPageSize(byte[] pdfBytes, int pageNumber)
     {
         using var doc = PdfDocument.Open(pdfBytes);
         var page = doc.GetPage(pageNumber);
         return (page.Width, page.Height);
     }
 
-    public static int GetImageCount(byte[] pdfBytes, int pageNumber = 1)
+    public static int GetImageCount(byte[] pdfBytes, int pageNumber)
     {
         using var doc = PdfDocument.Open(pdfBytes);
         return doc.GetPage(pageNumber).GetImages().Count();
     }
 
     // PDF coordinates (origin at the bottom left)
-    public static IReadOnlyList<PdfRectangle> GetImageBounds(byte[] pdfBytes, int pageNumber = 1)
+    public static IReadOnlyList<PdfRectangle> GetImageBounds(byte[] pdfBytes, int pageNumber)
     {
         using var doc = PdfDocument.Open(pdfBytes);
         return doc.GetPage(pageNumber).GetImages().Select(static x => x.BoundingBox).ToList();
     }
 
-    public static IReadOnlyList<string> GetOperators(byte[] pdfBytes, int pageNumber = 1)
+    public static IReadOnlyList<string> GetOperators(byte[] pdfBytes, int pageNumber)
     {
         using var doc = PdfDocument.Open(pdfBytes);
         return doc.GetPage(pageNumber).Operations.Select(static x => x.Operator).ToList();
