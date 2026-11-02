@@ -53,6 +53,31 @@ public sealed partial class FeatureTests
     }
 
     [Fact]
+    public void BorderShouldIgnoreAlphaOfRgbColor()
+    {
+        // Arrange — openpyxl writes 6-digit colors as 00RRGGBB; Excel draws the border without looking at the alpha
+        using var stream = TestWorkbookFactory.CreateWorkbook(
+            workbook =>
+            {
+                var sheet = workbook.AddWorksheet("Report");
+                var cell = sheet.Cell("B2");
+                cell.Value = "ZeroAlphaBorder";
+                cell.Style.Border.OutsideBorder = XLBorderStyleValues.Medium;
+                cell.Style.Border.OutsideBorderColor = XLColor.FromArgb(0, 255, 0);
+            },
+            document => TestWorkbookFactory.ReplaceRgbColor(document, "FF00FF00", "0000FF00"));
+
+        // Act
+        var pdfBytes = TestHelper.GeneratePdfAndSave(nameof(BorderShouldIgnoreAlphaOfRgbColor), stream);
+
+        // Assert
+        Assert.True(TestHelper.IsValidPdf(pdfBytes));
+        var fillColors = TestHelper.GetFillColors(pdfBytes);
+        Assert.Equal(4, fillColors.Count(static x => x == (0d, 1d, 0d)));
+        Assert.DoesNotContain((0d, 0d, 0d), fillColors);
+    }
+
+    [Fact]
     public void BorderShouldRenderTableWithAllSideBorders()
     {
         // Arrange

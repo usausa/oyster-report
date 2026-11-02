@@ -619,6 +619,11 @@ internal sealed class WorksheetLoader
             return "#00000000";
         }
 
+        if ((fill.Pattern == FillPattern.Solid) && (fill.RawFg is null))
+        {
+            return "#FF000000";
+        }
+
         var fg = styles.ColorResolver.Resolve(fill.RawFg, "#00000000");
         if (!fg.StartsWith("#00", StringComparison.Ordinal))
         {

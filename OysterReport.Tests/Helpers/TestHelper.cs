@@ -3,6 +3,7 @@ namespace OysterReport.Tests.Helpers;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.Content;
 using UglyToad.PdfPig.DocumentLayoutAnalysis.WordExtractor;
+using UglyToad.PdfPig.Graphics.Operations.SpecialGraphicsState;
 
 internal static class TestHelper
 {
@@ -71,6 +72,23 @@ internal static class TestHelper
     {
         using var doc = PdfDocument.Open(pdfBytes);
         return doc.GetPage(pageNumber).Letters;
+    }
+
+    // One entry per filled subpath (cell backgrounds and solid borders are drawn as rectangles)
+    public static IReadOnlyList<(double R, double G, double B)> GetFillColors(byte[] pdfBytes, int pageNumber = 1)
+    {
+        using var doc = PdfDocument.Open(pdfBytes);
+        return doc.GetPage(pageNumber).Paths
+            .Where(static x => x.IsFilled)
+            .SelectMany(static x => Enumerable.Repeat(x.FillColor!.ToRGBValues(), x.Count))
+            .ToList();
+    }
+
+    // The writer sets a graphics state only to draw with an alpha below 1
+    public static bool HasTransparency(byte[] pdfBytes, int pageNumber = 1)
+    {
+        using var doc = PdfDocument.Open(pdfBytes);
+        return doc.GetPage(pageNumber).Operations.OfType<SetGraphicsStateParametersFromDictionary>().Any();
     }
 
     public static (double Width, double Height) GetPageSize(byte[] pdfBytes, int pageNumber = 1)

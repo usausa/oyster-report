@@ -147,6 +147,22 @@ public sealed class ColorResolverTests
         Assert.Equal("#FF1234AB", result);
     }
 
+    [Theory]
+    [InlineData("001234AB")]
+    [InlineData("801234AB")]
+    public void ResolveShouldIgnoreAlphaOfRgbValue(string rgb)
+    {
+        // Arrange
+        var resolver = new ColorResolver(Theme);
+        var color = new TabColor { Rgb = rgb };
+
+        // Act
+        var result = resolver.Resolve(color, "#000000");
+
+        // Assert
+        Assert.Equal("#FF1234AB", result);
+    }
+
     //--------------------------------------------------------------------------------
     // Resolve – Theme
     //--------------------------------------------------------------------------------

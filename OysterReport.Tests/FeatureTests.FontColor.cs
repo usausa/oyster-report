@@ -46,4 +46,36 @@ public sealed partial class FeatureTests
         Assert.True(TestHelper.IsValidPdf(pdfBytes));
         Assert.Contains("ThemeColorText", TestHelper.ExtractAllText(pdfBytes), StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void FontColorShouldIgnoreAlphaOfRgbColor()
+    {
+        // Arrange — openpyxl writes 6-digit colors as 00RRGGBB; Excel draws the text without looking at the alpha
+        using var stream = TestWorkbookFactory.CreateWorkbook(
+            workbook =>
+            {
+                var sheet = workbook.AddWorksheet("Report");
+                var zeroAlphaCell = sheet.Cell("A1");
+                zeroAlphaCell.Value = "ZeroAlphaText";
+                zeroAlphaCell.Style.Font.FontColor = XLColor.FromArgb(0, 0, 255);
+                var halfAlphaCell = sheet.Cell("A2");
+                halfAlphaCell.Value = "HalfAlphaText";
+                halfAlphaCell.Style.Font.FontColor = XLColor.FromArgb(255, 0, 0);
+            },
+            document =>
+            {
+                TestWorkbookFactory.ReplaceRgbColor(document, "FF0000FF", "000000FF");
+                TestWorkbookFactory.ReplaceRgbColor(document, "FFFF0000", "80FF0000");
+            });
+
+        // Act
+        var pdfBytes = TestHelper.GeneratePdfAndSave(nameof(FontColorShouldIgnoreAlphaOfRgbColor), stream);
+
+        // Assert
+        Assert.True(TestHelper.IsValidPdf(pdfBytes));
+        var letters = TestHelper.GetLetters(pdfBytes);
+        Assert.Contains(letters, static x => x.FillColor.ToRGBValues() == (0d, 0d, 1d));
+        Assert.Contains(letters, static x => x.FillColor.ToRGBValues() == (1d, 0d, 0d));
+        Assert.False(TestHelper.HasTransparency(pdfBytes));
+    }
 }

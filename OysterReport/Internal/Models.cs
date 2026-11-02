@@ -717,7 +717,7 @@ internal sealed class ReportSheet
                     }
                 };
             }
-            else if (pa.EndRow >= insertAtRow)
+            else if (pa.EndRow + 1 >= insertAtRow)
             {
                 PrintArea = new ReportPrintArea
                 {
@@ -732,14 +732,14 @@ internal sealed class ReportSheet
             }
         }
 
-        if ((UsedRange.StartRow >= insertAtRow) || (UsedRange.EndRow >= insertAtRow))
+        if (UsedRange.EndRow + 1 >= insertAtRow)
         {
             var u = UsedRange;
             UsedRange = new ReportRange
             {
                 StartRow = u.StartRow >= insertAtRow ? u.StartRow + count : u.StartRow,
                 StartColumn = u.StartColumn,
-                EndRow = u.EndRow >= insertAtRow ? u.EndRow + count : u.EndRow,
+                EndRow = u.EndRow + count,
                 EndColumn = u.EndColumn
             };
         }
@@ -940,14 +940,14 @@ internal sealed class ReportSheet
             }
             else if (pa.EndRow >= startRow)
             {
-                var overlap = Math.Min(pa.EndRow, endRow) - Math.Max(pa.StartRow, startRow) + 1;
+                var newStartRow = Math.Min(pa.StartRow, startRow);
                 PrintArea = new ReportPrintArea
                 {
                     Range = new ReportRange
                     {
-                        StartRow = pa.StartRow,
+                        StartRow = newStartRow,
                         StartColumn = pa.StartColumn,
-                        EndRow = Math.Max(pa.StartRow, pa.EndRow - overlap),
+                        EndRow = Math.Max(newStartRow, pa.EndRow > endRow ? pa.EndRow - count : startRow - 1),
                         EndColumn = pa.EndColumn
                     }
                 };
@@ -967,12 +967,12 @@ internal sealed class ReportSheet
         }
         else if (u.EndRow >= startRow)
         {
-            var overlap = Math.Min(u.EndRow, endRow) - Math.Max(u.StartRow, startRow) + 1;
+            var newStartRow = Math.Min(u.StartRow, startRow);
             UsedRange = new ReportRange
             {
-                StartRow = u.StartRow,
+                StartRow = newStartRow,
                 StartColumn = u.StartColumn,
-                EndRow = Math.Max(u.StartRow, u.EndRow - overlap),
+                EndRow = Math.Max(newStartRow, u.EndRow > endRow ? u.EndRow - count : startRow - 1),
                 EndColumn = u.EndColumn
             };
         }

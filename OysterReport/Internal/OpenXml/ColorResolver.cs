@@ -86,6 +86,11 @@ internal sealed class ColorResolver
     private static string NormalizeRgbHex(string raw)
     {
         var span = raw.AsSpan().TrimStart('#').Trim();
+        if (span.Length == 8)
+        {
+            span = span[2..];
+        }
+
         Span<char> buffer = stackalloc char[10]; // '#' + up to 8 hex + 'FF' prefix = max 10
         if (span.Length == 6)
         {
