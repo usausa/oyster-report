@@ -104,4 +104,109 @@ public sealed partial class FeatureTests
         Assert.Contains("R1C1", text, StringComparison.Ordinal);
         Assert.Contains("R3C3", text, StringComparison.Ordinal);
     }
+
+    [Theory]
+    [InlineData(XLBorderStyleValues.Thin)]
+    [InlineData(XLBorderStyleValues.Medium)]
+    [InlineData(XLBorderStyleValues.Thick)]
+    public void BorderShouldFillCornersOfFrame(XLBorderStyleValues borderStyle)
+    {
+        // Arrange
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
+        {
+            var sheet = workbook.AddWorksheet("Report");
+            var range = sheet.Range("B2:C3");
+            foreach (var cell in range.Cells())
+            {
+                cell.Value = "Frame";
+            }
+
+            range.Style.Border.OutsideBorder = borderStyle;
+            range.Style.Border.OutsideBorderColor = XLColor.Black;
+            range.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+            range.Style.Border.InsideBorderColor = XLColor.Black;
+        });
+        using var workbook = new TemplateWorkbook(stream);
+
+        // Act
+        var pdfBytes = TestHelper.GeneratePdfAndSave($"{nameof(BorderShouldFillCornersOfFrame)}_{borderStyle}", workbook);
+
+        // Assert: the corners are filled up to the outer edge of the frame, and nothing goes past it
+        var options = new ReportRenderOption();
+        var width = borderStyle switch
+        {
+            XLBorderStyleValues.Thick => options.ThickBorderWidth,
+            XLBorderStyleValues.Medium => options.MediumBorderWidth,
+            _ => options.NormalBorderWidth
+        };
+        var half = width / 2;
+        var topLeft = GetCellBounds(workbook, "B2");
+        var bottomRight = GetCellBounds(workbook, "C3");
+        var rects = TestHelper.GetFilledRects(pdfBytes, 1, (0d, 0d, 0d));
+        Assert.True(IsFilled(rects, topLeft.X - (half / 2), topLeft.Y - (half / 2)));
+        Assert.True(IsFilled(rects, bottomRight.Right + (half / 2), topLeft.Y - (half / 2)));
+        Assert.True(IsFilled(rects, bottomRight.Right + (half / 2), bottomRight.Bottom + (half / 2)));
+        Assert.True(IsFilled(rects, topLeft.X - (half / 2), bottomRight.Bottom + (half / 2)));
+        Assert.False(IsFilled(rects, topLeft.X - half - 0.1, topLeft.Y - (half / 2)));
+        Assert.False(IsFilled(rects, topLeft.X - (half / 2), topLeft.Y - half - 0.1));
+        Assert.False(IsFilled(rects, topLeft.Right, topLeft.Y - half - 0.1));
+    }
+
+    [Fact]
+    public void BorderShouldJoinDoubleFrameAtCorners()
+    {
+        // Arrange
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
+        {
+            var sheet = workbook.AddWorksheet("Report");
+            var cell = sheet.Cell("B2");
+            cell.Value = "Double";
+            cell.Style.Border.OutsideBorder = XLBorderStyleValues.Double;
+            cell.Style.Border.OutsideBorderColor = XLColor.Black;
+        });
+        using var workbook = new TemplateWorkbook(stream);
+
+        // Act
+        var pdfBytes = TestHelper.GeneratePdfAndSave(nameof(BorderShouldJoinDoubleFrameAtCorners), workbook);
+
+        // Assert: outer strokes meet at the outer corner, inner strokes at the inner corner, and the gap stays open
+        var width = new ReportRenderOption().NormalBorderWidth;
+        var offset = Math.Max(RenderConstants.MinimumDoubleBorderGap, width * RenderConstants.DoubleBorderGapWidthMultiplier) / 2;
+        var bounds = GetCellBounds(workbook, "B2");
+        var rects = TestHelper.GetFilledRects(pdfBytes, 1, (0d, 0d, 0d));
+        Assert.True(IsFilled(rects, bounds.X - offset, bounds.Y - offset));
+        Assert.True(IsFilled(rects, bounds.X + offset, bounds.Y + offset));
+        Assert.False(IsFilled(rects, bounds.X, bounds.Y));
+        Assert.False(IsFilled(rects, bounds.X + 0.1, bounds.Y + offset));
+        Assert.False(IsFilled(rects, bounds.X + offset, bounds.Y + 0.1));
+    }
+
+    [Fact]
+    public void BorderShouldKeepFreeLineEndsAtCellEdges()
+    {
+        // Arrange
+        using var stream = TestWorkbookFactory.CreateWorkbook(workbook =>
+        {
+            var sheet = workbook.AddWorksheet("Report");
+            var cell = sheet.Cell("B2");
+            cell.Value = "Underline";
+            cell.Style.Border.BottomBorder = XLBorderStyleValues.Thick;
+            cell.Style.Border.BottomBorderColor = XLColor.Black;
+        });
+        using var workbook = new TemplateWorkbook(stream);
+
+        // Act
+        var pdfBytes = TestHelper.GeneratePdfAndSave(nameof(BorderShouldKeepFreeLineEndsAtCellEdges), workbook);
+
+        // Assert
+        var bounds = GetCellBounds(workbook, "B2");
+        var rects = TestHelper.GetFilledRects(pdfBytes, 1, (0d, 0d, 0d));
+        Assert.True(IsFilled(rects, bounds.X + 0.1, bounds.Bottom));
+        Assert.True(IsFilled(rects, bounds.Right - 0.1, bounds.Bottom));
+        Assert.False(IsFilled(rects, bounds.X - 0.1, bounds.Bottom));
+        Assert.False(IsFilled(rects, bounds.Right + 0.1, bounds.Bottom));
+    }
+
+    private static bool IsFilled(IReadOnlyList<ReportRect> rects, double x, double y) =>
+        rects.Any(r => (r.X <= x) && (x <= r.Right) && (r.Y <= y) && (y <= r.Bottom));
 }

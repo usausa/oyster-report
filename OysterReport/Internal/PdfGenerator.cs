@@ -289,6 +289,8 @@ internal static class PdfGenerator
             CollectBorderSide(borders.Left, new ReportLine { X1 = b.X, Y1 = b.Bottom, X2 = b.X, Y2 = b.Y }, collectedLines);
         }
 
+        var junctions = CollectJunctions(collectedLines, renderOption);
+
         // Stable by priority (same order as a stable sort of the insertion order)
         for (var priority = MinBorderPriority; priority <= MaxBorderPriority; priority++)
         {
@@ -296,7 +298,7 @@ internal static class PdfGenerator
             {
                 if (GetBorderPriority(border.Style) == priority)
                 {
-                    DrawBorderLine(page, border, line, renderOption);
+                    DrawBorderLine(page, border, line, junctions, renderOption);
                 }
             }
         }
@@ -333,19 +335,56 @@ internal static class PdfGenerator
         entry = (line, border);
     }
 
-    private static void DrawBorderLine(PdfPageCanvas page, ReportBorder border, ReportLine line, ReportRenderOption renderOption)
+    private static Dictionary<PointKey, Junction> CollectJunctions(Dictionary<LineKey, (ReportLine Line, ReportBorder Border)> collectedLines, ReportRenderOption renderOption)
+    {
+        var junctions = new Dictionary<PointKey, Junction>(collectedLines.Count);
+        foreach (var (line, border) in collectedLines.Values)
+        {
+            var arm = new BorderArm(GetBorderPriority(border.Style), ResolveBorderShape(border.Style, renderOption));
+            if (IsHorizontal(line))
+            {
+                SetArm(ref GetJunction(junctions, Math.Min(line.X1, line.X2), line.Y1).Right, arm);
+                SetArm(ref GetJunction(junctions, Math.Max(line.X1, line.X2), line.Y1).Left, arm);
+            }
+            else
+            {
+                SetArm(ref GetJunction(junctions, line.X1, Math.Min(line.Y1, line.Y2)).Down, arm);
+                SetArm(ref GetJunction(junctions, line.X1, Math.Max(line.Y1, line.Y2)).Up, arm);
+            }
+        }
+
+        return junctions;
+    }
+
+    private static ref Junction GetJunction(Dictionary<PointKey, Junction> junctions, double x, double y) =>
+        ref CollectionsMarshal.GetValueRefOrAddDefault(junctions, PointKey.Create(x, y), out _);
+
+    private static void SetArm(ref BorderArm? arm, BorderArm candidate)
+    {
+        // Overlapping segments (merged cells) keep the one drawn on top
+        if ((arm is null) || (arm.Value.Priority < candidate.Priority))
+        {
+            arm = candidate;
+        }
+    }
+
+    private static void DrawBorderLine(PdfPageCanvas page, ReportBorder border, ReportLine line, Dictionary<PointKey, Junction> junctions, ReportRenderOption renderOption)
     {
         var color = ToColor(border.ColorHex);
-        var width = ResolveBorderWidth(border.Style, renderOption);
+        var (width, offset) = ResolveBorderShape(border.Style, renderOption);
+        junctions.TryGetValue(PointKey.Create(line.X1, line.Y1), out var start);
+        junctions.TryGetValue(PointKey.Create(line.X2, line.Y2), out var end);
         if (border.Style == BorderLineStyle.Double)
         {
-            DrawDoubleBorder(page, color, width, line);
+            DrawSolidBorder(page, color, width, ResolveStroke(line, start, end, -offset, width));
+            DrawSolidBorder(page, color, width, ResolveStroke(line, start, end, offset, width));
             return;
         }
 
+        var stroke = ResolveStroke(line, start, end, 0d, width);
         if (IsSolidBorder(border.Style))
         {
-            DrawSolidBorder(page, color, width, line);
+            DrawSolidBorder(page, color, width, stroke);
             return;
         }
 
@@ -357,7 +396,7 @@ internal static class PdfGenerator
             BorderLineStyle.DashDot => SetDash(dash, 3 * width, width, width, width),
             _ => 0
         };
-        page.StrokeLine(color, width, dash[..dashLength], line.X1, line.Y1, line.X2, line.Y2);
+        page.StrokeLine(color, width, dash[..dashLength], stroke.X1, stroke.Y1, stroke.X2, stroke.Y2);
     }
 
     private static int SetDash(Span<double> destination, params ReadOnlySpan<double> pattern)
@@ -366,23 +405,49 @@ internal static class PdfGenerator
         return pattern.Length;
     }
 
-    private static void DrawDoubleBorder(PdfPageCanvas page, PdfColor color, double width, ReportLine line)
+    private static ReportLine ResolveStroke(ReportLine line, in Junction start, in Junction end, double offset, double width)
     {
-        var gap = Math.Max(RenderConstants.MinimumDoubleBorderGap, width * RenderConstants.DoubleBorderGapWidthMultiplier);
-        if (Math.Abs(line.Y1 - line.Y2) < RenderConstants.StraightLineTolerance)
+        var halfWidth = width / 2d;
+        if (IsHorizontal(line))
         {
-            DrawSolidBorder(page, color, width, line with { Y1 = line.Y1 - (gap / 2d), Y2 = line.Y2 - (gap / 2d) });
-            DrawSolidBorder(page, color, width, line with { Y1 = line.Y1 + (gap / 2d), Y2 = line.Y2 + (gap / 2d) });
-            return;
+            var (x1, x2) = Extend(line.X1, line.X2, ResolveExtension(start.Up, start.Down, offset, halfWidth), ResolveExtension(end.Up, end.Down, offset, halfWidth));
+            return new ReportLine { X1 = x1, Y1 = line.Y1 + offset, X2 = x2, Y2 = line.Y2 + offset };
         }
 
-        DrawSolidBorder(page, color, width, line with { X1 = line.X1 - (gap / 2d), X2 = line.X2 - (gap / 2d) });
-        DrawSolidBorder(page, color, width, line with { X1 = line.X1 + (gap / 2d), X2 = line.X2 + (gap / 2d) });
+        var (y1, y2) = Extend(line.Y1, line.Y2, ResolveExtension(start.Left, start.Right, offset, halfWidth), ResolveExtension(end.Left, end.Right, offset, halfWidth));
+        return new ReportLine { X1 = line.X1 + offset, Y1 = y1, X2 = line.X2 + offset, Y2 = y2 };
     }
+
+    private static double ResolveExtension(BorderArm? negative, BorderArm? positive, double offset, double halfWidth)
+    {
+        var extension = Double.NegativeInfinity;
+        if ((offset - halfWidth) <= 0)
+        {
+            extension = negative?.Shape.InnerReach ?? positive?.Shape.HalfExtent ?? 0d;
+        }
+
+        if ((offset + halfWidth) >= 0)
+        {
+            extension = Math.Max(extension, positive?.Shape.InnerReach ?? negative?.Shape.HalfExtent ?? 0d);
+        }
+
+        return extension;
+    }
+
+    private static (double From, double To) Extend(double from, double to, double fromExtension, double toExtension)
+    {
+        var direction = to >= from ? 1d : -1d;
+        var extendedFrom = from - (direction * fromExtension);
+        var extendedTo = to + (direction * toExtension);
+        return ((extendedTo - extendedFrom) * direction) >= 0 ? (extendedFrom, extendedTo) : (extendedFrom, extendedFrom);
+    }
+
+    private static bool IsHorizontal(ReportLine line) =>
+        Math.Abs(line.Y1 - line.Y2) < RenderConstants.StraightLineTolerance;
 
     private static void DrawSolidBorder(PdfPageCanvas page, PdfColor color, double width, ReportLine line)
     {
-        if (Math.Abs(line.Y1 - line.Y2) < RenderConstants.StraightLineTolerance)
+        if (IsHorizontal(line))
         {
             page.FillRect(color, Math.Min(line.X1, line.X2), line.Y1 - (width / 2d), Math.Abs(line.X2 - line.X1), width);
             return;
@@ -599,7 +664,6 @@ internal static class PdfGenerator
     // Color / Style helpers
     //--------------------------------------------------------------------------------
 
-    // Same result as parsing ColorHelper.NormalizeHex(colorHex), without allocating the normalized string
     private static PdfColor ToColor(string colorHex)
     {
         if (String.IsNullOrWhiteSpace(colorHex))
@@ -640,6 +704,14 @@ internal static class PdfGenerator
             BorderLineStyle.Hair => renderOption.HairBorderWidth,
             _ => renderOption.NormalBorderWidth
         };
+
+    private static BorderShape ResolveBorderShape(BorderLineStyle style, ReportRenderOption renderOption)
+    {
+        var width = ResolveBorderWidth(style, renderOption);
+        return style == BorderLineStyle.Double
+            ? new BorderShape(width, Math.Max(RenderConstants.MinimumDoubleBorderGap, width * RenderConstants.DoubleBorderGapWidthMultiplier) / 2d)
+            : new BorderShape(width, 0d);
+    }
 
     private static bool IsSolidBorder(BorderLineStyle style) =>
         style is BorderLineStyle.Hair or BorderLineStyle.Thin or BorderLineStyle.Medium or BorderLineStyle.Thick;
@@ -763,7 +835,6 @@ internal static class PdfGenerator
             _ => 0
         };
 
-    // Identifies a border segment by its rounded end points (bit patterns, so equality matches the rounded value text)
     private readonly record struct LineKey(long Left, long Top, long Right, long Bottom)
     {
         public static LineKey Create(ReportLine line) =>
@@ -772,6 +843,31 @@ internal static class PdfGenerator
                 BitConverter.DoubleToInt64Bits(Math.Round(Math.Min(line.Y1, line.Y2), 4)),
                 BitConverter.DoubleToInt64Bits(Math.Round(Math.Max(line.X1, line.X2), 4)),
                 BitConverter.DoubleToInt64Bits(Math.Round(Math.Max(line.Y1, line.Y2), 4)));
+    }
+
+    private readonly record struct PointKey(long X, long Y)
+    {
+        public static PointKey Create(double x, double y) =>
+            new(BitConverter.DoubleToInt64Bits(Math.Round(x, 4)), BitConverter.DoubleToInt64Bits(Math.Round(y, 4)));
+    }
+
+    private readonly record struct BorderShape(double Width, double Offset)
+    {
+        // From the center line to the outer edge
+        public double HalfExtent => Offset + (Width / 2d);
+
+        // Past the center line to the far edge of the nearest stroke, where a line ending inside this one stops
+        public double InnerReach => (Width / 2d) - Offset;
+    }
+
+    private readonly record struct BorderArm(int Priority, BorderShape Shape);
+
+    private struct Junction
+    {
+        public BorderArm? Left;
+        public BorderArm? Up;
+        public BorderArm? Right;
+        public BorderArm? Down;
     }
 
     private sealed record HeaderFooterSections(string Left, string Center, string Right)

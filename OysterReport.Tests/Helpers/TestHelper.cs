@@ -92,6 +92,18 @@ internal static class TestHelper
             .ToList();
     }
 
+    // Bounds of filled subpaths in the color, in report coordinates (origin at the top left)
+    public static IReadOnlyList<ReportRect> GetFilledRects(byte[] pdfBytes, int pageNumber, (double R, double G, double B) color)
+    {
+        using var doc = PdfDocument.Open(pdfBytes);
+        var page = doc.GetPage(pageNumber);
+        return page.Paths
+            .Where(x => x.IsFilled && (x.FillColor!.ToRGBValues() == color))
+            .SelectMany(static x => x.Select(static s => s.GetBoundingRectangle()!.Value))
+            .Select(x => new ReportRect { X = x.Left, Y = page.Height - x.Top, Width = x.Width, Height = x.Height })
+            .ToList();
+    }
+
     // The writer sets a graphics state only to draw with an alpha below 1
     public static bool HasTransparency(byte[] pdfBytes, int pageNumber)
     {
