@@ -207,6 +207,6 @@ public sealed partial class FeatureTests
         Assert.False(IsFilled(rects, bounds.Right + 0.1, bounds.Bottom));
     }
 
-    private static bool IsFilled(IReadOnlyList<ReportRect> rects, double x, double y) =>
+    private static bool IsFilled(IEnumerable<ReportRect> rects, double x, double y) =>
         rects.Any(r => (r.X <= x) && (x <= r.Right) && (r.Y <= y) && (y <= r.Bottom));
 }
