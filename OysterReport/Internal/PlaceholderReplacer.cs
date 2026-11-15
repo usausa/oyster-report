@@ -147,9 +147,7 @@ internal static class PlaceholderReplacer
     [SkipLocalsInit]
     private static string ReplaceText(string text, Dictionary<string, string?> values, List<string> replacedKeys)
     {
-#if NET9_0_OR_GREATER
         var lookup = values.GetAlternateLookup<ReadOnlySpan<char>>();
-#endif
         var builder = new DefaultInterpolatedStringHandler(0, 0, CultureInfo.InvariantCulture, stackalloc char[256]);
         var copiedUpTo = 0;
         var searchPos = 0;
@@ -169,12 +167,7 @@ internal static class PlaceholderReplacer
             }
 
             var name = text.AsSpan(open + 2, close - open - 2);
-#if NET9_0_OR_GREATER
             if (lookup.TryGetValue(name, out var key, out var value))
-#else
-            var key = name.ToString();
-            if (values.TryGetValue(key, out var value))
-#endif
             {
                 builder.AppendFormatted(text.AsSpan(copiedUpTo, open - copiedUpTo));
                 builder.AppendFormatted(value);

@@ -105,10 +105,13 @@ internal static class PdfGenerator
         {
             // OS/2 fsType: usage permission in bits 0-3, 0x0100 no subsetting, 0x0200 bitmap embedding only
             var fsType = face.Font.FsType;
-            var reason = (fsType & 0x000F) == 0x0002 ? "restricted license"
-                : (fsType & 0x0200) != 0 ? "bitmap embedding only"
-                : (fsType & 0x0100) != 0 ? "no subsetting"
-                : null;
+            var reason = (fsType & 0x000F) == 0x0002
+                ? "restricted license"
+                : (fsType & 0x0200) != 0
+                    ? "bitmap embedding only"
+                    : (fsType & 0x0100) != 0
+                        ? "no subsetting"
+                        : null;
             if (reason is null)
             {
                 continue;
@@ -641,7 +644,11 @@ internal static class PdfGenerator
                     break;
                 case '"':
                     // Font name and style (&"name,style") are not applied: skip to the closing quote
+#if NET11_0_OR_GREATER
+                    var closingQuote = text.IndexOf('"', index + 1, StringComparison.Ordinal);
+#else
                     var closingQuote = text.IndexOf('"', index + 1);
+#endif
                     index = closingQuote < 0 ? text.Length - 1 : closingQuote;
                     break;
                 case 'K':

@@ -139,7 +139,11 @@ internal static class OpenXmlLoader
                 continue;
             }
 
+#if NET11_0_OR_GREATER
+            var bang = text.LastIndexOf('!', StringComparison.Ordinal);
+#else
             var bang = text.LastIndexOf('!');
+#endif
             var refPart = bang >= 0 ? text[(bang + 1)..] : text;
             refPart = refPart.Replace("$", string.Empty, StringComparison.Ordinal);
             var range = ParsePrintAreaRange(refPart);
