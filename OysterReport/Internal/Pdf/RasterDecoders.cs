@@ -42,7 +42,8 @@ internal static class PngDecoder
         var bitsPerPixel = channels * depth;
         var filterBpp = Math.Max(1, bitsPerPixel / 8);
 
-        using var z = new ZLibStream(new MemoryStream(idat.ToArray()), CompressionMode.Decompress);
+        idat.Position = 0;
+        using var z = new ZLibStream(idat, CompressionMode.Decompress, leaveOpen: true);
         using var raw = new MemoryStream();
         z.CopyTo(raw);
         var src = raw.GetBuffer();

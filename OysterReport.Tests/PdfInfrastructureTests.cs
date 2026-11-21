@@ -246,6 +246,24 @@ public sealed class PdfInfrastructureTests
     }
 
     [Fact]
+    public void PngDecoderShouldDecodeSplitIdatChunks()
+    {
+        // Arrange
+        static byte[] Pixel(int x, int y) => [(byte)(x * 40), (byte)(y * 40), 7];
+        var single = BuildPng(8, 8, colorType: 2, depth: 8, interlaced: false, Pixel);
+        var split = BuildPng(8, 8, colorType: 2, depth: 8, interlaced: false, Pixel, idatChunks: 3);
+
+        // Act
+        var expected = PngDecoder.Decode(single);
+        var actual = PngDecoder.Decode(split);
+
+        // Assert
+        Assert.Equal(expected.Width, actual.Width);
+        Assert.Equal(expected.Color, actual.Color);
+        Assert.Null(actual.Alpha);
+    }
+
+    [Fact]
     public void PngDecoderShouldDownconvertSixteenBitSamples()
     {
         // Arrange
@@ -396,7 +414,7 @@ public sealed class PdfInfrastructureTests
     }
 
     // Minimal PNG encoder (filter 0, optional Adam7); CRCs are not validated by the decoder
-    private static byte[] BuildPng(int width, int height, int colorType, int depth, bool interlaced, Func<int, int, byte[]> pixel, byte[]? palette = null, byte[]? transparency = null)
+    private static byte[] BuildPng(int width, int height, int colorType, int depth, bool interlaced, Func<int, int, byte[]> pixel, byte[]? palette = null, byte[]? transparency = null, int idatChunks = 1)
     {
         using var raw = new MemoryStream();
         void Rows(IEnumerable<int> xs, IEnumerable<int> ys)
@@ -456,7 +474,13 @@ public sealed class PdfInfrastructureTests
             Chunk("tRNS", transparency);
         }
 
-        Chunk("IDAT", compressed.ToArray());
+        var idat = compressed.ToArray();
+        var chunkSize = (idat.Length + (idatChunks - 1)) / idatChunks;
+        for (var offset = 0; offset < idat.Length; offset += chunkSize)
+        {
+            Chunk("IDAT", idat.AsSpan(offset, Math.Min(chunkSize, idat.Length - offset)));
+        }
+
         Chunk("IEND", []);
         return png.ToArray();
 
